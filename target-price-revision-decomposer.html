@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>목표주가 변경 분해기 — BPS(추정) vs P/B(판단)</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
+    --txt:#e8ebf2; --muted:#9aa3b2; --accent:#5b8cff; --warn:#ffb020;
+    --bps:#3ddc97;   /* 추정(BPS) */
+    --mult:#ff7a85;  /* 판단(배수) */
+    --ok:#3ddc97; --bad:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.55;font-size:15px}
+  .wrap{max-width:1040px;margin:0 auto;padding:22px 18px 80px}
+  h1{font-size:22px;margin:6px 0 2px}
+  h2{font-size:17px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13.5px;margin:0 0 16px}
+  .badge{display:inline-block;background:var(--warn);color:#1a1300;font-weight:700;
+    padding:5px 12px;border-radius:999px;font-size:13px;margin-bottom:10px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0}
+  .why{background:var(--panel2);border-left:3px solid var(--accent);border-radius:8px;
+    padding:10px 13px;margin:10px 0;color:#cdd4e0;font-size:13.5px}
+  .why b{color:#fff}
+  .step-tag{display:inline-block;background:var(--accent);color:#fff;font-weight:700;font-size:12px;
+    padding:3px 9px;border-radius:7px;margin-right:8px;vertical-align:2px}
+  /* timeline cards (stage1) */
+  .grid{display:grid;gap:12px}
+  @media(min-width:760px){.cards{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card h3{margin:0 0 2px;font-size:14.5px}
+  .card .meta{color:var(--muted);font-size:12.5px;margin-bottom:8px}
+  .tp{font-size:24px;font-weight:800;letter-spacing:-.5px}
+  .tp small{font-size:12px;color:var(--muted);font-weight:500}
+  .row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:3px 0;border-top:1px dashed var(--line)}
+  .row span:first-child{color:var(--muted)}
+  .null{color:#6a7180;font-style:italic}
+  .quote{font-size:12px;color:#c4ccd9;background:#11141a;border:1px solid var(--line);
+    border-radius:8px;padding:8px 10px;margin-top:8px}
+  .quote .src{display:block;color:var(--accent);font-size:11px;margin-top:4px}
+  /* waterfall (stage2) */
+  .step-block{margin:18px 0;padding:14px;background:var(--panel2);border:1px solid var(--line);border-radius:12px}
+  .step-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .step-head .arrow{font-size:14px}
+  .step-head .delta{font-weight:800}
+  .delta.up{color:var(--bps)} .delta.down{color:var(--mult)}
+  .wf{display:flex;align-items:stretch;height:46px;border-radius:9px;overflow:hidden;border:1px solid var(--line);background:#11141a}
+  .wf .seg{display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;white-space:nowrap;color:#06140d}
+  .seg.bps{background:var(--bps)} .seg.mult{background:var(--mult);color:#2a0608}
+  .seg.bpsNeg{background:repeating-linear-gradient(45deg,#1c3a2c,#1c3a2c 6px,#16302454 6px,#16302454 12px);color:var(--bps);border:1px dashed var(--bps)}
+  .seg.multNeg{background:repeating-linear-gradient(45deg,#3a1c20,#3a1c20 6px,#30161854 6px,#30161854 12px);color:var(--mult);border:1px dashed var(--mult)}
+  .wf-legend{display:flex;gap:16px;margin-top:9px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+  .wf-legend i{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:-1px}
+  .verdict{font-size:13.5px;margin-top:9px;color:#d6dce6}
+  .verdict b.bps{color:var(--bps)} .verdict b.mult{color:var(--mult)}
+  /* checks */
+  .check{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .check:last-child{border-bottom:0}
+  .dot{flex:0 0 auto;width:20px;height:20px;border-radius:50%;font-size:13px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .dot.ok{background:rgba(61,220,151,.18);color:var(--ok)}
+  .dot.bad{background:rgba(255,107,107,.18);color:var(--bad)}
+  .check .ct{font-size:13.5px}
+  .check .ct small{display:block;color:var(--muted);font-size:12px;margin-top:1px}
+  textarea{width:100%;min-height:100px;background:#0c0e13;color:var(--txt);border:1px solid var(--line);
+    border-radius:10px;padding:10px;font-family:inherit;font-size:13px;resize:vertical}
+  details{margin-top:10px} summary{cursor:pointer;color:var(--accent);font-size:13px}
+  .foot{color:var(--muted);font-size:12px;margin-top:18px;text-align:center}
+  .num{font-variant-numeric:tabular-nums}
+  .summary-line{font-size:15px;margin:4px 0 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="badge">⚠️ 예시(가짜 데이터) — 같은 증권사·같은 종목의 가상 리포트입니다</div>
+  <h1>목표주가 변경 분해기 <span style="font-size:14px;color:var(--muted)">BPS(추정) vs P/B(판단)</span></h1>
+  <p class="sub">한 증권사가 같은 종목의 목표주가를 시간이 지나며 바꿨을 때, 그 변화를 <b>목표주가 = 예상 BPS × 적용 P/B</b> 한 줄로 분해합니다. <b style="color:var(--bps)">추정(BPS)의 변화</b>와 <b style="color:var(--mult)">판단(배수)의 변화</b>를 색으로 갈라 보여줍니다.</p>
+
+  <div class="panel">
+    <h2><span class="step-tag">설정</span>증권사 · 종목 · 자료</h2>
+    <div class="why">📌 <b>지금 무엇을 하나:</b> 아래는 제가 넣어둔 <b>가짜 샘플</b>(한 증권사가 같은 종목 목표가를 3번 바꾼 가정)입니다. 준비되면 <b>같은 증권사·같은 종목의 리포트 여러 부</b>를 주시면 그대로 바꿔 드립니다. <b>왜 같은 증권사여야 하나:</b> 분석가가 바뀌면 가정 체계가 달라져 'BPS vs 배수' 분해가 사과-오렌지 비교가 되기 때문입니다.</div>
+    <div style="font-size:13.5px"><b>증권사:</b> OO증권(예시) &nbsp;·&nbsp; <b>종목:</b> 가상금융지주(예시)</div>
+    <details>
+      <summary>실제 리포트 텍스트 붙여넣기(선택) — 아직은 비워두셔도 됩니다</summary>
+      <p class="sub" style="margin-top:8px">리포트별 (기준일·목표가·예상 BPS·적용 P/B·인용)을 주시면 됩니다. 한 건씩 따로 추출하는 것이 1단계(Reader)의 핵심입니다.</p>
+      <textarea placeholder="예) [2026-02-12] 목표가 60,000원 = 2026E BPS 100,000원 × Target P/B 0.60배. '자본비율 개선으로 주주환원 여력...'"></textarea>
+    </details>
+  </div>
+
+  <!-- STAGE 1 : Reader -->
+  <div class="panel">
+    <h2><span class="step-tag">1단계 · Reader</span>리포트마다 따로 사실 추출</h2>
+    <div class="why">📌 <b>지금 무엇을 하나:</b> 리포트를 <b>한 부씩 따로</b> 읽고 (목표가·BPS·적용 P/B·기준일·인용)만 뽑습니다. 본문에 없으면 <span class="null">null</span>, 추측 금지. <b>왜:</b> 다른 회차의 숫자가 새어들어 가짜 추세가 생기는 것을 막기 위해서입니다.</div>
+    <div class="grid cards" id="readerCards"></div>
+  </div>
+
+  <!-- STAGE 2 : Synthesizer -->
+  <div class="panel">
+    <h2><span class="step-tag">2단계 · Synthesizer</span>목표가 변화를 BPS분 / 배수분으로 분해</h2>
+    <div class="why">📌 <b>지금 무엇을 하나:</b> 추출을 <b>시간순</b>으로 놓고, 인접한 두 리포트 사이의 목표가 변화를 <b style="color:var(--bps)">BPS(추정) 변화분</b>과 <b style="color:var(--mult)">배수(판단) 변화분</b>으로 나눕니다. <b>어떻게 나누나:</b> 목표가=BPS×배수이므로, 변화량 ≈ (ΔBPS×예전배수) + (Δ배수×새BPS) 로 분해합니다(교차항 포함). <b>왜 중요한가:</b> 같은 '목표가 +5,000원'이라도 <b>실적이 좋아져서</b>인지 <b>분석가가 눈높이(배수)를 올려서</b>인지에 따라 신뢰도가 전혀 다릅니다.</div>
+
+    <p class="summary-line" id="overallLine"></p>
+    <div id="waterfalls"></div>
+  </div>
+
+  <!-- STAGE 3 : Skeptic -->
+  <div class="panel">
+    <h2><span class="step-tag">3단계 · Skeptic</span>검산 — 만든 쪽과 분리된 별도 점검</h2>
+    <div class="why">📌 <b>지금 무엇을 하나:</b> 2단계가 만든 분해를 믿지 않고, <b>산식을 역산</b>(BPS×배수 ≈ 목표가)해 맞는지 다시 셉니다. 또 분해 두 조각의 합이 실제 목표가 변화와 같은지, 인용이 추출에 실재하는지 확인합니다. <b>왜 분리하나:</b> 분석을 만든 손으로 검산하면 같은 실수를 반복하기 때문입니다.</div>
+    <div id="checks"></div>
+  </div>
+
+  <p class="foot">단일 HTML · 외부 연결 없음 · 모든 숫자에 출처 리포트(기준일) 부착 · 분해는 화면에서 직접 계산</p>
+</div>
+
+<script>
+/* 샘플(가짜) — 같은 증권사가 같은 종목 목표가를 3차례 변경.
+   값이 본문에 없으면 null. 실제 적용 시 이 배열만 교체. */
+const SAMPLE = [
+  { date:"2026-02-12", target:60000, bps:100000, pb:0.60,
+    quote:"자본비율 개선이 가시화되며 밸류에이션 정상화를 기대." },
+  { date:"2026-04-20", target:69000, bps:103000, pb:0.67,
+    quote:"이익 추정을 소폭 상향하고, 주주환원 강화에 P/B 눈높이도 올림." },
+  { date:"2026-06-15", target:66000, bps:110000, pb:0.60,
+    quote:"BPS는 늘었으나 매크로 불확실성으로 적용 배수는 다시 보수적으로." }
+];
+const BROKER="OO증권(예시)";
+
+const fmt = n => n==null ? null : Math.round(n).toLocaleString('ko-KR');
+const won = n => n==null ? '<span class="null">null</span>' : fmt(n)+'원';
+const pb  = n => n==null ? '<span class="null">null</span>' : n.toFixed(2)+'배';
+
+/* STAGE 1 cards */
+const rc = document.getElementById('readerCards');
+SAMPLE.forEach((r,i)=>{
+  rc.insertAdjacentHTML('beforeend',`
+    <div class="card">
+      <h3>${i+1}차 리포트</h3>
+      <div class="meta">${BROKER} · 기준일 ${r.date}</div>
+      <div class="tp">${won(r.target).replace('원','')}<small> 원 목표가</small></div>
+      <div class="row"><span>예상 BPS(추정)</span><span class="num">${won(r.bps)}</span></div>
+      <div class="row"><span>적용 P/B(판단)</span><span class="num">${pb(r.pb)}</span></div>
+      <div class="quote">“${r.quote}”<span class="src">— ${BROKER}, ${r.date}</span></div>
+    </div>`);
+});
+
+/* STAGE 2 waterfall : 인접 구간 분해 */
+const wf = document.getElementById('waterfalls');
+let firstT=SAMPLE[0].target, lastT=SAMPLE[SAMPLE.length-1].target;
+let totBps=0, totMult=0;
+
+for(let i=1;i<SAMPLE.length;i++){
+  const a=SAMPLE[i-1], b=SAMPLE[i];
+  const dTarget=b.target-a.target;
+  // 분해: ΔBPS항 = (BPS_b-BPS_a)*pb_a ; Δ배수항 = (pb_b-pb_a)*BPS_b
+  const bpsPart=(b.bps-a.bps)*a.pb;
+  const multPart=(b.pb-a.pb)*b.bps;
+  totBps+=bpsPart; totMult+=multPart;
+
+  const mag=Math.abs(bpsPart)+Math.abs(multPart) || 1;
+  const wB=Math.abs(bpsPart)/mag*100, wM=Math.abs(multPart)/mag*100;
+  const lead = Math.abs(bpsPart)>=Math.abs(multPart)?'bps':'mult';
+
+  const verdict = lead==='bps'
+    ? `이번 변경은 주로 <b class="bps">추정(BPS) 변화</b> 때문 — 실적·자본 전망이 움직였습니다.`
+    : `이번 변경은 주로 <b class="mult">판단(배수) 변화</b> 때문 — 같은 펀더멘털에 매기는 눈높이(P/B)가 달라졌습니다.`;
+
+  wf.insertAdjacentHTML('beforeend',`
+    <div class="step-block">
+      <div class="step-head">
+        <div><b>${a.date}</b> <span class="arrow">→</span> <b>${b.date}</b>
+          <span style="color:var(--muted)"> · 목표가 ${fmt(a.target)} → ${fmt(b.target)}</span></div>
+        <div class="delta ${dTarget>=0?'up':'down'}">${dTarget>=0?'+':''}${fmt(dTarget)}원</div>
+      </div>
+      <div class="wf">
+        <div class="seg ${bpsPart>=0?'bps':'bpsNeg'}" style="width:${wB}%">${wB>14?(bpsPart>=0?'+':'')+fmt(bpsPart):''}</div>
+        <div class="seg ${multPart>=0?'mult':'multNeg'}" style="width:${wM}%">${wM>14?(multPart>=0?'+':'')+fmt(multPart):''}</div>
+      </div>
+      <div class="wf-legend">
+        <span><i style="background:var(--bps)"></i>BPS(추정) 기여 ${fmt(bpsPart)}원</span>
+        <span><i style="background:var(--mult)"></i>배수(판단) 기여 ${fmt(multPart)}원</span>
+        <span>빗금=마이너스 기여</span>
+      </div>
+      <div class="verdict">${verdict} <span style="color:var(--muted)">(출처: ${BROKER} ${a.date}, ${b.date})</span></div>
+    </div>`);
+}
+
+document.getElementById('overallLine').innerHTML =
+  `전체 기간 목표가 ${fmt(firstT)} → ${fmt(lastT)}원 (${(lastT-firstT>=0?'+':'')+fmt(lastT-firstT)}원) 중 ` +
+  `<b style="color:var(--bps)">추정(BPS) 누적 ${fmt(totBps)}원</b>, ` +
+  `<b style="color:var(--mult)">판단(배수) 누적 ${fmt(totMult)}원</b>.`;
+
+/* STAGE 3 checks (별도 재계산) */
+const checks=[];
+// (1) 산식 역산: BPS×배수 ≈ 목표가
+let formulaOK=true, worst=0;
+SAMPLE.forEach(r=>{
+  if(r.bps!=null&&r.pb!=null&&r.target!=null){
+    const re=r.bps*r.pb, d=Math.abs(re/r.target-1)*100; worst=Math.max(worst,d);
+    if(d>3) formulaOK=false;
+  }
+});
+checks.push({ok:formulaOK,
+  t:`산식 역산 일치: 모든 회차 BPS×P/B ≈ 목표가`,
+  s:`독립 재계산 최대 오차 ${worst.toFixed(1)}% (허용 3%)`});
+
+// (2) 분해 합 = 실제 변화 (교차항 포함 일치)
+let decompOK=true, maxResid=0;
+for(let i=1;i<SAMPLE.length;i++){
+  const a=SAMPLE[i-1],b=SAMPLE[i];
+  const dT=b.target-a.target;
+  const sum=(b.bps-a.bps)*a.pb+(b.pb-a.pb)*b.bps;
+  const resid=Math.abs(sum-dT);
+  maxResid=Math.max(maxResid,resid);
+  if(resid>Math.max(50,Math.abs(dT)*0.01)) decompOK=false;
+}
+checks.push({ok:decompOK,
+  t:`분해 두 조각의 합 = 실제 목표가 변화`,
+  s:`BPS분 + 배수분이 ΔTarget과 일치 (최대 잔차 ${fmt(maxResid)}원)`});
+
+// (3) null로 분해하지 않음
+const nullUsed=SAMPLE.some(r=>r.bps==null||r.pb==null||r.target==null);
+checks.push({ok:!nullUsed,
+  t:`버린 값(null)으로 분해하지 않음`,
+  s:`BPS·P/B·목표가가 모두 있는 회차만 사용`});
+
+// (4) 시간순 정렬 확인
+let sorted=true;
+for(let i=1;i<SAMPLE.length;i++) if(new Date(SAMPLE[i].date)<new Date(SAMPLE[i-1].date)) sorted=false;
+checks.push({ok:sorted,
+  t:`기준일 시간순으로 정렬됨`,
+  s:`인접 구간 분해가 올바른 순서로 계산되도록 확인`});
+
+// (5) 인용 실재 + 출처
+const cited=SAMPLE.every(r=>r.quote&&r.date);
+checks.push({ok:cited,
+  t:`모든 회차에 인용 + 출처(증권사·기준일) 존재`,
+  s:`인용이 추출 데이터에 실재하는지 확인 (실제 적용 시 원문 대조)`});
+
+const cc=document.getElementById('checks');
+checks.forEach(c=>cc.insertAdjacentHTML('beforeend',`
+  <div class="check"><div class="dot ${c.ok?'ok':'bad'}">${c.ok?'✓':'!'}</div>
+  <div class="ct">${c.t}<small>${c.s}</small></div></div>`));
+</script>
+</body>
+</html>

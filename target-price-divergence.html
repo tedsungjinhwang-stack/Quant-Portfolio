@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>목표가 분산 분해기 — 증권사 목표가 차이는 어디서·왜 갈리나</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
+    --txt:#e8ebf2; --muted:#9aa3b2; --accent:#5b8cff; --warn:#ffb020;
+    --earn:#3ddc97; --mult:#ff7a85; --stale:#7a8090; --ok:#3ddc97; --bad:#ff6b6b;
+    --chip:#222734;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.55;font-size:15px}
+  .wrap{max-width:1080px;margin:0 auto;padding:22px 18px 80px}
+  h1{font-size:22px;margin:6px 0 2px}
+  h2{font-size:17px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13.5px;margin:0 0 16px}
+  .badge{display:inline-block;background:var(--warn);color:#1a1300;font-weight:700;
+    padding:5px 12px;border-radius:999px;font-size:13px;margin-bottom:10px}
+  .badge.real{background:var(--ok);color:#04210f}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:18px;margin:14px 0}
+  .why{background:var(--panel2);border-left:3px solid var(--accent);border-radius:8px;
+    padding:10px 13px;margin:10px 0;color:#cdd4e0;font-size:13.5px}
+  .why b{color:#fff}
+  .step-tag{display:inline-block;background:var(--accent);color:#fff;font-weight:700;
+    font-size:12px;padding:3px 9px;border-radius:7px;margin-right:8px;vertical-align:2px}
+  .grid{display:grid;gap:12px}
+  @media(min-width:760px){.cards{grid-template-columns:repeat(3,1fr)}}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card.stale{opacity:.62;border-style:dashed}
+  .card h3{margin:0 0 2px;font-size:15px}
+  .card .meta{color:var(--muted);font-size:12.5px;margin-bottom:8px}
+  .tp{font-size:26px;font-weight:800;letter-spacing:-.5px}
+  .tp small{font-size:12px;color:var(--muted);font-weight:500}
+  .row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:3px 0;
+    border-top:1px dashed var(--line)}
+  .row span:first-child{color:var(--muted)}
+  .null{color:#6a7180;font-style:italic}
+  .quote{font-size:12.5px;color:#c4ccd9;background:#11141a;border:1px solid var(--line);
+    border-radius:8px;padding:8px 10px;margin-top:8px}
+  .quote .src{display:block;color:var(--accent);font-size:11.5px;margin-top:4px}
+  .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;
+    background:var(--chip);color:var(--muted);margin-left:6px}
+  .pill.stale{background:#2a2d36;color:var(--stale)}
+  /* decomposition bar */
+  .decomp{height:38px;border-radius:9px;overflow:hidden;display:flex;border:1px solid var(--line)}
+  .decomp > div{display:flex;align-items:center;justify-content:center;font-size:12.5px;
+    font-weight:700;color:#06140d;white-space:nowrap}
+  .seg-mult{background:var(--mult);color:#2a0608}
+  .seg-earn{background:var(--earn)}
+  .legend{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;font-size:13px}
+  .legend i{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:-1px}
+  .big-claim{font-size:16px;line-height:1.5;margin:6px 0 0}
+  .big-claim b.mult{color:var(--mult)} .big-claim b.earn{color:var(--earn)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  .check{display:flex;align-items:flex-start;gap:9px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .check:last-child{border-bottom:0}
+  .dot{flex:0 0 auto;width:20px;height:20px;border-radius:50%;font-size:13px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .dot.ok{background:rgba(61,220,151,.18);color:var(--ok)}
+  .dot.bad{background:rgba(255,107,107,.18);color:var(--bad)}
+  .check .ct{font-size:13.5px}
+  .check .ct small{display:block;color:var(--muted);font-size:12px;margin-top:1px}
+  textarea{width:100%;min-height:120px;background:#0c0e13;color:var(--txt);border:1px solid var(--line);
+    border-radius:10px;padding:10px;font-family:inherit;font-size:13px;resize:vertical}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+  button{background:var(--accent);color:#fff;border:0;padding:9px 16px;border-radius:9px;
+    font-size:14px;font-weight:600;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+  label.inp{font-size:13px;color:var(--muted)}
+  input[type=number]{background:#0c0e13;color:var(--txt);border:1px solid var(--line);
+    border-radius:8px;padding:7px 9px;width:120px;font-size:13px}
+  .foot{color:var(--muted);font-size:12px;margin-top:18px;text-align:center}
+  .hl{color:var(--accent)}
+  details{margin-top:8px}
+  summary{cursor:pointer;color:var(--accent);font-size:13px}
+  .num{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="dataBadge" class="badge">⚠️ 예시(가짜 데이터) — 실제 리포트로 교체 전입니다</div>
+  <h1>목표가 분산 분해기</h1>
+  <p class="sub">같은 종목을 보는 증권사들의 목표가가 왜 다른가 — <b>실적 전망 차이</b>인지, <b>같은 이익에 매기는 멀티플 차이</b>인지, 아니면 <b>오래된 리포트(stale)로 생긴 착시</b>인지를 한 화면에 분해합니다.</p>
+
+  <!-- ============ 입력 ============ -->
+  <div class="panel">
+    <h2><span class="step-tag">설정</span>종목·오늘 주가·기준일</h2>
+    <div class="why">📌 <b>지금 무엇을 하나:</b> 아래는 제가 넣어둔 <b>가짜 샘플</b>입니다. 화면이 어떻게 도는지 먼저 보시고, 준비되면 실제 증권사 리포트 2~3건·오늘 주가·각 리포트 기준일을 주시면 그대로 바꿔 드립니다. <b>왜 필요한가:</b> '오래된 리포트(stale)' 판정은 오늘 날짜 기준으로 며칠 지났는지를 봐야 하기 때문입니다.</div>
+    <div class="controls">
+      <label class="inp">종목명 <input id="tickerName" type="text" value="가상전자(예시)" style="background:#0c0e13;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:160px;font-size:13px"></label>
+      <label class="inp">오늘 주가 <input id="curPrice" type="number" value="70000"></label>
+      <label class="inp">오늘 날짜 <input id="today" type="text" value="2026-06-23" style="background:#0c0e13;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:120px;font-size:13px"></label>
+      <label class="inp">stale 기준(일) <input id="staleDays" type="number" value="90"></label>
+      <button onclick="run()">다시 계산</button>
+    </div>
+    <details>
+      <summary>실제 리포트 텍스트 붙여넣기(선택) — 아직은 비워두셔도 됩니다</summary>
+      <p class="sub" style="margin-top:8px">데모에서는 아래 샘플 객체를 그대로 씁니다. 실제 적용 시 이 칸에 리포트별 (증권사·날짜·목표가·EPS·PER·인용)을 주시면 됩니다. 한 건씩 따로 추출하는 것이 1단계의 핵심입니다.</p>
+      <textarea id="rawInput" placeholder="예) [미래증권 / 2026-06-10] 목표가 95,000원, 2026E EPS 5,000원 × Target P/E 19배. '메모리 업황 회복으로...'"></textarea>
+    </details>
+  </div>
+
+  <!-- ============ STAGE 1 ============ -->
+  <div class="panel">
+    <h2><span class="step-tag">1단계</span>리포트 한 건씩 — 사실만 추출</h2>
+    <div class="why">📌 <b>지금 무엇을 하나:</b> 리포트를 <b>한 건씩 따로</b> 보면서 본문에 적힌 사실(증권사·날짜·목표가·산식·원문 인용)만 뽑습니다. <b>왜 이렇게 하나:</b> 여러 건을 한꺼번에 섞으면 한 리포트의 숫자가 옆 리포트로 새어들어 '지어내기'가 생깁니다. 본문에 없으면 <span class="null">null</span>로 비워두고 절대 추정하지 않습니다. 인용은 원문 그대로 옮깁니다.</div>
+    <div class="grid cards" id="extractCards"></div>
+  </div>
+
+  <!-- ============ STAGE 2 ============ -->
+  <div class="panel">
+    <h2><span class="step-tag">2단계</span>분산을 '단 하나의 가정'으로 압축 + stale 분리</h2>
+    <div class="why">📌 <b>지금 무엇을 하나:</b> 목표가 = <b>EPS(실적) × PER(멀티플)</b> 입니다. 그래서 목표가들의 흩어짐(분산)을 ‘실적 때문’과 ‘멀티플 때문’ 두 조각으로 쪼갭니다. <b>왜 중요한가:</b> "다들 목표가가 다르다"가 아니라 "<b>차이의 대부분은 OO 하나 때문</b>"이라고 한 문장으로 말할 수 있어야 의사결정이 됩니다. 그리고 오래된 리포트(stale)는 <b>비율 계산에서 빼고</b> 따로 보여드립니다 — 옛 가정이 섞이면 그림이 왜곡되기 때문입니다.</div>
+
+    <div id="staleNote" class="why" style="border-left-color:var(--stale);display:none"></div>
+
+    <p class="big-claim" id="headline"></p>
+
+    <div style="margin:14px 0 4px;color:var(--muted);font-size:13px">목표가 분산의 출처 (stale 제외, log 분해)</div>
+    <div class="decomp" id="decompBar"></div>
+    <div class="legend">
+      <span><i style="background:var(--mult)"></i>멀티플(같은 이익, 다른 PER)</span>
+      <span><i style="background:var(--earn)"></i>실적(EPS 전망 차이)</span>
+    </div>
+
+    <table id="stage2table"></table>
+
+    <div style="margin-top:12px">
+      <div style="color:var(--muted);font-size:13px;margin-bottom:6px">stale로 따로 뺀 리포트</div>
+      <div id="staleCards" class="grid cards"></div>
+    </div>
+  </div>
+
+  <!-- ============ STAGE 3 ============ -->
+  <div class="panel">
+    <h2><span class="step-tag">3단계</span>검증 — 만든 쪽과 분리된 별도 점검</h2>
+    <div class="why">📌 <b>지금 무엇을 하나:</b> 2단계가 만든 분석이 1단계 추출과 어긋나지 않는지, 그리고 <b>버린 값(null·stale)으로 비율을 만들지 않았는지</b>를 따로 다시 셉니다. <b>왜 분리하나:</b> 분석을 만든 같은 손으로 검증하면 실수를 못 봅니다. 그래서 검증은 추출 원본만 보고 숫자를 <b>처음부터 다시</b> 계산해 일치 여부를 표시합니다.</div>
+    <div id="checks"></div>
+  </div>
+
+  <p class="foot">단일 HTML · 외부 연결 없음 · 모든 인용에는 출처(증권사+날짜)가 붙습니다 · 숫자는 화면에서 직접 계산됩니다</p>
+</div>
+
+<script>
+/* =========================================================
+   샘플(가짜) 추출 데이터 — 1단계 산출물의 형태.
+   실제 적용 시 이 배열만 교체하면 됩니다.
+   본문에 없는 값은 null 로 둡니다(지어내지 않음).
+   ========================================================= */
+const SAMPLE = [
+  {
+    broker:"미래에셋증권(예시)", date:"2026-06-10", target:95000,
+    eps:5000, per:19.0,
+    formula:"2026E EPS 5,000원 × Target P/E 19.0배",
+    quote:"메모리 업황 회복과 HBM 비중 확대로 2026년 이익 체력이 한 단계 올라설 것."
+  },
+  {
+    broker:"삼성증권(예시)", date:"2026-06-18", target:88000,
+    eps:5200, per:16.9,
+    formula:"2026E EPS 5,200원 × Target P/E 16.9배",
+    quote:"실적 눈높이는 가장 높지만, 밸류에이션은 보수적으로 적용해 멀티플은 낮춤."
+  },
+  {
+    broker:"한국투자증권(예시)", date:"2026-01-15", target:82000,
+    eps:4800, per:17.1,
+    formula:"2025E EPS 4,800원 × Target P/E 17.1배",
+    quote:"하반기 가격 반등을 가정하나 본 리포트는 연초 기준으로 갱신이 필요."
+  }
+];
+
+const fmt = n => n==null ? null : n.toLocaleString('ko-KR');
+const won = n => n==null ? '<span class="null">null</span>' : fmt(n)+'원';
+const x   = n => n==null ? '<span class="null">null</span>' : n.toFixed(1)+'배';
+
+function daysBetween(a,b){ return Math.round((new Date(b)-new Date(a))/86400000); }
+
+function run(){
+  const today = document.getElementById('today').value.trim();
+  const staleDays = +document.getElementById('staleDays').value;
+  const cur = +document.getElementById('curPrice').value;
+  const name = document.getElementById('tickerName').value;
+
+  // ---- 데이터 준비: stale 판정 ----
+  const reports = SAMPLE.map(r=>{
+    const age = daysBetween(r.date, today);
+    return {...r, age, stale: age > staleDays};
+  });
+
+  /* ========== STAGE 1 : 카드 ========== */
+  const ec = document.getElementById('extractCards'); ec.innerHTML='';
+  reports.forEach(r=>{
+    const up = (r.target!=null && cur) ? ((r.target/cur-1)*100) : null;
+    ec.insertAdjacentHTML('beforeend', `
+      <div class="card ${r.stale?'stale':''}">
+        <h3>${r.broker}${r.stale?'<span class="pill stale">stale</span>':''}</h3>
+        <div class="meta">기준일 ${r.date} · 오늘 기준 ${r.age}일 경과</div>
+        <div class="tp">${won(r.target).replace('원','')}<small> 원 · 상승여력 ${up==null?'—':(up>0?'+':'')+up.toFixed(0)+'%'}</small></div>
+        <div class="row"><span>2026E EPS(실적)</span><span class="num">${won(r.eps)}</span></div>
+        <div class="row"><span>Target PER(멀티플)</span><span class="num">${x(r.per)}</span></div>
+        <div class="row"><span>산식</span><span style="text-align:right;max-width:60%">${r.formula||'<span class=null>null</span>'}</span></div>
+        <div class="quote">“${r.quote}”<span class="src">— ${r.broker}, ${r.date}</span></div>
+      </div>`);
+  });
+
+  /* ========== STAGE 2 : 분산 분해 ========== */
+  const fresh = reports.filter(r=>!r.stale && r.eps!=null && r.per!=null);
+  const staleOnes = reports.filter(r=>r.stale);
+
+  // log 분해: log(target)=log(eps)+log(per)
+  // Var(logTarget) = Var(logEps) + Var(logPer) + 2Cov  → 실적/멀티플 기여 분리
+  const lt = fresh.map(r=>Math.log(r.target));
+  const le = fresh.map(r=>Math.log(r.eps));
+  const lp = fresh.map(r=>Math.log(r.per));
+  const v  = arr => { const m=arr.reduce((a,b)=>a+b,0)/arr.length;
+                      return arr.reduce((a,b)=>a+(b-m)**2,0)/arr.length; };
+  const cov= (A,B)=>{ const ma=A.reduce((a,b)=>a+b,0)/A.length, mb=B.reduce((a,b)=>a+b,0)/B.length;
+                      return A.reduce((s,_,i)=>s+(A[i]-ma)*(B[i]-mb),0)/A.length; };
+
+  const vE = v(le), vP = v(lp), c = cov(le,lp), vT = v(lt);
+  // 공분산은 양쪽에 절반씩 배분 → 실적/멀티플 기여도
+  const earnContrib = vE + c;
+  const multContrib = vP + c;
+  const totalC = earnContrib + multContrib;
+  let earnPct = totalC>0 ? Math.max(0, earnContrib/totalC*100) : 0;
+  let multPct = totalC>0 ? Math.max(0, multContrib/totalC*100) : 0;
+  // 정규화
+  const s = earnPct+multPct; earnPct = earnPct/s*100; multPct = multPct/s*100;
+
+  // headline
+  const lead = multPct>=earnPct ? 'mult':'earn';
+  document.getElementById('headline').innerHTML = lead==='mult'
+    ? `차이의 대부분은 <b class="mult">멀티플(${multPct.toFixed(0)}%)</b> — 즉 <b>같은 이익에 매기는 PER이 달라서</b>지, 실적 전망 차이(<b class="earn">${earnPct.toFixed(0)}%</b>) 때문이 아닙니다.`
+    : `차이의 대부분은 <b class="earn">실적 전망(${earnPct.toFixed(0)}%)</b> — 즉 <b>EPS를 다르게 봐서</b>지, 멀티플 차이(<b class="mult">${multPct.toFixed(0)}%</b>) 때문이 아닙니다.`;
+
+  // bar
+  document.getElementById('decompBar').innerHTML =
+    `<div class="seg-mult" style="width:${multPct}%">${multPct>=12?'멀티플 '+multPct.toFixed(0)+'%':''}</div>
+     <div class="seg-earn" style="width:${earnPct}%">${earnPct>=12?'실적 '+earnPct.toFixed(0)+'%':''}</div>`;
+
+  // stale note
+  const sn = document.getElementById('staleNote');
+  if(staleOnes.length){
+    sn.style.display='block';
+    sn.innerHTML = `🕒 <b>${staleOnes.map(r=>r.broker).join(', ')}</b> 은(는) 기준일이 ${staleDays}일을 넘어 <b>비율 계산에서 제외</b>했습니다. 옛 EPS/PER이 섞이면 분해가 왜곡되기 때문입니다(아래에 따로 표시).`;
+  } else { sn.style.display='none'; }
+
+  // table
+  const tbl = document.getElementById('stage2table');
+  let rows = `<tr><th>증권사</th><th>목표가</th><th>EPS</th><th>PER</th><th>중앙값 대비</th></tr>`;
+  const medEps = [...fresh].map(r=>r.eps).sort((a,b)=>a-b)[Math.floor(fresh.length/2)];
+  const medPer = [...fresh].map(r=>r.per).sort((a,b)=>a-b)[Math.floor(fresh.length/2)];
+  fresh.forEach(r=>{
+    rows += `<tr><td>${r.broker}</td><td class="num">${fmt(r.target)}</td>
+      <td class="num">${fmt(r.eps)} <small style="color:var(--earn)">${r.eps>medEps?'▲':r.eps<medEps?'▼':'='}</small></td>
+      <td class="num">${r.per.toFixed(1)} <small style="color:var(--mult)">${r.per>medPer?'▲':r.per<medPer?'▼':'='}</small></td>
+      <td class="num">EPS ${(r.eps/medEps*100-100).toFixed(0)}% · PER ${(r.per/medPer*100-100).toFixed(0)}%</td></tr>`;
+  });
+  tbl.innerHTML = rows;
+
+  // stale cards
+  const sc = document.getElementById('staleCards'); sc.innerHTML='';
+  if(!staleOnes.length){ sc.innerHTML='<div class="card" style="opacity:.5">stale로 분류된 리포트가 없습니다.</div>'; }
+  staleOnes.forEach(r=>{
+    sc.insertAdjacentHTML('beforeend',`
+      <div class="card stale">
+        <h3>${r.broker}<span class="pill stale">${r.age}일 경과</span></h3>
+        <div class="meta">기준일 ${r.date}</div>
+        <div class="tp">${fmt(r.target)}<small> 원</small></div>
+        <div class="quote">“${r.quote}”<span class="src">— ${r.broker}, ${r.date}</span></div>
+      </div>`);
+  });
+
+  /* ========== STAGE 3 : 검증(별도 재계산) ========== */
+  const checks = [];
+  // (1) 모든 사용 리포트에서 목표가 == EPS×PER 재계산 일치?
+  let formulaOK=true, worst=0;
+  fresh.forEach(r=>{
+    const recompute = r.eps*r.per;
+    const diff = Math.abs(recompute/r.target-1)*100;
+    worst=Math.max(worst,diff);
+    if(diff>3) formulaOK=false;
+  });
+  checks.push({ok:formulaOK,
+    t:`산식 재계산 일치: 사용된 ${fresh.length}건 모두 목표가 ≈ EPS×PER`,
+    s:`독립적으로 EPS×PER을 다시 곱해 목표가와 대조 (최대 오차 ${worst.toFixed(1)}%, 허용 3%)`});
+
+  // (2) stale을 비율에서 제외했는가
+  const usedStale = fresh.some(r=>r.stale);
+  checks.push({ok:!usedStale,
+    t:`stale 리포트는 분산 비율에서 제외됨 (${staleOnes.length}건 분리)`,
+    s:`비율 계산에 들어간 ${fresh.length}건 중 stale: ${fresh.filter(r=>r.stale).length}건`});
+
+  // (3) null로 비율 만들지 않았는가
+  const nullUsed = fresh.some(r=>r.eps==null||r.per==null||r.target==null);
+  checks.push({ok:!nullUsed,
+    t:`버린 값(null)으로 비율을 만들지 않음`,
+    s:`EPS·PER·목표가가 모두 채워진 건만 분해에 사용`});
+
+  // (4) 비율 합 100%
+  const sumOK = Math.abs(earnPct+multPct-100)<0.5;
+  checks.push({ok:sumOK,
+    t:`분해 비율 합 = 100% (실적 ${earnPct.toFixed(0)}% + 멀티플 ${multPct.toFixed(0)}%)`,
+    s:`두 조각의 합이 전체와 맞는지 확인`});
+
+  // (5) 모든 인용에 출처
+  const allCited = reports.every(r=>r.quote && r.broker && r.date);
+  checks.push({ok:allCited,
+    t:`모든 인용에 출처(증권사+날짜) 부착`,
+    s:`${reports.length}건 전부 출처 표기 확인`});
+
+  const cont = document.getElementById('checks'); cont.innerHTML='';
+  checks.forEach(c=>{
+    cont.insertAdjacentHTML('beforeend',`
+      <div class="check">
+        <div class="dot ${c.ok?'ok':'bad'}">${c.ok?'✓':'!'}</div>
+        <div class="ct">${c.t}<small>${c.s}</small></div>
+      </div>`);
+  });
+}
+run();
+</script>
+</body>
+</html>

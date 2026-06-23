@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>위클리 시그널 다이제스트 — 한 주치 자료를 운용 관점 핵심만</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
+    --txt:#e8ebf2; --muted:#9aa3b2; --accent:#5b8cff; --warn:#ffb020;
+    --high:#ff7a85; --med:#ffce5a; --skip:#7a8090; --verify:#b08cff;
+    --ok:#3ddc97; --bad:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.55;font-size:15px}
+  .wrap{max-width:1020px;margin:0 auto;padding:22px 18px 80px}
+  h1{font-size:22px;margin:6px 0 2px}
+  h2{font-size:17px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13.5px;margin:0 0 16px}
+  .badge{display:inline-block;background:var(--warn);color:#1a1300;font-weight:700;
+    padding:5px 12px;border-radius:999px;font-size:13px;margin-bottom:10px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0}
+  .why{background:var(--panel2);border-left:3px solid var(--accent);border-radius:8px;
+    padding:10px 13px;margin:10px 0;color:#cdd4e0;font-size:13.5px}
+  .why b{color:#fff}
+  .step-tag{display:inline-block;background:var(--accent);color:#fff;font-weight:700;font-size:12px;
+    padding:3px 9px;border-radius:7px;margin-right:8px;vertical-align:2px}
+  /* signal 3줄 */
+  .signal{background:linear-gradient(135deg,#1b2030,#171a21);border:1px solid var(--line);
+    border-radius:12px;padding:14px 16px;margin:8px 0;display:flex;gap:12px;align-items:flex-start}
+  .signal .n{flex:0 0 auto;width:26px;height:26px;border-radius:8px;background:var(--accent);
+    color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .signal .tx{font-size:15px}
+  .signal .tx small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+  /* insight cards */
+  .insight{border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0;background:var(--panel2)}
+  .insight.high{border-left:4px solid var(--high)}
+  .insight.med{border-left:4px solid var(--med)}
+  .tagline{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  .lvl{font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px}
+  .lvl.high{background:rgba(255,122,133,.18);color:var(--high)}
+  .lvl.med{background:rgba(255,206,90,.18);color:var(--med)}
+  .theme{font-size:11px;color:var(--muted);background:#222734;padding:3px 9px;border-radius:999px}
+  .insight h3{margin:0;font-size:15.5px}
+  .insight .body{font-size:14px;color:#d6dce6;margin:6px 0}
+  .quote{font-size:12.5px;color:#c4ccd9;background:#11141a;border:1px solid var(--line);
+    border-radius:8px;padding:8px 10px;margin-top:8px}
+  .quote .src{display:block;color:var(--accent);font-size:11.5px;margin-top:4px}
+  .ts{color:var(--verify);font-weight:700}
+  /* watch / skip */
+  .twocol{display:grid;gap:12px}
+  @media(min-width:720px){.twocol{grid-template-columns:1fr 1fr}}
+  .listbox{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .listbox h4{margin:0 0 8px;font-size:14px}
+  .listbox.watch h4{color:var(--ok)} .listbox.skip h4{color:var(--skip)}
+  .litem{font-size:13.5px;padding:6px 0;border-top:1px dashed var(--line);display:flex;gap:8px}
+  .litem:first-of-type{border-top:0}
+  .litem .src2{color:var(--muted);font-size:11.5px}
+  /* verify */
+  .vitem{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .vitem:last-child{border-bottom:0}
+  .vdot{flex:0 0 auto;width:20px;height:20px;border-radius:50%;background:rgba(176,140,255,.18);
+    color:var(--verify);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:12px;margin-top:1px}
+  .vitem .vt{font-size:13.5px}
+  .vitem .vt small{display:block;color:var(--muted);font-size:12px;margin-top:1px}
+  textarea{width:100%;min-height:90px;background:#0c0e13;color:var(--txt);border:1px solid var(--line);
+    border-radius:10px;padding:10px;font-family:inherit;font-size:13px;resize:vertical;margin-top:8px}
+  button{background:var(--accent);color:#fff;border:0;padding:9px 16px;border-radius:9px;
+    font-size:14px;font-weight:600;cursor:pointer;margin-top:10px}
+  .foot{color:var(--muted);font-size:12px;margin-top:18px;text-align:center}
+  .src-chip{font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="badge">⚠️ 예시(가짜 데이터) — 아래는 샘플 텍스트로 돌린 결과입니다</div>
+  <h1>위클리 시그널 다이제스트</h1>
+  <p class="sub">한 주간 쌓인 공개 리포트·인터뷰·영상(자막)을 다 읽는 대신, <b>내 운용 관점에서 의미 있는 것만</b> 남깁니다. 순서: <b>위클리 시그널 3줄 → 핵심 인사이트(HIGH/MEDIUM) → 볼 것/건너뛸 것 → 검증 필요</b>.</p>
+
+  <div class="panel">
+    <h2><span class="step-tag">입력</span>자료 붙여넣기 (자동 수집은 건너뜀)</h2>
+    <div class="why">📌 <b>지금 무엇을 하나:</b> 자동 수집은 생략하고, 곧 붙여넣으실 <b>공개 리포트·자막 텍스트 2~3건</b>으로 '생성 단계'부터 돌립니다. <b>왜 이렇게 하나:</b> 입력에 없는 내용을 지어내지 않기 위해, 다이제스트는 오직 붙여넣은 원문에서만 인용을 뽑습니다. 영상이면 <span class="ts">[타임스탬프]</span>를, 글이면 (매체·날짜)를 출처로 답니다. 지금 화면은 아래 <b>가짜 샘플</b>로 작동 모습을 보여드리는 것입니다.</div>
+    <textarea placeholder="여기에 리포트/인터뷰/영상 자막 텍스트를 붙여넣으세요. 예) [유튜브 IR채널 12:40] '내년 설비투자는 올해 대비 두 자릿수 줄일 계획' ..."></textarea>
+    <button onclick="alert('실제 적용 단계에서 붙여넣은 텍스트로 이 다이제스트를 다시 생성합니다. 지금은 샘플 화면입니다.')">붙여넣은 자료로 생성</button>
+  </div>
+
+  <!-- 위클리 시그널 3줄 -->
+  <div class="panel">
+    <h2><span class="step-tag">결과 1</span>위클리 시그널 — 3줄</h2>
+    <div class="why">📌 <b>왜 3줄인가:</b> 한 주를 한 호흡에 파악하기 위해, 운용 판단을 바꿀 수 있는 것만 3개로 압축합니다. 각 줄은 아래 인사이트의 근거와 연결됩니다.</div>
+    <div class="signal"><div class="n">1</div><div class="tx">반도체 설비투자 축소 발언이 복수 채널에서 반복 — <b>공급 둔화 → 가격 우호</b> 쪽 신호.<small>근거: 인사이트 ①, ② (HIGH)</small></div></div>
+    <div class="signal"><div class="n">2</div><div class="tx">소비 관련 코멘트는 <b>방향이 엇갈림</b> — 한 곳은 회복, 한 곳은 둔화. 단정 금물.<small>근거: 인사이트 ③ (MEDIUM) + 검증 필요 항목</small></div></div>
+    <div class="signal"><div class="n">3</div><div class="tx">신규 규제 언급은 <b>1차 소스 미확인</b> — 행동 전에 원문 확인 필요.<small>근거: 검증 필요 1번</small></div></div>
+  </div>
+
+  <!-- 핵심 인사이트 -->
+  <div class="panel">
+    <h2><span class="step-tag">결과 2</span>핵심 인사이트 (HIGH / MEDIUM)</h2>
+    <div class="why">📌 <b>지금 무엇을 하나:</b> 각 인사이트에 <b>중요도(HIGH/MEDIUM)</b>를 매기고, 반드시 <b>원문 인용 + 출처</b>를 함께 답니다. <b>왜 인용을 다나:</b> 요약만 믿지 않고 원문으로 곧장 되짚을 수 있어야 하기 때문입니다. 영상 출처는 타임스탬프로 답니다.</div>
+
+    <div class="insight high">
+      <div class="tagline"><span class="lvl high">HIGH</span><span class="theme">반도체 · 공급</span></div>
+      <h3>① 주요 업체 설비투자(CapEx) 축소 시사 — 공급 둔화 가능성</h3>
+      <div class="body">내년 투자 규모를 두 자릿수로 줄인다는 발언. 공급 증가 속도가 늦춰지면 가격에 우호적.</div>
+      <div class="quote">“내년 설비투자는 올해 대비 두 자릿수 줄일 계획입니다.”<span class="src">— [영상] IR 컨퍼런스콜 자막 <span class="ts">[12:40]</span>, 2026-06-19</span></div>
+    </div>
+
+    <div class="insight high">
+      <div class="tagline"><span class="lvl high">HIGH</span><span class="theme">반도체 · 수요</span></div>
+      <h3>② HBM 수요 강세 코멘트 — 믹스 개선 지속</h3>
+      <div class="body">고부가 메모리 비중 확대가 마진을 끌어올린다는 진단. ①과 합쳐 가격·믹스 양방향 우호.</div>
+      <div class="quote">“HBM 비중 확대로 평균판가와 마진이 동반 개선되고 있습니다.”<span class="src">— [리포트] OO증권 산업분석, 2026-06-17</span></div>
+    </div>
+
+    <div class="insight med">
+      <div class="tagline"><span class="lvl med">MEDIUM</span><span class="theme">소비 · 방향 불확실</span></div>
+      <h3>③ 소비 회복 vs 둔화 — 코멘트 엇갈림</h3>
+      <div class="body">한 인터뷰는 하반기 회복을, 다른 자료는 둔화를 시사. 합의가 없어 단정 불가 → 추적 관찰 대상.</div>
+      <div class="quote">“하반기로 갈수록 소비 심리가 살아나는 흐름입니다.”<span class="src">— [영상] 애널리스트 인터뷰 <span class="ts">[03:15]</span>, 2026-06-18</span></div>
+    </div>
+  </div>
+
+  <!-- 볼 것 / 건너뛸 것 -->
+  <div class="panel">
+    <h2><span class="step-tag">결과 3</span>볼 것 / 건너뛸 것</h2>
+    <div class="why">📌 <b>왜 나누나:</b> 시간은 한정돼 있으니, 원문까지 직접 봐야 할 자료와 요약으로 충분한 자료를 갈라 드립니다.</div>
+    <div class="twocol">
+      <div class="listbox watch">
+        <h4>✅ 볼 것 (원문 확인 권장)</h4>
+        <div class="litem"><div>IR 컨퍼런스콜 자막 — CapEx 발언 맥락 전체<div class="src2">[영상] 2026-06-19 · 12:00~14:00 구간</div></div></div>
+        <div class="litem"><div>OO증권 산업분석 — HBM 판가 가정 표<div class="src2">[리포트] 2026-06-17 · p.4 추정치</div></div></div>
+      </div>
+      <div class="listbox skip">
+        <h4>⏭️ 건너뛸 것 (요약으로 충분)</h4>
+        <div class="litem"><div>일반 시황 코멘트 — 새 정보 없음<div class="src2">[리포트] 데일리, 2026-06-20</div></div></div>
+        <div class="litem"><div>지난주 실적 리뷰 재탕<div class="src2">[영상] 2026-06-16</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 검증 필요 -->
+  <div class="panel">
+    <h2><span class="step-tag">결과 4</span>검증 필요 (불확실 → 분리)</h2>
+    <div class="why">📌 <b>지금 무엇을 하나:</b> 입력에서 <b>단정하기 이른 것</b>은 인사이트에 섞지 않고 여기로 따로 뺍니다. <b>왜 분리하나:</b> 1차 소스가 없거나 서로 충돌하는 내용을 확정처럼 다루면 위험하기 때문입니다. 지어내지 않고 '확인 필요'로 남깁니다.</div>
+    <div class="vitem"><div class="vdot">?</div><div class="vt">신규 규제 언급의 1차 소스 미확인<small>한 자막에서만 등장 · 원문/공시로 교차 확인 필요 — [영상] [21:05], 2026-06-18</small></div></div>
+    <div class="vitem"><div class="vdot">?</div><div class="vt">소비 회복/둔화 코멘트 충돌<small>인사이트 ③의 두 출처가 상반 · 어느 쪽이 우세한지 데이터 확인 필요</small></div></div>
+    <div class="vitem"><div class="vdot">?</div><div class="vt">CapEx '두 자릿수'의 정확한 수치 불명<small>10%대인지 20%대인지 미상 · 발표자료 원문 수치 확인 필요 — [영상] [12:40]</small></div></div>
+  </div>
+
+  <p class="foot">단일 HTML · 외부 연결 없음 · 입력에 없는 내용은 생성하지 않음 · 모든 인사이트에 출처(영상은 타임스탬프) 부착</p>
+</div>
+</body>
+</html>
