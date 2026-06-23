@@ -3,22 +3,22 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>위클리 시그널 다이제스트 — 한 주치 자료를 운용 관점 핵심만</title>
+<title>모닝 다이제스트 — 한 주치 자료를 운용 관점 핵심만</title>
 <style>
   :root{
     --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
     --txt:#e8ebf2; --muted:#9aa3b2; --accent:#5b8cff; --warn:#ffb020;
     --high:#ff7a85; --med:#ffce5a; --skip:#7a8090; --verify:#b08cff;
-    --ok:#3ddc97; --bad:#ff6b6b;
+    --ok:#3ddc97; --bad:#ff6b6b; --chip:#222734;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--txt);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
     line-height:1.55;font-size:15px}
-  .wrap{max-width:1020px;margin:0 auto;padding:22px 18px 80px}
-  h1{font-size:22px;margin:6px 0 2px}
+  .wrap{max-width:1040px;margin:0 auto;padding:20px 18px 80px}
+  h1{font-size:23px;margin:4px 0 2px}
   h2{font-size:17px;margin:0 0 4px}
-  .sub{color:var(--muted);font-size:13.5px;margin:0 0 16px}
+  .sub{color:var(--muted);font-size:13.5px;margin:0 0 14px}
   .badge{display:inline-block;background:var(--warn);color:#1a1300;font-weight:700;
     padding:5px 12px;border-radius:999px;font-size:13px;margin-bottom:10px}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0}
@@ -27,37 +27,71 @@
   .why b{color:#fff}
   .step-tag{display:inline-block;background:var(--accent);color:#fff;font-weight:700;font-size:12px;
     padding:3px 9px;border-radius:7px;margin-right:8px;vertical-align:2px}
-  /* signal 3줄 */
+
+  /* meta chips */
+  .meta-row{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
+  .chip{font-size:12px;color:var(--muted);background:var(--chip);border:1px solid var(--line);
+    padding:4px 10px;border-radius:999px}
+  .chip b{color:var(--txt)}
+  .chip.live{color:var(--warn);border-color:#5a4a1a}
+
+  /* conversion meter */
+  .conv{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#1b2030,#161a21);
+    border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0;flex-wrap:wrap}
+  .conv .from{font-size:14px;color:var(--muted)} .conv .from b{color:var(--txt);font-size:18px}
+  .conv .ar{font-size:18px;color:var(--accent)}
+  .conv .to{font-size:14px;color:var(--ok)} .conv .to b{font-size:22px}
+  .conv .save{margin-left:auto;font-size:12.5px;color:var(--muted)}
+
+  /* persona */
+  .persona{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+  .persona textarea{flex:1;min-width:240px;min-height:54px;background:#0c0e13;color:var(--txt);
+    border:1px solid var(--line);border-radius:10px;padding:9px;font-family:inherit;font-size:13px;resize:vertical}
+
+  /* signal */
   .signal{background:linear-gradient(135deg,#1b2030,#171a21);border:1px solid var(--line);
-    border-radius:12px;padding:14px 16px;margin:8px 0;display:flex;gap:12px;align-items:flex-start}
+    border-radius:12px;padding:13px 15px;margin:8px 0;display:flex;gap:12px;align-items:flex-start}
   .signal .n{flex:0 0 auto;width:26px;height:26px;border-radius:8px;background:var(--accent);
     color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
-  .signal .tx{font-size:15px}
+  .signal .tx{font-size:14.5px}
   .signal .tx small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+
+  /* callout */
+  .callout{border:1px solid var(--high);border-radius:14px;padding:16px;margin:12px 0;
+    background:linear-gradient(135deg,#241519,#1a1418)}
+  .callout .klabel{font-size:11px;font-weight:800;color:var(--high);letter-spacing:.5px}
+  .callout.med{border-color:var(--med);background:linear-gradient(135deg,#241f12,#1a1812)}
+  .callout.med .klabel{color:var(--med)}
+  .callout h3{margin:4px 0 4px;font-size:17px}
+
   /* insight cards */
   .insight{border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0;background:var(--panel2)}
   .insight.high{border-left:4px solid var(--high)}
-  .insight.med{border-left:4px solid var(--med)}
-  .tagline{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  .insight.medium{border-left:4px solid var(--med)}
+  .tagline{display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap}
   .lvl{font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px}
   .lvl.high{background:rgba(255,122,133,.18);color:var(--high)}
-  .lvl.med{background:rgba(255,206,90,.18);color:var(--med)}
-  .theme{font-size:11px;color:var(--muted);background:#222734;padding:3px 9px;border-radius:999px}
+  .lvl.medium{background:rgba(255,206,90,.18);color:var(--med)}
+  .stype{font-size:11px;color:var(--muted);background:var(--chip);padding:3px 9px;border-radius:999px}
   .insight h3{margin:0;font-size:15.5px}
   .insight .body{font-size:14px;color:#d6dce6;margin:6px 0}
   .quote{font-size:12.5px;color:#c4ccd9;background:#11141a;border:1px solid var(--line);
     border-radius:8px;padding:8px 10px;margin-top:8px}
-  .quote .src{display:block;color:var(--accent);font-size:11.5px;margin-top:4px}
-  .ts{color:var(--verify);font-weight:700}
-  /* watch / skip */
+  .quote .src{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;color:var(--accent);font-size:11.5px;margin-top:5px}
+  .jump{color:var(--verify);font-weight:700;text-decoration:none}
+  .jump:hover{text-decoration:underline}
+
+  /* watch/skip */
   .twocol{display:grid;gap:12px}
   @media(min-width:720px){.twocol{grid-template-columns:1fr 1fr}}
   .listbox{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px}
   .listbox h4{margin:0 0 8px;font-size:14px}
   .listbox.watch h4{color:var(--ok)} .listbox.skip h4{color:var(--skip)}
-  .litem{font-size:13.5px;padding:6px 0;border-top:1px dashed var(--line);display:flex;gap:8px}
+  .litem{font-size:13.5px;padding:7px 0;border-top:1px dashed var(--line);display:flex;gap:8px}
   .litem:first-of-type{border-top:0}
+  .litem .mk{flex:0 0 auto}
   .litem .src2{color:var(--muted);font-size:11.5px}
+
   /* verify */
   .vitem{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--line)}
   .vitem:last-child{border-bottom:0}
@@ -65,92 +99,307 @@
     color:var(--verify);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:12px;margin-top:1px}
   .vitem .vt{font-size:13.5px}
   .vitem .vt small{display:block;color:var(--muted);font-size:12px;margin-top:1px}
-  textarea{width:100%;min-height:90px;background:#0c0e13;color:var(--txt);border:1px solid var(--line);
+
+  /* pipeline */
+  .pipe{display:grid;gap:10px}
+  @media(min-width:720px){.pipe{grid-template-columns:repeat(4,1fr)}}
+  .pstep{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:12px}
+  .pstep .pnum{font-size:11px;font-weight:800;color:var(--accent)}
+  .pstep h4{margin:3px 0 4px;font-size:13.5px}
+  .pstep p{margin:0;font-size:12px;color:var(--muted)}
+  .pstep .model{display:inline-block;margin-top:7px;font-size:10.5px;background:#11141a;border:1px solid var(--line);
+    color:var(--txt);padding:2px 7px;border-radius:6px}
+
+  /* catalog */
+  .grp-title{font-size:13px;color:var(--muted);margin:14px 0 6px;font-weight:600}
+  .chgrid{display:grid;gap:10px}
+  @media(min-width:680px){.chgrid{grid-template-columns:repeat(2,1fr)}}
+  .chcard{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:12px;display:flex;gap:10px;align-items:flex-start}
+  .chcard input{margin-top:3px}
+  .chcard .cname{font-size:13.5px;font-weight:600}
+  .chcard .cdesc{font-size:12px;color:var(--muted);margin-top:2px}
+  .chcard .cfreq{font-size:10.5px;color:var(--accent);margin-top:4px}
+  .chcard.best{opacity:.7}
+  .chcard .be{font-size:10px;color:var(--warn);margin-left:4px}
+
+  textarea.paste{width:100%;min-height:90px;background:#0c0e13;color:var(--txt);border:1px solid var(--line);
     border-radius:10px;padding:10px;font-family:inherit;font-size:13px;resize:vertical;margin-top:8px}
   button{background:var(--accent);color:#fff;border:0;padding:9px 16px;border-radius:9px;
     font-size:14px;font-weight:600;cursor:pointer;margin-top:10px}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
   .foot{color:var(--muted);font-size:12px;margin-top:18px;text-align:center}
-  .src-chip{font-size:11px;color:var(--muted)}
+  details{margin-top:8px} summary{cursor:pointer;color:var(--accent);font-size:13px}
+  .count-pill{font-size:11px;color:var(--muted);font-weight:500}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <div class="badge">⚠️ 예시(가짜 데이터) — 아래는 샘플 텍스트로 돌린 결과입니다</div>
-  <h1>위클리 시그널 다이제스트</h1>
-  <p class="sub">한 주간 쌓인 공개 리포트·인터뷰·영상(자막)을 다 읽는 대신, <b>내 운용 관점에서 의미 있는 것만</b> 남깁니다. 순서: <b>위클리 시그널 3줄 → 핵심 인사이트(HIGH/MEDIUM) → 볼 것/건너뛸 것 → 검증 필요</b>.</p>
+  <div class="badge">⚠️ 예시(가짜 데이터) — 사전 생성된 샘플 다이제스트입니다</div>
+  <h1>모닝 다이제스트</h1>
+  <p class="sub">한 주간의 인터뷰·리포트·영상을 에이전트가 대신 읽고, <b>출처가 검증된 인사이트만</b> 한 화면에 남깁니다.</p>
 
+  <!-- 메타 + 변환 지표 -->
+  <div class="meta-row" id="metaRow"></div>
+  <div class="conv" id="conv"></div>
+
+  <!-- 페르소나 -->
   <div class="panel">
-    <h2><span class="step-tag">입력</span>자료 붙여넣기 (자동 수집은 건너뜀)</h2>
-    <div class="why">📌 <b>지금 무엇을 하나:</b> 자동 수집은 생략하고, 곧 붙여넣으실 <b>공개 리포트·자막 텍스트 2~3건</b>으로 '생성 단계'부터 돌립니다. <b>왜 이렇게 하나:</b> 입력에 없는 내용을 지어내지 않기 위해, 다이제스트는 오직 붙여넣은 원문에서만 인용을 뽑습니다. 영상이면 <span class="ts">[타임스탬프]</span>를, 글이면 (매체·날짜)를 출처로 답니다. 지금 화면은 아래 <b>가짜 샘플</b>로 작동 모습을 보여드리는 것입니다.</div>
-    <textarea placeholder="여기에 리포트/인터뷰/영상 자막 텍스트를 붙여넣으세요. 예) [유튜브 IR채널 12:40] '내년 설비투자는 올해 대비 두 자릿수 줄일 계획' ..."></textarea>
-    <button onclick="alert('실제 적용 단계에서 붙여넣은 텍스트로 이 다이제스트를 다시 생성합니다. 지금은 샘플 화면입니다.')">붙여넣은 자료로 생성</button>
+    <h2><span class="step-tag">운용 관점</span>페르소나 — "무엇을 중요하게 볼지"</h2>
+    <div class="why">📌 <b>왜 먼저 정하나:</b> 같은 자료라도 <b>이 관점에 따라 HIGH로 뽑히는 항목이 달라집니다.</b> 아래 문구를 본인 운용 컨텍스트로 바꾸면(개별 종목 담당·섹터·매크로 등) 등급이 다시 매겨집니다. 지금은 데모 기본값입니다.</div>
+    <div class="persona">
+      <textarea id="persona">국내 기관 글로벌 주식·멀티에셋 운용역. 사업모델·경영진 코멘트, 자산배분, 금리·크레딧 사이클을 중시. 단기 시황보다 구조적 변화와 자금 흐름에 민감.</textarea>
+    </div>
   </div>
 
-  <!-- 위클리 시그널 3줄 -->
+  <!-- 위클리 시그널 -->
   <div class="panel">
     <h2><span class="step-tag">결과 1</span>위클리 시그널 — 3줄</h2>
-    <div class="why">📌 <b>왜 3줄인가:</b> 한 주를 한 호흡에 파악하기 위해, 운용 판단을 바꿀 수 있는 것만 3개로 압축합니다. 각 줄은 아래 인사이트의 근거와 연결됩니다.</div>
-    <div class="signal"><div class="n">1</div><div class="tx">반도체 설비투자 축소 발언이 복수 채널에서 반복 — <b>공급 둔화 → 가격 우호</b> 쪽 신호.<small>근거: 인사이트 ①, ② (HIGH)</small></div></div>
-    <div class="signal"><div class="n">2</div><div class="tx">소비 관련 코멘트는 <b>방향이 엇갈림</b> — 한 곳은 회복, 한 곳은 둔화. 단정 금물.<small>근거: 인사이트 ③ (MEDIUM) + 검증 필요 항목</small></div></div>
-    <div class="signal"><div class="n">3</div><div class="tx">신규 규제 언급은 <b>1차 소스 미확인</b> — 행동 전에 원문 확인 필요.<small>근거: 검증 필요 1번</small></div></div>
+    <div class="why">📌 <b>왜 3줄인가:</b> 한 주를 한 호흡에 파악하도록, 운용 판단을 바꿀 수 있는 것만 정확히 3개로 압축합니다. 각 줄은 아래 인사이트 근거와 연결됩니다.</div>
+    <div id="signals"></div>
   </div>
 
   <!-- 핵심 인사이트 -->
   <div class="panel">
-    <h2><span class="step-tag">결과 2</span>핵심 인사이트 (HIGH / MEDIUM)</h2>
-    <div class="why">📌 <b>지금 무엇을 하나:</b> 각 인사이트에 <b>중요도(HIGH/MEDIUM)</b>를 매기고, 반드시 <b>원문 인용 + 출처</b>를 함께 답니다. <b>왜 인용을 다나:</b> 요약만 믿지 않고 원문으로 곧장 되짚을 수 있어야 하기 때문입니다. 영상 출처는 타임스탬프로 답니다.</div>
-
-    <div class="insight high">
-      <div class="tagline"><span class="lvl high">HIGH</span><span class="theme">반도체 · 공급</span></div>
-      <h3>① 주요 업체 설비투자(CapEx) 축소 시사 — 공급 둔화 가능성</h3>
-      <div class="body">내년 투자 규모를 두 자릿수로 줄인다는 발언. 공급 증가 속도가 늦춰지면 가격에 우호적.</div>
-      <div class="quote">“내년 설비투자는 올해 대비 두 자릿수 줄일 계획입니다.”<span class="src">— [영상] IR 컨퍼런스콜 자막 <span class="ts">[12:40]</span>, 2026-06-19</span></div>
-    </div>
-
-    <div class="insight high">
-      <div class="tagline"><span class="lvl high">HIGH</span><span class="theme">반도체 · 수요</span></div>
-      <h3>② HBM 수요 강세 코멘트 — 믹스 개선 지속</h3>
-      <div class="body">고부가 메모리 비중 확대가 마진을 끌어올린다는 진단. ①과 합쳐 가격·믹스 양방향 우호.</div>
-      <div class="quote">“HBM 비중 확대로 평균판가와 마진이 동반 개선되고 있습니다.”<span class="src">— [리포트] OO증권 산업분석, 2026-06-17</span></div>
-    </div>
-
-    <div class="insight med">
-      <div class="tagline"><span class="lvl med">MEDIUM</span><span class="theme">소비 · 방향 불확실</span></div>
-      <h3>③ 소비 회복 vs 둔화 — 코멘트 엇갈림</h3>
-      <div class="body">한 인터뷰는 하반기 회복을, 다른 자료는 둔화를 시사. 합의가 없어 단정 불가 → 추적 관찰 대상.</div>
-      <div class="quote">“하반기로 갈수록 소비 심리가 살아나는 흐름입니다.”<span class="src">— [영상] 애널리스트 인터뷰 <span class="ts">[03:15]</span>, 2026-06-18</span></div>
-    </div>
+    <h2><span class="step-tag">결과 2</span>핵심 인사이트 <span class="count-pill" id="insCount"></span></h2>
+    <div class="why">📌 <b>지금 무엇을 하나:</b> 각 인사이트에 <b>중요도(HIGH/MEDIUM)</b>를 매기고, 반드시 <b>원문 인용 + 출처</b>를 답니다. 첫 HIGH는 <b>'이번 주 핵심'</b>으로 크게 띄웁니다(HIGH가 없으면 MEDIUM을 정직하게 'MEDIUM·이번 주 참고'로). 영상 출처는 <b>▶ mm:ss 에서 보기</b>, 문서는 <b>▶ 원문에서 보기</b>로 1차 자료에 바로 점프합니다.</div>
+    <div id="callout"></div>
+    <div id="insights"></div>
   </div>
 
-  <!-- 볼 것 / 건너뛸 것 -->
+  <!-- 볼것/건너뛸것 -->
   <div class="panel">
-    <h2><span class="step-tag">결과 3</span>볼 것 / 건너뛸 것</h2>
-    <div class="why">📌 <b>왜 나누나:</b> 시간은 한정돼 있으니, 원문까지 직접 봐야 할 자료와 요약으로 충분한 자료를 갈라 드립니다.</div>
+    <h2><span class="step-tag">결과 3</span>볼 것 / 건너뛸 것 <span class="count-pill" id="wsCount"></span></h2>
+    <div class="why">📌 <b>왜 나누나:</b> 입력된 <b>모든 출처</b>에 watch/skip 판정과 한 줄 이유를 답니다. 원문까지 봐야 할 것과 요약으로 충분한 것을 갈라 시간을 아낍니다.</div>
     <div class="twocol">
-      <div class="listbox watch">
-        <h4>✅ 볼 것 (원문 확인 권장)</h4>
-        <div class="litem"><div>IR 컨퍼런스콜 자막 — CapEx 발언 맥락 전체<div class="src2">[영상] 2026-06-19 · 12:00~14:00 구간</div></div></div>
-        <div class="litem"><div>OO증권 산업분석 — HBM 판가 가정 표<div class="src2">[리포트] 2026-06-17 · p.4 추정치</div></div></div>
-      </div>
-      <div class="listbox skip">
-        <h4>⏭️ 건너뛸 것 (요약으로 충분)</h4>
-        <div class="litem"><div>일반 시황 코멘트 — 새 정보 없음<div class="src2">[리포트] 데일리, 2026-06-20</div></div></div>
-        <div class="litem"><div>지난주 실적 리뷰 재탕<div class="src2">[영상] 2026-06-16</div></div></div>
-      </div>
+      <div class="listbox watch"><h4>✅ 볼 것 (원문 확인 권장)</h4><div id="watchList"></div></div>
+      <div class="listbox skip"><h4>⏭️ 건너뛸 것 (요약으로 충분)</h4><div id="skipList"></div></div>
     </div>
   </div>
 
   <!-- 검증 필요 -->
   <div class="panel">
-    <h2><span class="step-tag">결과 4</span>검증 필요 (불확실 → 분리)</h2>
-    <div class="why">📌 <b>지금 무엇을 하나:</b> 입력에서 <b>단정하기 이른 것</b>은 인사이트에 섞지 않고 여기로 따로 뺍니다. <b>왜 분리하나:</b> 1차 소스가 없거나 서로 충돌하는 내용을 확정처럼 다루면 위험하기 때문입니다. 지어내지 않고 '확인 필요'로 남깁니다.</div>
-    <div class="vitem"><div class="vdot">?</div><div class="vt">신규 규제 언급의 1차 소스 미확인<small>한 자막에서만 등장 · 원문/공시로 교차 확인 필요 — [영상] [21:05], 2026-06-18</small></div></div>
-    <div class="vitem"><div class="vdot">?</div><div class="vt">소비 회복/둔화 코멘트 충돌<small>인사이트 ③의 두 출처가 상반 · 어느 쪽이 우세한지 데이터 확인 필요</small></div></div>
-    <div class="vitem"><div class="vdot">?</div><div class="vt">CapEx '두 자릿수'의 정확한 수치 불명<small>10%대인지 20%대인지 미상 · 발표자료 원문 수치 확인 필요 — [영상] [12:40]</small></div></div>
+    <h2><span class="step-tag">결과 4</span>검증 필요 <span class="count-pill" id="lcCount"></span></h2>
+    <div class="why">📌 <b>지금 무엇을 하나:</b> 자동 자막·요약 기반이라, <b>주관적 전망·미확인 수치·모델 추정치</b>는 본문 인사이트에 섞지 않고 여기로 분리합니다. <b>건너뛰지 마세요</b> — 의사결정 전에 사람이 원본으로 확인할 목록입니다.</div>
+    <div id="lowConf"></div>
   </div>
 
-  <p class="foot">단일 HTML · 외부 연결 없음 · 입력에 없는 내용은 생성하지 않음 · 모든 인사이트에 출처(영상은 타임스탬프) 부착</p>
+  <!-- 파이프라인 (무엇을 왜) -->
+  <div class="panel">
+    <h2><span class="step-tag">어떻게 만드나</span>에이전트 워크플로우</h2>
+    <div class="why">📌 <b>왜 단계를 나누나:</b> 수집은 모델 없이, 추출은 가벼운 모델, <b>최종 생성만 가장 똑똑한 모델</b>로 — 비용은 줄이고 품질은 지킵니다. 각 단계가 무엇을 하는지 아래에 적었습니다.</div>
+    <div class="pipe">
+      <div class="pstep"><div class="pnum">단계 0</div><h4>수집 (모델 없음)</h4><p>유튜브 자막·문서 본문을 캐시에 저장. API 키 불필요. 200자 미만 본문은 버림.</p><span class="model">키 없음</span></div>
+      <div class="pstep"><div class="pnum">단계 1</div><h4>Reader 추출 (보이지 않음)</h4><p>문서 본문에서 사실·수치·목표가·의견만 압축. 본문에 없는 건 안 지어냄.</p><span class="model">Sonnet 4.6 · medium</span></div>
+      <div class="pstep"><div class="pnum">단계 2</div><h4>소스 통합</h4><p>영상 자막([초] 마커)과 추출문을 한 블록으로 합침. 발언 위치를 가리킬 수 있게.</p><span class="model">코드</span></div>
+      <div class="pstep"><div class="pnum">단계 3</div><h4>다이제스트 생성 (보이는 단계)</h4><p>페르소나+소스로 단 한 번 생성. emit_digest 도구로 구조화 제출.</p><span class="model">Opus 4.8 · xhigh</span></div>
+    </div>
+  </div>
+
+  <!-- 입력 -->
+  <div class="panel">
+    <h2><span class="step-tag">입력</span>자료 붙여넣기 (자동 수집은 건너뜀)</h2>
+    <div class="why">📌 <b>가장 빠른 길:</b> 자동 수집은 생략하고, 관심 있는 <b>공개 리포트·자막 텍스트 2~3건</b>을 붙여넣어 '생성 단계'부터 돌립니다. 유튜브 자막은 영상의 <b>"스크립트 표시"</b>에서, 리포트 본문은 발행처 공개 PDF에서 얻습니다. <b>공개 자료만 — 내부 자료는 넣지 마세요.</b></div>
+    <textarea class="paste" placeholder="여기에 리포트/인터뷰/영상 자막 텍스트를 붙여넣으세요. 예) [유튜브 IR채널 12:40] '내년 설비투자는 올해 대비 두 자릿수 줄일 계획' ..."></textarea>
+    <button onclick="alert('실제 적용 단계에서 붙여넣은 텍스트로 이 다이제스트를 다시 생성합니다. 지금은 사전 생성 샘플 화면입니다.')">붙여넣은 자료로 생성</button>
+  </div>
+
+  <!-- 구독 카탈로그 -->
+  <div class="panel">
+    <h2><span class="step-tag">구독</span>채널 카탈로그 (공개 자료만)</h2>
+    <div class="why">📌 <b>무엇인가:</b> 결과를 먼저 보고, 그 아래에서 어떤 공개 채널을 정기적으로 모을지 고릅니다. <b>'베스트에포트'</b>(Apollo·한국은행)는 사이트 구조상 자동 수집이 보장되지 않아 기본 선택에서 빠져 있습니다.</div>
+    <div id="catalog"></div>
+  </div>
+
+  <p class="foot">단일 HTML · 외부 연결 없음 · 입력에 없는 내용은 생성하지 않음 · 모든 인용은 원본 출처로 연결됩니다(영상=타임스탬프 · 문서=원문)</p>
 </div>
+
+<script>
+/* ============================================================
+   사전 생성된 샘플(가짜) 다이제스트. SPEC의 구조·수치를 반영.
+   실제 적용 시 SOURCES / SIGNALS / INSIGHTS / LOWCONF 를 교체.
+   ============================================================ */
+const GENERATED_AT = "2026-06-23 08:40";
+const GEN_SECONDS  = 69;          // SPEC 샘플: 생성 약 69초
+const MODE         = "사전 생성"; // 사전 생성 / 라이브 생성
+
+/* 6개 출처: 영상 3 + 문서 3 (SPEC 샘플) */
+const SOURCES = [
+  {id:"V1", type:"video", name:'NBIM "In Good Company" — Jens Stoltenberg: How Norway Built the World’s Largest Fund', mins:28, url:"#",
+   ws:"watch", reason:"국부펀드의 자산배분·거버넌스 원칙 발언 — 멀티에셋 관점 직결."},
+  {id:"V2", type:"video", name:"Top Traders Unplugged — Why the Next Financial Crisis Could Change America Forever (Ep.12)", mins:54, url:"#",
+   ws:"watch", reason:"시스템틱·크레딧 리스크 내러티브 — 사이클 점검에 유효."},
+  {id:"V3", type:"video", name:"Bloomberg — Why Musk Raced to Take SpaceX Public", mins:12, url:"#",
+   ws:"skip", reason:"개별 IPO 일화 중심 — 운용 핵심과 거리. 맥락 참고만."},
+  {id:"D1", type:"doc", name:"Oaktree — Howard Marks Memo: What’s Going on in Private Credit?", mins:0, url:"#",
+   ws:"watch", reason:"프라이빗 크레딧 구조 변화 — 크레딧 사이클 신호의 1차 근거."},
+  {id:"D2", type:"doc", name:"BIS Quarterly Review, March 2026", mins:0, url:"#",
+   ws:"watch", reason:"NBFI·레버리지·유동성 데이터 — 시스템 리스크 점검 표 확인 권장."},
+  {id:"D3", type:"doc", name:"자본시장연구원(KCMI) — 2026년 자산운용산업 주요 이슈", mins:0, url:"#",
+   ws:"skip", reason:"국내 제도 개관 — 새 정보 적어 요약으로 충분."}
+];
+
+/* 위클리 시그널 3줄 (SPEC 샘플 문구) */
+const SIGNALS = [
+  {tx:"<b>AI 소프트웨어 디스럽션</b>이 실적과 주가에 동시 반영되기 시작 — 수혜·피해 종목의 분기점.", why:"근거: 인사이트 ①②"},
+  {tx:"<b>크레딧 경보등 점화</b> — 프라이빗 크레딧 급성장과 NBFI 레버리지에서 초기 경고 신호.", why:"근거: 인사이트 ③④ + 검증 필요"},
+  {tx:"<b>구조적 자금 순환매</b> — 국부펀드·연기금의 배분 변화가 자금 흐름의 결을 바꾸는 중.", why:"근거: 인사이트 ⑤⑥"}
+];
+
+/* 핵심 인사이트 (SPEC: 6~10개, 샘플 10개). ts: 영상 초, 문서 0 */
+const INSIGHTS = [
+  {src:"D1", level:"high", title:"프라이빗 크레딧, 2008 이후 급팽창 — 사이클 후반 신호",
+   body:"직접대출이 위기 이후 은행을 대체하며 빠르게 커졌고, 경쟁 심화로 조건이 느슨해지는 국면. 부실이 늦게 드러나는 자산군 특성상 주의가 필요.",
+   quote:"위기 이후 직접대출이 은행 공백을 메우며 급성장했고, 지금은 자본이 너무 많이 몰린 국면일 수 있다.", ts:0},
+  {src:"V2", level:"high", title:"다음 위기의 진앙은 '비은행(NBFI) 레버리지'일 수 있다",
+   body:"규제 사각의 비은행 레버리지가 충격을 증폭시킬 수 있다는 시스템틱 운용역의 진단. 은행 자본만 보면 놓치는 리스크.",
+   quote:"다음 사고는 은행이 아니라 그 바깥, 규제가 덜 닿는 레버리지에서 날 것이다.", ts:1840},
+  {src:"V1", level:"high", title:"국부펀드, 장기·역발상 배분 원칙 재확인",
+   body:"세계 최대 펀드가 시장이 흔들릴 때 오히려 위험자산 비중을 유지·확대하는 규율을 강조. 멀티에셋 운용의 벤치마크 행동.",
+   quote:"우리는 가격이 빠질 때 파는 쪽이 아니라, 규율에 따라 비중을 지키거나 늘리는 쪽이다.", ts:760},
+  {src:"D2", level:"high", title:"BIS, NBFI·유동성 미스매치 데이터로 경고",
+   body:"비은행 부문의 레버리지와 유동성 미스매치 지표가 누적. 시장 스트레스 시 증폭 경로로 작동할 수 있음을 데이터로 제시.",
+   quote:"비은행 금융기관의 레버리지와 유동성 변환이 시스템 증폭 경로가 될 수 있다.", ts:0},
+  {src:"V1", level:"medium", title:"경영진의 '자본배분 규율'이 장기 성과를 가른다",
+   body:"여러 CEO 인터뷰에서 공통적으로, 화려한 성장보다 자본배분 규율이 장기 수익률을 좌우한다는 관찰.",
+   quote:"좋은 회사와 위대한 회사를 가르는 건 결국 자본을 어디에 쓰느냐다.", ts:1180},
+  {src:"D1", level:"medium", title:"스프레드 축소가 '안전'을 뜻하지 않는다",
+   body:"보상(스프레드)이 줄었는데 위험이 줄었다고 착각하기 쉬운 국면. 가격에 위험이 충분히 반영됐는지 재점검 필요.",
+   quote:"보상이 얇아질수록, 그 보상이 위험에 값하는지 더 따져야 한다.", ts:0},
+  {src:"V2", level:"medium", title:"트렌드추종, 변동성 레짐 전환에 베팅",
+   body:"저변동성 장기화 뒤 레짐 전환 가능성에 대비하는 포지셔닝. 방향 예측이 아니라 전환 자체에 대비하는 접근.",
+   quote:"우리는 방향을 맞히려는 게 아니라, 레짐이 바뀔 때 살아남게 설계한다.", ts:2510},
+  {src:"D3", level:"medium", title:"국내 OCIO·연기금 배분 제도 변화 가시화",
+   body:"OCIO 확대와 자산운용 제도 개편이 국내 자금의 해외·대체 배분을 늘리는 방향. 중기 자금 흐름에 영향.",
+   quote:"OCIO 도입 확대는 국내 기관 자금의 해외·대체 배분을 구조적으로 늘릴 수 있다.", ts:0},
+  {src:"D2", level:"medium", title:"달러 자금조달·FX 스왑 베이시스 주시",
+   body:"분기말 달러 자금조달 비용과 FX 스왑 베이시스가 스트레스 신호의 선행 지표가 될 수 있음.",
+   quote:"FX 스왑 베이시스의 확대는 달러 자금조달 스트레스의 이른 신호다.", ts:0},
+  {src:"V3", level:"medium", title:"대형 IPO, 위험선호의 온도계",
+   body:"초대형 IPO의 흥행 여부 자체가 시장 위험선호의 가늠자. 종목보다 분위기 지표로 해석.",
+   quote:"이만한 규모의 상장을 시장이 소화한다는 건, 위험선호가 살아있다는 뜻이다.", ts:300}
+];
+
+/* 검증 필요 (SPEC 샘플: 7개) */
+const LOWCONF = [
+  {t:"발화자의 '다음 위기' 시나리오는 주관적 전망", s:"시점·규모 단정 불가 — 본인 시나리오와 교차 점검 — Top Traders Unplugged [30:40]"},
+  {t:"프라이빗 크레딧 '자본 과잉' 판단은 정성적 견해", s:"정량 임계치 없음 — 발행처 데이터로 확인 — Oaktree 메모"},
+  {t:"NBFI 레버리지 수치의 산정 방식 미확인", s:"BIS 정의·범위 확인 필요 — 원문 표 대조 — BIS Quarterly Mar 2026"},
+  {t:"FX 스왑 베이시스 '선행성'은 경험칙", s:"인과 아님 — 과거 사례로 검증 권장"},
+  {t:"OCIO 배분 효과 규모는 모델 추정", s:"제도 시행 시점·강도에 따라 달라짐 — KCMI 원문 확인"},
+  {t:"IPO 흥행=위험선호 해석은 단일 일화", s:"표본 1건 — 일반화 주의 — Bloomberg 영상"},
+  {t:"자막 자동 생성 인용 일부, 표현 부정확 가능", s:"인용 의미는 보존했으나 단어는 원문에서 재확인 권장"}
+];
+
+/* 9채널 카탈로그 (3그룹). best=베스트에포트(기본 미선택) */
+const CATALOG = [
+  {grp:"유튜브 — 인터뷰·롱폼 (발언 타임스탬프로 점프)", items:[
+    {name:'NBIM "In Good Company"', desc:"세계 최대 국부펀드 CEO가 글로벌 CEO·CIO를 인터뷰", freq:"weekly", on:true},
+    {name:"Top Traders Unplugged", desc:"트렌드추종·글로벌 매크로·시스템틱 운용역 대담", freq:"weekly", on:true},
+    {name:"Bloomberg — Odd Lots·Surveillance", desc:"금리·매크로·시장구조 내러티브 (무료 오디오/영상)", freq:"daily", on:true},
+    {name:"Money Maze Podcast", desc:"글로벌 운용역·CIO·창업자 롱폼 인터뷰", freq:"weekly", on:true}
+  ]},
+  {grp:"글로벌 — 리서치·메모 (원문 링크로 검증)", items:[
+    {name:"Oaktree — Howard Marks Memos", desc:"사이클·리스크·투자심리 메모", freq:"monthly", on:true},
+    {name:"BIS Quarterly Review", desc:"금융안정·레버리지·NBFI·유동성 분석", freq:"quarterly", on:true},
+    {name:"Apollo — The Daily Spark", desc:"Torsten Sløk의 매크로 데이터 차트", freq:"daily", on:false, best:true}
+  ]},
+  {grp:"국내 — 공개 리서치 (원문 링크로 검증)", items:[
+    {name:"자본시장연구원(KCMI)", desc:"국내 기관·연기금·OCIO·자산운용 제도 무료 리서치", freq:"weekly", on:true},
+    {name:"한국은행 금융안정보고서", desc:"국내 금융안정·금리·신용", freq:"semiannual", on:false, best:true}
+  ]}
+];
+
+/* ---------- 렌더 ---------- */
+const byId = id => SOURCES.find(s=>s.id===id);
+const mmss = sec => `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
+
+// 변환 지표 + 메타
+const totalVideoMin = SOURCES.filter(s=>s.type==='video').reduce((a,s)=>a+s.mins,0);
+const docCount = SOURCES.filter(s=>s.type==='doc').length;
+const origMin = totalVideoMin + docCount*15; // 문서는 보수적 15분/건 환산
+// 읽는시간 = 다이제스트 글자수 / 600, 최소 2분
+const digestChars = SIGNALS.reduce((a,s)=>a+s.tx.replace(/<[^>]+>/g,'').length,0)
+  + INSIGHTS.reduce((a,i)=>a+i.title.length+i.body.length+i.quote.length,0);
+const readMin = Math.max(2, Math.round(digestChars/600));
+
+document.getElementById('metaRow').innerHTML =
+  `<span class="chip ${MODE==='라이브 생성'?'live':''}"><b>${MODE}</b></span>`+
+  `<span class="chip">생성 <b>${GENERATED_AT}</b></span>`+
+  `<span class="chip">분석 출처 <b>${SOURCES.length}개</b> (영상 ${SOURCES.filter(s=>s.type==='video').length}·문서 ${docCount})</span>`+
+  `<span class="chip">생성 <b>${GEN_SECONDS}초</b></span>`;
+
+document.getElementById('conv').innerHTML =
+  `<div class="from">원본 분량<br><b>≈ ${(origMin/60).toFixed(1)}시간</b></div>`+
+  `<div class="ar">→</div>`+
+  `<div class="to">다이제스트 읽는 시간<br><b>약 ${readMin}분</b></div>`+
+  `<div class="save">사람이 다 읽으면 ${(origMin/60).toFixed(1)}시간 · 이 화면이면 ${readMin}분</div>`;
+
+// 시그널
+document.getElementById('signals').innerHTML = SIGNALS.map((s,i)=>
+  `<div class="signal"><div class="n">${i+1}</div><div class="tx">${s.tx}<small>${s.why}</small></div></div>`).join('');
+
+// 인사이트 — 콜아웃 + 목록
+const num=["①","②","③","④","⑤","⑥","⑦","⑧","⑨","⑩"];
+const highs = INSIGHTS.filter(i=>i.level==='high');
+const calloutItem = highs.length ? highs[0] : INSIGHTS.find(i=>i.level==='medium');
+const calloutIsHigh = highs.length>0;
+
+function srcLine(it){
+  const s = byId(it.src);
+  const jump = s.type==='video'
+    ? `<a class="jump" href="${s.url}">▶ ${mmss(it.ts)} 에서 보기</a>`
+    : `<a class="jump" href="${s.url}">▶ 원문에서 보기</a>`;
+  return `<span class="src"><span>— ${s.name}</span>${jump}</span>`;
+}
+
+document.getElementById('callout').innerHTML = calloutItem ? `
+  <div class="callout ${calloutIsHigh?'':'med'}">
+    <div class="klabel">${calloutIsHigh?'★ 이번 주 핵심 · HIGH':'★ 이번 주 참고 · MEDIUM'}</div>
+    <h3>${calloutItem.title}</h3>
+    <div class="body">${calloutItem.body}</div>
+    <div class="quote">“${calloutItem.quote}”${srcLine(calloutItem)}</div>
+  </div>` : '';
+
+const rest = INSIGHTS.filter(i=>i!==calloutItem);
+document.getElementById('insights').innerHTML = rest.map((it,idx)=>{
+  const s = byId(it.src);
+  return `<div class="insight ${it.level}">
+    <div class="tagline">
+      <span class="lvl ${it.level}">${it.level.toUpperCase()}</span>
+      <span class="stype">${s.type==='video'?'🎬 영상':'📄 문서'}</span>
+    </div>
+    <h3>${num[idx+1]||''} ${it.title}</h3>
+    <div class="body">${it.body}</div>
+    <div class="quote">“${it.quote}”${srcLine(it)}</div>
+  </div>`;
+}).join('');
+document.getElementById('insCount').textContent = `(${INSIGHTS.length}개 · HIGH ${highs.length} · MEDIUM ${INSIGHTS.length-highs.length})`;
+
+// 볼것/건너뛸것 — 모든 출처
+const mark = t => t==='video'?'🎬':'📄';
+document.getElementById('watchList').innerHTML = SOURCES.filter(s=>s.ws==='watch').map(s=>
+  `<div class="litem"><span class="mk">${mark(s.type)}</span><div>${s.name}<div class="src2">${s.reason}</div></div></div>`).join('');
+document.getElementById('skipList').innerHTML = SOURCES.filter(s=>s.ws==='skip').map(s=>
+  `<div class="litem"><span class="mk">${mark(s.type)}</span><div>${s.name}<div class="src2">${s.reason}</div></div></div>`).join('');
+document.getElementById('wsCount').textContent = `(전체 ${SOURCES.length}개 출처 판정)`;
+
+// 검증 필요
+document.getElementById('lowConf').innerHTML = LOWCONF.map(v=>
+  `<div class="vitem"><div class="vdot">?</div><div class="vt">${v.t}<small>${v.s}</small></div></div>`).join('');
+document.getElementById('lcCount').textContent = `(${LOWCONF.length}개 분리)`;
+
+// 카탈로그
+document.getElementById('catalog').innerHTML = CATALOG.map(g=>
+  `<div class="grp-title">${g.grp}</div><div class="chgrid">`+
+  g.items.map(c=>`
+    <label class="chcard ${c.best?'best':''}">
+      <input type="checkbox" ${c.on?'checked':''}>
+      <div><div class="cname">${c.name}${c.best?'<span class="be">· 베스트에포트</span>':''}</div>
+      <div class="cdesc">${c.desc}</div>
+      <div class="cfreq">${c.freq}${c.best?' · 기본 미선택':''}</div></div>
+    </label>`).join('')+`</div>`
+).join('');
+</script>
 </body>
 </html>
