@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>모멘텀 대장주 · 기술적 대시보드</title>
+<style>
+  :root{--bg:#0e1014;--panel:#161a21;--panel2:#1d222b;--line:#2a2f3a;--txt:#e8ebf2;
+    --muted:#9aa3b2;--accent:#5b8cff;--up:#3ddc97;--down:#ff6b6b;--warn:#ffb020;
+    --touch:#3ddc97;--near:#ffce5a;--ma20:#ffce5a;--ma60:#5b8cff;--ma200:#ff7a85;--chip:#222734}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,
+    "Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:14px;line-height:1.5}
+  .wrap{max-width:1280px;margin:0 auto;padding:18px 16px 70px}
+  h1{font-size:20px;margin:4px 0}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 12px}
+  .badge{display:inline-block;background:var(--warn);color:#1a1300;font-weight:700;
+    padding:4px 11px;border-radius:999px;font-size:12px;margin-bottom:8px}
+  .badge.live{background:var(--up);color:#04210f}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
+  .chip{font-size:12px;color:var(--muted);background:var(--chip);border:1px solid var(--line);
+    padding:4px 10px;border-radius:999px}.chip b{color:var(--txt)}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  select,input{background:#0c0e13;color:var(--txt);border:1px solid var(--line);border-radius:8px;
+    padding:6px 9px;font-size:13px;font-family:inherit}
+  .layout{display:grid;gap:14px}
+  @media(min-width:980px){.layout{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{padding:6px 7px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child,th.l,td.l{text-align:left}
+  th{color:var(--muted);font-weight:600;font-size:11.5px;cursor:pointer;position:sticky;top:0;background:var(--panel)}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:#1b2030}
+  tbody tr.sel{background:#1f2a3d;outline:1px solid var(--accent)}
+  .tbl-scroll{max-height:560px;overflow:auto;border-radius:8px}
+  .flag{font-size:11px}
+  .bdg{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px}
+  .bdg.t{background:rgba(61,220,151,.18);color:var(--touch)}
+  .bdg.n{background:rgba(255,206,90,.18);color:var(--near)}
+  .bdg.x{background:#222734;color:var(--muted)}
+  .num{font-variant-numeric:tabular-nums}
+  .pos{color:var(--up)}.neg{color:var(--down)}
+  .ell{font-size:11px;color:#cdd4e0}
+  /* detail */
+  .dhead{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap}
+  .dhead h2{margin:0;font-size:18px}
+  .dhead .meta{color:var(--muted);font-size:12px}
+  .chartbox{margin:10px 0;background:#0c0e13;border:1px solid var(--line);border-radius:10px;padding:6px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin:2px 2px 6px}
+  .legend i{width:18px;height:3px;display:inline-block;border-radius:2px;margin-right:5px;vertical-align:3px}
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 14px;margin-top:8px}
+  @media(min-width:560px){.stats{grid-template-columns:repeat(3,1fr)}}
+  .stat{display:flex;justify-content:space-between;font-size:12.5px;border-bottom:1px dashed var(--line);padding:5px 0}
+  .stat span:first-child{color:var(--muted)}
+  .ellbox{margin-top:10px;background:var(--panel2);border-left:3px solid var(--warn);border-radius:8px;padding:9px 11px;font-size:12.5px}
+  .ellbox b{color:#fff}
+  .caveat{color:var(--muted);font-size:11.5px;margin-top:6px}
+  .empty{color:var(--muted);text-align:center;padding:40px 10px}
+  .foot{color:var(--muted);font-size:11.5px;margin-top:16px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="badge" class="badge">⚠️ 예시(가짜 데이터)</div>
+  <h1>모멘텀 대장주 · 기술적 대시보드</h1>
+  <p class="sub">RS 상위 대장주(종가&gt;200MA) 중에서 <b>20MA 눌림목</b>·이격도·RSI·52주고점대비·<b>엘리어트 파동(추정)</b>을 한 화면에. 행을 누르면 차트가 열립니다.</p>
+  <div id="chips" class="chips"></div>
+
+  <div class="controls">
+    <select id="fMarket"><option value="">전체 시장</option><option value="US">🟢 미국</option><option value="KR">🔵 한국</option></select>
+    <select id="fStatus"><option value="">전체 상태</option><option value="touched">눌림목 터치</option><option value="near">근접</option></select>
+    <select id="fSector"><option value="">전체 섹터</option></select>
+    <select id="fSort">
+      <option value="rs_rank">정렬: RS 순위</option>
+      <option value="dist20abs">정렬: 20MA 이격(작은순)</option>
+      <option value="rsi">정렬: RSI(낮은순)</option>
+      <option value="high52_pct">정렬: 52주고점 근접</option>
+    </select>
+    <input id="fText" placeholder="종목/코드 검색" size="12">
+  </div>
+
+  <div class="layout">
+    <div class="panel">
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr>
+            <th class="l" data-k="name">종목</th><th data-k="rs_rank">RS#</th>
+            <th data-k="close">종가</th><th>눌림목</th>
+            <th data-k="dist20abs">20이격%</th><th data-k="disp60">60이격</th>
+            <th data-k="rsi">RSI</th><th data-k="high52_pct">52H%</th>
+            <th class="l">엘리어트(추정)</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" id="detail">
+      <div class="empty">왼쪽 표에서 종목을 누르면<br>차트·기술적 지표·엘리어트 추정이 여기에 표시됩니다.</div>
+    </div>
+  </div>
+
+  <p class="foot">무료 지연 종가 기준 · RS=3·6·12개월 수익률 가중 · 눌림목=당일 저가≤20MA≤고가 · 엘리어트는 주관적이라 알고리즘 '추정'(참고용) · 투자 판단은 원본 차트 확인 후</p>
+</div>
+
+<script>
+// 실행 시 GitHub Actions 스크리너가 이 자리에 실데이터를 주입합니다.
+let DATA = /*__DATA__*/null;
+
+// ---- 데모용 샘플(실데이터 없을 때만) ----
+function makeBars(seed, n, start){
+  let bars=[], p=start, s=seed;
+  const rnd=()=>{s=(s*9301+49297)%233280;return s/233280;};
+  for(let i=0;i<n;i++){
+    const drift=0.0015+0.004*Math.sin(i/12+seed), vol=p*(0.012+0.01*rnd());
+    p=Math.max(1,p*(1+drift)+(rnd()-0.5)*vol*1.2);
+    const o=p*(1+(rnd()-0.5)*0.01), c=p, hi=Math.max(o,c)*(1+rnd()*0.012), lo=Math.min(o,c)*(1-rnd()*0.012);
+    bars.push({d:`d${i}`,o:+o.toFixed(2),h:+hi.toFixed(2),l:+lo.toFixed(2),c:+c.toFixed(2)});
+  }
+  return bars;
+}
+function ma(bars,w){return bars.map((_,i)=>i<w-1?null:+(bars.slice(i-w+1,i+1).reduce((a,b)=>a+b.c,0)/w).toFixed(2));}
+function sampleLeader(o){
+  const bars=makeBars(o.seed,130,o.start);
+  return {market:o.market,code:o.code,name:o.name,sector:o.sector,rs_rank:o.rank,
+    close:bars.at(-1).c, ma20:ma(bars,20).at(-1), ma60:ma(bars,60).at(-1), ma200:ma(bars,90).at(-1),
+    touched:o.touched, near:o.near, dist20:o.dist20, disp20:100+o.dist20,
+    disp60:o.disp60, disp200:o.disp200, rsi:o.rsi, high52_pct:o.h52, vol_ratio:o.vr,
+    elliott:o.ell, elliott_note:o.note, ret3m:o.r3, ret6m:o.r6,
+    bars:bars, ma20s:ma(bars,20), ma60s:ma(bars,60), ma200s:ma(bars,90)};
+}
+if(!DATA){
+  DATA={demo:true, bar_date:"예시", generated_at:"예시 데이터",
+    counts:{leaders:4,touched:2,near:1},
+    leaders:[
+      sampleLeader({market:"US",code:"AAA",name:"가상반도체",sector:"Information Technology",rank:1,touched:true,near:false,dist20:0.3,disp60:108,disp200:121,rsi:52,h52:-4.2,vr:1.6,ell:"3파 상승 추정",note:"저점 이후 2개 스윙 · 상승 진행(추정)",r3:18,r6:34,start:80}),
+      sampleLeader({market:"US",code:"BBB",name:"가상AI소프트",sector:"Information Technology",rank:2,touched:false,near:true,dist20:0.8,disp60:111,disp200:128,rsi:58,h52:-2.1,vr:1.2,ell:"5파 마무리 추정",note:"저점 이후 4개 스윙 · 되돌림 진행(추정)",r3:22,r6:41,start:60}),
+      sampleLeader({market:"KR",code:"005930",name:"가상전자",sector:"IT",rank:1,touched:true,near:false,dist20:-0.4,disp60:106,disp200:118,rsi:48,h52:-6.5,vr:2.1,ell:"2파 조정 추정",note:"저점 이후 1개 스윙 · 되돌림 진행(추정)",r3:12,r6:25,start:50}),
+      sampleLeader({market:"KR",code:"000660",name:"가상하이닉스",sector:"IT",rank:2,touched:false,near:false,dist20:6.2,disp60:115,disp200:140,rsi:67,h52:-0.5,vr:1.0,ell:"조정(A·B·C) 추정",note:"임펄스 5파 이후 조정 국면일 수 있음(추정)",r3:30,r6:62,start:40}),
+    ]};
+}
+
+const $=id=>document.getElementById(id);
+const isLive = !DATA.demo;
+$("badge").className = "badge "+(isLive?"live":"");
+$("badge").textContent = isLive ? "● 실데이터" : "⚠️ 예시(가짜 데이터) — 스크리너 실행 전 미리보기";
+
+const L = DATA.leaders.map(r=>({...r, dist20abs: r.dist20==null?999:Math.abs(r.dist20)}));
+$("chips").innerHTML =
+  `<span class="chip">기준일 <b>${DATA.bar_date}</b></span>`+
+  `<span class="chip">생성 <b>${DATA.generated_at||'-'}</b></span>`+
+  `<span class="chip">대장주 <b>${DATA.counts.leaders}</b></span>`+
+  `<span class="chip" style="color:var(--touch)">터치 <b>${DATA.counts.touched}</b></span>`+
+  `<span class="chip" style="color:var(--near)">근접 <b>${DATA.counts.near}</b></span>`;
+
+// 섹터 필터 채우기
+[...new Set(L.map(r=>r.sector))].sort().forEach(s=>{
+  const o=document.createElement("option");o.value=s;o.textContent=s;$("fSector").appendChild(o);});
+
+let sortKey="rs_rank", sortDir=1, selected=null;
+["fMarket","fStatus","fSector","fSort","fText"].forEach(id=>$(id).addEventListener("input",render));
+document.querySelectorAll("th[data-k]").forEach(th=>th.addEventListener("click",()=>{
+  const k=th.dataset.k; sortDir=(k===sortKey)?-sortDir:1; sortKey=k; $("fSort").value=k in {rs_rank:1,dist20abs:1,rsi:1,high52_pct:1}?k:$("fSort").value; render();}));
+
+const fmt=(v,d=2)=>v==null?"–":Number(v).toLocaleString("ko-KR",{minimumFractionDigits:0,maximumFractionDigits:d});
+const sign=v=>v==null?"":(v>0?"pos":"neg");
+
+function render(){
+  const m=$("fMarket").value,st=$("fStatus").value,sec=$("fSector").value,
+        q=$("fText").value.trim().toLowerCase(),sk=$("fSort").value;
+  let rows=L.filter(r=>(!m||r.market===m)&&(!sec||r.sector===sec)
+    &&(!st||(st==="touched"&&r.touched)||(st==="near"&&r.near))
+    &&(!q||r.name.toLowerCase().includes(q)||String(r.code).toLowerCase().includes(q)));
+  const key = (sortKey in {rs_rank:1,dist20abs:1,rsi:1,high52_pct:1}) ? sortKey : sk;
+  const asc = (key==="rs_rank"||key==="dist20abs"||key==="rsi");
+  rows.sort((a,b)=>((a[key]??1e9)-(b[key]??1e9))*(asc?1:-1)*sortDir);
+
+  $("tbody").innerHTML = rows.map(r=>{
+    const bd = r.touched?'<span class="bdg t">터치</span>':r.near?'<span class="bdg n">근접</span>':'<span class="bdg x">—</span>';
+    const flag=r.market==="US"?"🟢":"🔵";
+    return `<tr data-code="${r.market}:${r.code}" class="${selected===r.market+':'+r.code?'sel':''}">
+      <td class="l"><span class="flag">${flag}</span> <b>${r.name}</b> <span style="color:var(--muted)">${r.code}</span><br>
+        <span style="color:var(--muted);font-size:11px">${r.sector}</span></td>
+      <td class="num">${r.rs_rank}</td>
+      <td class="num">${fmt(r.close)}</td>
+      <td>${bd}</td>
+      <td class="num ${sign(r.dist20)}">${r.dist20==null?'–':(r.dist20>0?'+':'')+r.dist20}</td>
+      <td class="num">${fmt(r.disp60,0)}</td>
+      <td class="num">${r.rsi}</td>
+      <td class="num ${sign(r.high52_pct)}">${r.high52_pct==null?'–':r.high52_pct}</td>
+      <td class="l ell">${r.elliott}</td>
+    </tr>`;}).join("") || `<tr><td colspan="9" class="empty">조건에 맞는 종목이 없습니다.</td></tr>`;
+
+  document.querySelectorAll("#tbody tr[data-code]").forEach(tr=>tr.addEventListener("click",()=>{
+    selected=tr.dataset.code; render();
+    showDetail(L.find(r=>r.market+':'+r.code===selected));}));
+}
+
+function chartSVG(r){
+  const W=560,H=240,padL=44,padR=10,padT=10,padB=18, bars=r.bars;
+  const n=bars.length, iw=(W-padL-padR)/n;
+  let lo=Math.min(...bars.map(b=>b.l)), hi=Math.max(...bars.map(b=>b.h));
+  [r.ma200s,r.ma60s,r.ma20s].forEach(s=>s.forEach(v=>{if(v!=null){lo=Math.min(lo,v);hi=Math.max(hi,v);}}));
+  const pad=(hi-lo)*0.05; lo-=pad; hi+=pad;
+  const Y=v=>padT+(H-padT-padB)*(1-(v-lo)/(hi-lo));
+  const X=i=>padL+iw*(i+0.5);
+  let s="";
+  // y축 그리드
+  for(let g=0;g<=4;g++){const v=lo+(hi-lo)*g/4,y=Y(v);
+    s+=`<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#222a36"/>`+
+       `<text x="4" y="${y+3}" fill="#7a8294" font-size="9">${v.toLocaleString("ko-KR",{maximumFractionDigits:0})}</text>`;}
+  // 캔들
+  bars.forEach((b,i)=>{const up=b.c>=b.o,col=up?"#3ddc97":"#ff6b6b",cx=X(i),bw=Math.max(1,iw*0.6);
+    s+=`<line x1="${cx}" y1="${Y(b.h)}" x2="${cx}" y2="${Y(b.l)}" stroke="${col}" stroke-width="1"/>`+
+       `<rect x="${cx-bw/2}" y="${Y(Math.max(b.o,b.c))}" width="${bw}" height="${Math.max(1,Math.abs(Y(b.o)-Y(b.c)))}" fill="${col}"/>`;});
+  // 이동평균선
+  const linePath=(arr,col)=>{let d="",started=false;arr.forEach((v,i)=>{if(v==null)return;
+    d+=(started?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)+" ";started=true;});
+    return d?`<path d="${d}" fill="none" stroke="${col}" stroke-width="1.5"/>`:"";};
+  s+=linePath(r.ma200s,"#ff7a85")+linePath(r.ma60s,"#5b8cff")+linePath(r.ma20s,"#ffce5a");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${s}</svg>`;
+}
+
+function showDetail(r){
+  if(!r){return;}
+  const stat=(k,v,cls="")=>`<div class="stat"><span>${k}</span><span class="num ${cls}">${v}</span></div>`;
+  const sg=v=>v==null?"":(v>0?"pos":"neg");
+  $("detail").innerHTML=`
+    <div class="dhead">
+      <div><h2>${r.market==="US"?"🟢":"🔵"} ${r.name} <span style="color:var(--muted);font-size:14px">${r.code}</span></h2>
+        <div class="meta">${r.sector} · RS 순위 #${r.rs_rank} · 종가 ${fmt(r.close)}</div></div>
+      <div>${r.touched?'<span class="bdg t">눌림목 터치</span>':r.near?'<span class="bdg n">근접</span>':'<span class="bdg x">관망</span>'}</div>
+    </div>
+    <div class="chartbox">${chartSVG(r)}</div>
+    <div class="legend"><span><i style="background:#ffce5a"></i>20MA</span><span><i style="background:#5b8cff"></i>60MA</span>
+      <span><i style="background:#ff7a85"></i>200MA(추세)</span><span>🟢/🔴 일봉 캔들</span></div>
+    <div class="stats">
+      ${stat("20MA 이격(거리)", (r.dist20>0?'+':'')+ (r.dist20??'–') +'%', sg(r.dist20))}
+      ${stat("20일 이격도", (r.disp20??'–'))}
+      ${stat("60일 이격도", (r.disp60??'–'))}
+      ${stat("200일 이격도", (r.disp200??'–'))}
+      ${stat("RSI(14)", r.rsi, r.rsi>=70?'neg':r.rsi<=30?'pos':'')}
+      ${stat("52주 고점대비", (r.high52_pct??'–')+'%', sg(r.high52_pct))}
+      ${stat("3개월 수익률", (r.ret3m>0?'+':'')+(r.ret3m??'–')+'%', sg(r.ret3m))}
+      ${stat("6개월 수익률", (r.ret6m>0?'+':'')+(r.ret6m??'–')+'%', sg(r.ret6m))}
+      ${stat("거래량비(20일평균)", (r.vol_ratio??'–')+'x')}
+    </div>
+    <div class="ellbox">🌀 <b>엘리어트 파동(추정): ${r.elliott}</b><br>${r.elliott_note||''}
+      <div class="caveat">※ 엘리어트 파동은 분석자마다 카운팅이 달라지는 주관적 기법입니다. 위 라벨은 지그재그 스윙(±${(DATA.config&&DATA.config.zigzag_pct)||7}%) 기반 <b>알고리즘 추정</b>이며, 위 차트로 직접 카운팅해 확인하세요.</div>
+    </div>`;
+}
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+name: Daily Momentum 20MA Pullback Screener
+
+on:
+  schedule:
+    # 22:10 UTC = 07:10 KST (다음날 아침). 미국 장 마감(20~21 UTC) 이후라
+    # 한 번 실행으로 미국·한국 양 시장의 당일 종가를 모두 반영합니다.
+    - cron: "10 22 * * 1-5"
+  workflow_dispatch: {}   # 수동 실행 버튼
+
+permissions:
+  contents: write          # 리포트 파일 커밋용
+
+concurrency:
+  group: momentum-screener
+  cancel-in-progress: false
+
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r screener/requirements.txt
+
+      - name: Run screener
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python screener/screener.py
+
+      - name: Commit reports
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add reports/ || true
+          if ! git diff --cached --quiet; then
+            git commit -m "screener: report $(date -u +%Y-%m-%d)"
+            git push
+          else
+            echo "변경 없음 — 커밋 건너뜀"
+          fi
