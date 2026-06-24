@@ -3,3 +3,4 @@ yfinance>=0.2.40
 pandas>=2.0
 requests>=2.31
 lxml>=4.9
+pykrx>=1.0.45
