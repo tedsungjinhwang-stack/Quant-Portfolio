@@ -95,6 +95,10 @@
           </tr></thead><tbody id="top10"></tbody></table>
         </div>
       </div>
+      <div class="panel" id="cmdPanel" style="margin-top:14px;display:none">
+        <div class="ttl"><span class="tk" style="background:#3a3320;color:#ffce5a">원자재</span> 강한 원자재 <small>ETF 자체 RS·20MA 눌림목 (대장주 없음)</small></div>
+        <div class="secrow" id="commodities"></div>
+      </div>
     </div>
 
     <div class="panel">
@@ -139,14 +143,20 @@ if(!DATA){
     stk({market:"KR",code:"207940",name:"가상바이오",sector:"바이오",rank:4,n:1,d20:0.7,d60:110,d200:126,rsi:57,h52:-2.9,vr:1.3,ell:"3파 상승 추정",note:"상승 진행(추정)",r3:19,r6:37,rs:31,seed:10,start:42}),
     stk({market:"KR",code:"012450",name:"가상항공우주",sector:"우주항공",rank:5,d20:4.0,d60:112,d200:133,rsi:63,h52:-1.8,vr:1.1,ell:"5파 마무리 추정",note:"되돌림 진행(추정)",r3:24,r6:48,rs:35,seed:12,start:38}),
   ];
-  const stocks=mk([...US,...KR]);
+  const CMD=[
+    stk({market:"CMD",code:"GLD",name:"금(GLD)",sector:"원자재",rank:0,d20:1.2,d60:104,d200:114,rsi:59,h52:-1.2,vr:1.1,ell:"3파 상승 추정",note:"상승 진행(추정)",r3:9,r6:18,rs:16,seed:14,start:160}),
+    stk({market:"CMD",code:"CPER",name:"구리(CPER)",sector:"원자재",rank:0,t:1,d20:0.1,d60:103,d200:109,rsi:51,h52:-4.0,vr:1.3,ell:"2파 조정 추정",note:"되돌림 진행(추정)",r3:7,r6:14,rs:12,seed:15,start:28}),
+    stk({market:"CMD",code:"URA",name:"우라늄(URA)",sector:"원자재",rank:0,d20:5.5,d60:112,d200:131,rsi:66,h52:-0.8,vr:1.0,ell:"3파 상승 추정",note:"상승 진행(추정)",r3:21,r6:39,rs:33,seed:16,start:25}),
+  ];
+  const stocks=mk([...US,...KR,...CMD]);
   DATA={demo:true,bar_date:"예시",generated_at:"예시 데이터",config:{zigzag_pct:7},
+    commodities:CMD.map(r=>r.id),
     counts:{stocks:US.length+KR.length,touched:3,near:3},stocks,
     markets:{
       US:{sectors:[
-        {sector:"Information Technology",etf:"XLK",etf_rs:34.0,leader_ids:["US:AAA","US:BBB","US:CCC"]},
-        {sector:"Industrials",etf:"XLI",etf_rs:21.0,leader_ids:["US:EEE"]},
-        {sector:"Energy",etf:"XLE",etf_rs:18.0,leader_ids:["US:DDD"]}],
+        {sector:"반도체(SMH)",etf:"SMH",kind:"theme",etf_rs:39.0,leader_ids:["US:AAA","US:CCC"]},
+        {sector:"소프트웨어(IGV)",etf:"IGV",kind:"theme",etf_rs:33.0,leader_ids:["US:BBB"]},
+        {sector:"Energy",etf:"XLE",kind:"sector",etf_rs:18.0,leader_ids:["US:DDD"]}],
         top_ids:US.map(r=>r.id),deep_ids:["US:AAA","US:BBB","US:CCC"]},
       KR:{sectors:[
         {sector:"반도체",etf:"091160",etf_rs:38.0,leader_ids:["KR:005930","KR:000660"]},
@@ -184,9 +194,21 @@ function render(){
         <span class="nm">${r.name} ${pbBadge(r)}</span>
         <span class="rk">RS#${r.rs_rank||'-'} · ${(r.dist20>0?'+':'')+r.dist20}%</span></div>`;}).join("")
       || '<div class="rk" style="color:var(--muted);font-size:11.5px;padding:4px">구성종목 RS 데이터 없음</div>';
-    return `<div class="seccard"><h4>${s.sector}</h4>
-      <div class="er">${s.etf} · 섹터 RS <b>${s.etf_rs}</b></div>${ld}</div>`;}).join("")
+    const kind=s.kind==='theme'?'테마':(s.kind==='sector'?'섹터':'섹터');
+    return `<div class="seccard"><h4>${s.sector} <span class="bdg x" style="font-size:9.5px">${kind}</span></h4>
+      <div class="er">${s.etf} · RS <b>${s.etf_rs}</b></div>${ld}</div>`;}).join("")
     || '<div class="empty">섹터 데이터 없음</div>';
+
+  // 원자재(미국 보기에서만)
+  const cmds=(DATA.commodities||[]).map(id=>S[id]).filter(Boolean);
+  const cp=$("cmdPanel");
+  if(market==="US" && cmds.length){
+    cp.style.display="";
+    $("commodities").innerHTML=cmds.map(r=>`
+      <div class="seccard" style="padding:9px"><div class="ldr ${selected===r.id?'sel':''}" data-id="${r.id}" style="padding:2px">
+        <span class="nm"><b>${r.name}</b> ${pbBadge(r)}</span>
+        <span class="rk">RS ${r.rs} · ${(r.dist20>0?'+':'')+r.dist20}%</span></div></div>`).join("");
+  } else { cp.style.display="none"; }
   // 트랙②
   $("top10").innerHTML=(mk.top_ids||[]).map(id=>{const r=S[id];if(!r)return"";
     const deep=(mk.deep_ids||[]).includes(id);

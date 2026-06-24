@@ -51,6 +51,32 @@ SECTOR_ETFS_US = {
     "XLU": "Utilities", "XLC": "Communication Services",
 }
 
+# 미국 테마 ETF(SPDR 큰 섹터보다 날카로움) → 구성종목 리스트로 대장주 선별
+THEME_ETFS_US = {
+    "SMH": {"label": "반도체(SMH)", "members": ["NVDA", "AVGO", "AMD", "QCOM", "TXN", "MU", "AMAT",
+            "LRCX", "KLAC", "ADI", "INTC", "MRVL", "MCHP", "NXPI", "ON", "MPWR", "TER", "SWKS"]},
+    "IGV": {"label": "소프트웨어(IGV)", "members": ["MSFT", "ORCL", "CRM", "ADBE", "NOW", "INTU", "PANW",
+            "SNPS", "CDNS", "FTNT", "CRWD", "PLTR", "DDOG", "SNOW", "TEAM", "WDAY", "ADSK", "ANSS"]},
+    "XBI": {"label": "바이오테크(XBI)", "members": ["VRTX", "REGN", "GILD", "AMGN", "BIIB", "MRNA", "INCY",
+            "EXEL", "NBIX", "HALO", "ALNY", "BMRN", "SRPT", "UTHR", "NTRA"]},
+    "ITA": {"label": "방산·우주(ITA)", "members": ["RTX", "BA", "LMT", "GD", "NOC", "GE", "LHX", "HWM",
+            "TDG", "AXON", "HII", "TXT"]},
+    "TAN": {"label": "태양광(TAN)", "members": ["FSLR", "ENPH", "SEDG", "RUN", "NXT", "ARRY", "SHLS", "CSIQ"]},
+    "JETS": {"label": "항공(JETS)", "members": ["DAL", "UAL", "AAL", "LUV", "ALK", "SKYW", "ALGT"]},
+    "KRE": {"label": "지역은행(KRE)", "members": ["TFC", "USB", "PNC", "MTB", "FITB", "KEY", "RF", "HBAN",
+            "CFG", "ZION", "CMA"]},
+    "XME": {"label": "금속·광산(XME)", "members": ["NEM", "FCX", "NUE", "STLD", "CLF", "X", "AA", "RS",
+            "MP", "ATI", "CMC"]},
+    "XOP": {"label": "석유 E&P(XOP)", "members": ["COP", "EOG", "DVN", "FANG", "OXY", "HES", "APA",
+            "CTRA", "MRO", "MTDR", "OVV"]},
+}
+
+# 미국 원자재 ETF(주식 아님 → '대장주' 없음, ETF 자체를 RS·눌림목으로 추적)
+COMMODITY_ETFS = {
+    "GLD": "금", "SLV": "은", "CPER": "구리", "USO": "WTI원유", "UNG": "천연가스",
+    "DBA": "농산물", "DBC": "원자재종합", "URA": "우라늄", "GDX": "금광업",
+}
+
 # 한국: KODEX 섹터/테마 ETF를 FDR 목록에서 자동 수집할 때 쓰는 키워드
 KR_SECTOR_KEYWORDS = (
     "반도체", "2차전지", "바이오", "헬스케어", "제약", "은행", "증권", "보험", "자동차",
@@ -319,7 +345,7 @@ def metrics(meta, df):
 # ----------------------------------------------------------------------
 # 2트랙 구성
 # ----------------------------------------------------------------------
-def build_tracks(allrecs, us_etf_rs, kr_etfs, kr_etf_rs, holdings_fn):
+def build_tracks(allrecs, us_units, kr_etfs, kr_etf_rs, holdings_fn):
     markets = {}
     for mkt in ("US", "KR"):
         recs = [r for r in allrecs if r["market"] == mkt and r["trend_ok"]]
@@ -332,15 +358,20 @@ def build_tracks(allrecs, us_etf_rs, kr_etfs, kr_etf_rs, holdings_fn):
             r["rs_rank"] = i
         deep_ids = [r["id"] for r in top[: CONFIG["deep_top"]]]
 
-        # 트랙① 강한 섹터 → 대장주
+        # 트랙① 강한 섹터/테마 → 대장주
         sectors = []
         if mkt == "US":
-            ranked = sorted(
-                [(etf, sec, us_etf_rs.get(etf)) for etf, sec in SECTOR_ETFS_US.items() if us_etf_rs.get(etf) is not None],
-                key=lambda x: x[2], reverse=True)
-            for etf, sec, ersv in ranked[: CONFIG["top_sectors"]]:
-                leaders = [r for r in recs if r["sector"] == sec][: CONFIG["leaders_per_sector"]]
-                sectors.append({"sector": sec, "etf": etf, "etf_rs": round(ersv * 100, 1),
+            ranked = sorted([u for u in us_units if u.get("rs") is not None],
+                            key=lambda u: u["rs"], reverse=True)
+            for u in ranked[: CONFIG["top_sectors"]]:
+                if u["kind"] == "sector":
+                    leaders = [r for r in recs if r["sector"] == u["label"]]
+                else:  # theme: 구성종목 리스트
+                    ms = set(u["members"])
+                    leaders = [r for r in recs if r["code"] in ms]
+                leaders = leaders[: CONFIG["leaders_per_sector"]]
+                sectors.append({"sector": u["label"], "etf": u["etf"], "kind": u["kind"],
+                                "etf_rs": round(u["rs"] * 100, 1),
                                 "leader_ids": [r["id"] for r in leaders]})
 
         elif kr_etfs:
@@ -402,7 +433,7 @@ def latest_bar_date(data):
         return dt.date.today().isoformat()
 
 
-def build_message(markets, stocks, bar_date):
+def build_message(markets, stocks, bar_date, commodity_ids=()):
     flag = lambda m: "🟢" if m == "US" else "🔵"
     lines = [f"📈 <b>2트랙 모멘텀 스크리너</b> · 기준일 {bar_date}"]
     for mkt in ("US", "KR"):
@@ -426,6 +457,11 @@ def build_message(markets, stocks, bar_date):
         deep = [stocks[i] for i in mk.get("deep_ids", [])]
         if deep:
             lines.append("· 심층 Top3: " + ", ".join(f"{r['name']}·{r['elliott']}" for r in deep))
+    if commodity_ids:
+        cm = [stocks[i] for i in commodity_ids[:5]]
+        lines.append("\n🟡 <b>원자재(RS 상위)</b>: " +
+                     ", ".join(f"{stocks[i]['name'].split('(')[0]}{'🟢터치' if stocks[i]['touched'] else ''}"
+                               for i in commodity_ids[:5]))
     lines.append("\n<i>대시보드(차트·이격도·엘리어트): reports/dashboard.html · 무료 지연 종가</i>")
     return "\n".join(lines)
 
@@ -488,8 +524,18 @@ def main():
     if not rows:
         send_telegram("⚠️ 스크리너: 유니버스 수집 실패.")
         sys.exit(0)
+    # 테마 ETF 구성종목을 미국 유니버스에 자동 편입(S&P500에 없으면 추가)
+    us_codes = {r["code"] for r in rows if r["market"] == "US"}
+    for info in THEME_ETFS_US.values():
+        for sym in info["members"]:
+            if sym not in us_codes:
+                us_codes.add(sym)
+                rows.append({"market": "US", "code": sym, "yahoo": sym.replace(".", "-"),
+                             "name": sym, "sector": info["label"]})
+
     kr_etfs = get_kr_sector_etfs()
     symbols = ({r["yahoo"] for r in rows} | set(SECTOR_ETFS_US.keys())
+               | set(THEME_ETFS_US.keys()) | set(COMMODITY_ETFS.keys())
                | {e["yahoo"] for e in kr_etfs})
     data = download_prices(symbols)
     bar_date = latest_bar_date(data)
@@ -500,23 +546,39 @@ def main():
         if rec:
             allrecs.append(rec)
 
-    us_etf_rs = {}
-    for etf in SECTOR_ETFS_US:
-        df = ohlc_for(data, etf)
-        if df is not None:
-            v, *_ = rs_value(df["Close"].astype(float))
-            us_etf_rs[etf] = v
-    kr_etf_rs = {}
-    for e in kr_etfs:
-        df = ohlc_for(data, e["yahoo"])
-        if df is not None:
-            v, *_ = rs_value(df["Close"].astype(float))
-            kr_etf_rs[e["yahoo"]] = v
-    print(f"[result] 종목 {len(allrecs)} · US섹터ETF {sum(1 for v in us_etf_rs.values() if v is not None)} "
-          f"· KR섹터ETF {sum(1 for v in kr_etf_rs.values() if v is not None)}")
+    def etf_rs(sym):
+        df = ohlc_for(data, sym)
+        if df is None:
+            return None
+        v, *_ = rs_value(df["Close"].astype(float))
+        return v
 
-    markets = build_tracks(allrecs, us_etf_rs, kr_etfs, kr_etf_rs, kr_etf_holdings)
+    # 미국 섹터/테마 유닛(한 풀에서 RS 랭킹)
+    us_units = []
+    for etf, sec in SECTOR_ETFS_US.items():
+        us_units.append({"etf": etf, "label": sec, "kind": "sector", "rs": etf_rs(etf)})
+    for etf, info in THEME_ETFS_US.items():
+        us_units.append({"etf": etf, "label": info["label"], "kind": "theme",
+                         "members": info["members"], "rs": etf_rs(etf)})
+
+    kr_etf_rs = {e["yahoo"]: etf_rs(e["yahoo"]) for e in kr_etfs}
+
+    # 원자재 ETF(주식 아님 → ETF 자체를 rec로)
+    commodities = []
+    for tk, label in COMMODITY_ETFS.items():
+        rec = metrics({"market": "CMD", "code": tk, "name": f"{label}({tk})", "sector": "원자재"},
+                      ohlc_for(data, tk))
+        if rec:
+            commodities.append(rec)
+    commodities.sort(key=lambda r: r["_rs_raw"], reverse=True)
+    print(f"[result] 종목 {len(allrecs)} · US유닛 {sum(1 for u in us_units if u['rs'] is not None)} "
+          f"· KR섹터ETF {sum(1 for v in kr_etf_rs.values() if v is not None)} · 원자재 {len(commodities)}")
+
+    markets = build_tracks(allrecs, us_units, kr_etfs, kr_etf_rs, kr_etf_holdings)
     stocks = collect_selected(markets, allrecs)
+    for rec in commodities:  # 원자재를 stocks에 추가(상세 차트용)
+        c = dict(rec); c.pop("_rs_raw", None); c.setdefault("rs_rank", 0)
+        stocks[c["id"]] = c
     payload = {
         "bar_date": bar_date,
         "generated_at": dt.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
@@ -524,12 +586,13 @@ def main():
                                           "leaders_per_sector", "individual_top", "deep_top",
                                           "proximity_pct", "rs_weights", "zigzag_pct")},
         "markets": markets, "stocks": stocks,
+        "commodities": [c["id"] for c in commodities],
         "counts": {"stocks": len(stocks),
                    "touched": sum(1 for r in stocks.values() if r["touched"]),
                    "near": sum(1 for r in stocks.values() if r["near"])},
     }
     write_outputs(payload)
-    send_telegram(build_message(markets, stocks, bar_date))
+    send_telegram(build_message(markets, stocks, bar_date, payload["commodities"]))
     print("[done]")
 
 
