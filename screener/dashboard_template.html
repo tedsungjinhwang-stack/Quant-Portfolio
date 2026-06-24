@@ -70,6 +70,20 @@
   .ellbox b{color:#fff}.caveat{color:var(--muted);font-size:11.5px;margin-top:6px}
   .empty{color:var(--muted);text-align:center;padding:40px 10px}
   .foot{color:var(--muted);font-size:11.5px;margin-top:16px;text-align:center}
+  /* regime banner */
+  .rbanner{border-radius:12px;padding:13px 15px;margin-bottom:14px;border:1px solid;display:grid;gap:12px}
+  @media(min-width:780px){.rbanner{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);align-items:center}}
+  .rbanner.green{background:rgba(61,220,151,.08);border-color:#2c5a45}
+  .rbanner.yellow{background:rgba(255,206,90,.08);border-color:#5a4f24}
+  .rbanner.red{background:rgba(255,107,107,.08);border-color:#5a2c2c}
+  .rlight{font-size:21px;font-weight:800;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .rlight small{color:var(--muted);font-size:12.5px;font-weight:500}
+  .reasons{color:var(--muted);font-size:11.5px;margin-top:6px}
+  .ridx{display:flex;gap:8px;flex-wrap:wrap}
+  .ridx .ic{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:11.5px;line-height:1.45}
+  .ridx .ic b{font-size:13px}
+  .bar{height:8px;background:#222a36;border-radius:5px;overflow:hidden;margin:3px 0 6px}
+  .bar > i{display:block;height:100%}
 </style>
 </head>
 <body>

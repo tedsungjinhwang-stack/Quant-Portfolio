@@ -77,6 +77,12 @@ COMMODITY_ETFS = {
     "DBA": "농산물", "DBC": "원자재종합", "URA": "우라늄", "GDX": "금광업",
 }
 
+# 시장 건강도(레짐) 판단용 지수
+INDEXES = {
+    "US": [("^GSPC", "S&P500"), ("^IXIC", "나스닥")],
+    "KR": [("^KS11", "코스피"), ("^KQ11", "코스닥")],
+}
+
 # 한국: KODEX 섹터/테마 ETF를 FDR 목록에서 자동 수집할 때 쓰는 키워드
 KR_SECTOR_KEYWORDS = (
     "반도체", "2차전지", "바이오", "헬스케어", "제약", "은행", "증권", "보험", "자동차",
@@ -345,6 +351,73 @@ def metrics(meta, df):
 # ----------------------------------------------------------------------
 # 2트랙 구성
 # ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+# 시장 건강도(레짐)
+# ----------------------------------------------------------------------
+def index_health(name, ticker, df):
+    if df is None or len(df) < 60:
+        return None
+    close = df["Close"].astype(float)
+    last = float(close.iloc[-1])
+    ma50 = close.rolling(50).mean()
+    ma200 = close.rolling(min(200, len(close))).mean()
+    v50, v200 = ma50.iloc[-1], ma200.iloc[-1]
+    slope_up = bool(pd.notna(v200) and len(ma200.dropna()) > 21 and v200 > ma200.iloc[-21])
+    return {
+        "name": name, "ticker": ticker, "close": round(last, 2),
+        "ma50": round(float(v50), 2) if pd.notna(v50) else None,
+        "ma200": round(float(v200), 2) if pd.notna(v200) else None,
+        "above200": bool(pd.notna(v200) and last > v200),
+        "golden": bool(pd.notna(v50) and pd.notna(v200) and v50 > v200),
+        "dist200": round((last / float(v200) - 1) * 100, 1) if pd.notna(v200) else None,
+        "slope_up": slope_up,
+        "rsi": round(float(rsi(close).iloc[-1]), 1),
+    }
+
+
+def build_regime(allrecs, idx_map):
+    out = {}
+    for mkt in ("US", "KR"):
+        idxs = [idx_map[t] for t, _ in INDEXES[mkt] if idx_map.get(t)]
+        pool = [r for r in allrecs if r["market"] == mkt and r.get("ma200") and r.get("ma60")]
+        n = len(pool)
+        b200 = sum(1 for r in pool if r["close"] > r["ma200"]) / n * 100 if n else None
+        b60 = sum(1 for r in pool if r["close"] > r["ma60"]) / n * 100 if n else None
+        bnew = sum(1 for r in pool if r.get("high52_pct") is not None and r["high52_pct"] >= -3) / n * 100 if n else None
+        primary = idxs[0] if idxs else None
+
+        signals, reasons = {}, []
+        if primary:
+            signals["idx_above200"] = primary["above200"]
+            signals["golden_cross"] = primary["golden"]
+            signals["slope_up"] = primary["slope_up"]
+            reasons.append(f"{primary['name']} {'200일선 위' if primary['above200'] else '200일선 아래'}"
+                           f"({primary['dist200']:+.1f}%)")
+            reasons.append("정배열(50>200)" if primary["golden"] else "역배열(50<200)")
+            reasons.append("200일선 상승" if primary["slope_up"] else "200일선 하락/횡보")
+        if b200 is not None:
+            signals["breadth200"] = b200 >= 55
+            signals["breadth60"] = b60 >= 55
+            reasons.append(f"200일선 위 종목 {b200:.0f}% · 60일선 위 {b60:.0f}%")
+
+        score = sum(1 for v in signals.values() if v)
+        total = len(signals) or 1
+        if score >= max(4, total - 1):
+            label, color, premise = "상승장", "green", "추세추종 눌림목 매수에 우호적인 국면."
+        elif score <= 1:
+            label, color, premise = "하락장", "red", "대전제 위배 — 눌림목 매수는 저확률, 현금·방어 우선."
+        else:
+            label, color, premise = "중립·혼조", "yellow", "선별 대응 — 강한 섹터·대장주 위주로만."
+
+        out[mkt] = {"label": label, "color": color, "premise": premise,
+                    "score": score, "total": total, "signals": signals, "reasons": reasons,
+                    "breadth": {"above200": round(b200, 1) if b200 is not None else None,
+                                "above60": round(b60, 1) if b60 is not None else None,
+                                "newhigh": round(bnew, 1) if bnew is not None else None, "n": n},
+                    "indexes": idxs}
+    return out
+
+
 def build_tracks(allrecs, us_units, kr_etfs, kr_etf_rs, holdings_fn):
     markets = {}
     for mkt in ("US", "KR"):
@@ -433,14 +506,20 @@ def latest_bar_date(data):
         return dt.date.today().isoformat()
 
 
-def build_message(markets, stocks, bar_date, commodity_ids=()):
+def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None):
+    regime = regime or {}
     flag = lambda m: "🟢" if m == "US" else "🔵"
+    light = {"green": "🟢", "yellow": "🟡", "red": "🔴"}
     lines = [f"📈 <b>2트랙 모멘텀 스크리너</b> · 기준일 {bar_date}"]
     for mkt in ("US", "KR"):
         mk = markets.get(mkt, {})
         if not mk.get("sectors") and not mk.get("top_ids"):
             continue
-        lines.append(f"\n{flag(mkt)} <b>{'미국' if mkt=='US' else '한국'}</b>")
+        rg = regime.get(mkt)
+        rg_txt = f" — {light.get(rg['color'],'')} <b>{rg['label']}</b>" if rg else ""
+        lines.append(f"\n{flag(mkt)} <b>{'미국' if mkt=='US' else '한국'}</b>{rg_txt}")
+        if rg:
+            lines.append(f"  대전제: {rg['premise']}")
         secs = mk.get("sectors", [])
         if secs:
             lines.append("· 트랙① 강한 섹터: " + ", ".join(s["sector"] for s in secs))
@@ -534,9 +613,10 @@ def main():
                              "name": sym, "sector": info["label"]})
 
     kr_etfs = get_kr_sector_etfs()
+    index_tickers = {t for lst in INDEXES.values() for t, _ in lst}
     symbols = ({r["yahoo"] for r in rows} | set(SECTOR_ETFS_US.keys())
                | set(THEME_ETFS_US.keys()) | set(COMMODITY_ETFS.keys())
-               | {e["yahoo"] for e in kr_etfs})
+               | index_tickers | {e["yahoo"] for e in kr_etfs})
     data = download_prices(symbols)
     bar_date = latest_bar_date(data)
 
@@ -574,6 +654,15 @@ def main():
     print(f"[result] 종목 {len(allrecs)} · US유닛 {sum(1 for u in us_units if u['rs'] is not None)} "
           f"· KR섹터ETF {sum(1 for v in kr_etf_rs.values() if v is not None)} · 원자재 {len(commodities)}")
 
+    idx_map = {}
+    for mkt, lst in INDEXES.items():
+        for tk, nm in lst:
+            h = index_health(nm, tk, ohlc_for(data, tk))
+            if h:
+                idx_map[tk] = h
+    regime = build_regime(allrecs, idx_map)
+    print(f"[regime] US={regime['US']['label']} KR={regime['KR']['label']}")
+
     markets = build_tracks(allrecs, us_units, kr_etfs, kr_etf_rs, kr_etf_holdings)
     stocks = collect_selected(markets, allrecs)
     for rec in commodities:  # 원자재를 stocks에 추가(상세 차트용)
@@ -585,6 +674,7 @@ def main():
         "config": {k: CONFIG[k] for k in ("ma_pullback", "ma_trend", "top_sectors",
                                           "leaders_per_sector", "individual_top", "deep_top",
                                           "proximity_pct", "rs_weights", "zigzag_pct")},
+        "regime": regime,
         "markets": markets, "stocks": stocks,
         "commodities": [c["id"] for c in commodities],
         "counts": {"stocks": len(stocks),
@@ -592,7 +682,7 @@ def main():
                    "near": sum(1 for r in stocks.values() if r["near"])},
     }
     write_outputs(payload)
-    send_telegram(build_message(markets, stocks, bar_date, payload["commodities"]))
+    send_telegram(build_message(markets, stocks, bar_date, payload["commodities"], regime))
     print("[done]")
 
 
