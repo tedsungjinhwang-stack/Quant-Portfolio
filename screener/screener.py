@@ -312,6 +312,7 @@ def metrics(meta, df):
     touched = bool(pd.notna(v20) and lo <= v20 <= hi)
     dist20 = (last - v20) / v20 * 100 if pd.notna(v20) else None
     high52 = float(close.tail(252).max())
+    low52 = float(close.tail(252).min())
     vol = df.get("Volume")
     vr = None
     if vol is not None and len(vol) >= 20 and vol.tail(20).mean() > 0:
@@ -340,6 +341,7 @@ def metrics(meta, df):
         "disp200": round(last / float(v200) * 100, 1) if pd.notna(v200) else None,
         "rsi": round(float(rsi(close).iloc[-1]), 1),
         "high52_pct": round((last / high52 - 1) * 100, 1) if high52 > 0 else None,
+        "low52_pct": round((last / low52 - 1) * 100, 1) if low52 > 0 else None,
         "vol_ratio": round(vr, 2) if vr else None,
         "elliott": ell, "elliott_note": note,
         "ret3m": round(m3 * 100, 1), "ret6m": round(m6 * 100, 1),
@@ -376,44 +378,53 @@ def index_health(name, ticker, df):
 
 
 def build_regime(allrecs, idx_map):
+    """StockEasy 방법론 재현: 이평선 이탈비율 + 52주 신고가/신저가 순증 + 지수추세 → 국면."""
     out = {}
     for mkt in ("US", "KR"):
         idxs = [idx_map[t] for t, _ in INDEXES[mkt] if idx_map.get(t)]
-        pool = [r for r in allrecs if r["market"] == mkt and r.get("ma200") and r.get("ma60")]
+        pool = [r for r in allrecs if r["market"] == mkt and r.get("ma200") and r.get("ma20")]
         n = len(pool)
-        b200 = sum(1 for r in pool if r["close"] > r["ma200"]) / n * 100 if n else None
-        b60 = sum(1 for r in pool if r["close"] > r["ma60"]) / n * 100 if n else None
-        bnew = sum(1 for r in pool if r.get("high52_pct") is not None and r["high52_pct"] >= -3) / n * 100 if n else None
+        pct = lambda c: round(sum(1 for r in pool if c(r)) / n * 100, 1) if n else None
+
+        below20 = pct(lambda r: r["close"] < r["ma20"])      # 20일선 이탈비율(↑=약세)
+        below200 = pct(lambda r: r["close"] < r["ma200"])    # 200일선 이탈비율(↑=약세)
+        above200 = round(100 - below200, 1) if below200 is not None else None
+        new_high = pct(lambda r: r.get("high52_pct") is not None and r["high52_pct"] >= -0.5)  # 52주 신고가
+        near_high = pct(lambda r: r.get("high52_pct") is not None and r["high52_pct"] >= -3)   # 신고가 근접
+        new_low = pct(lambda r: r.get("low52_pct") is not None and r["low52_pct"] <= 1.0)      # 52주 신저가
+        net_nh = round((new_high or 0) - (new_low or 0), 1) if n else None  # 신고가-신저가 순증
+
         primary = idxs[0] if idxs else None
-
-        signals, reasons = {}, []
+        idx_up = bool(primary and primary["above200"])
+        reasons = []
         if primary:
-            signals["idx_above200"] = primary["above200"]
-            signals["golden_cross"] = primary["golden"]
-            signals["slope_up"] = primary["slope_up"]
             reasons.append(f"{primary['name']} {'200일선 위' if primary['above200'] else '200일선 아래'}"
-                           f"({primary['dist200']:+.1f}%)")
-            reasons.append("정배열(50>200)" if primary["golden"] else "역배열(50<200)")
-            reasons.append("200일선 상승" if primary["slope_up"] else "200일선 하락/횡보")
-        if b200 is not None:
-            signals["breadth200"] = b200 >= 55
-            signals["breadth60"] = b60 >= 55
-            reasons.append(f"200일선 위 종목 {b200:.0f}% · 60일선 위 {b60:.0f}%")
+                           f"({primary['dist200']:+.1f}%, {'정배열' if primary['golden'] else '역배열'})")
+        if below200 is not None:
+            reasons.append(f"200일선 이탈 {below200:.0f}% · 20일선 이탈 {below20:.0f}% (낮을수록 강세)")
+            reasons.append(f"52주 신고가 {new_high:.0f}% · 신저가 {new_low:.0f}% (순증 {net_nh:+.0f})")
 
-        score = sum(1 for v in signals.values() if v)
-        total = len(signals) or 1
-        if score >= max(4, total - 1):
-            label, color, premise = "상승장", "green", "추세추종 눌림목 매수에 우호적인 국면."
-        elif score <= 1:
-            label, color, premise = "하락장", "red", "대전제 위배 — 눌림목 매수는 저확률, 현금·방어 우선."
+        # 국면 판정 (StockEasy 라벨 체계)
+        weak200 = below200 if below200 is not None else 50
+        weak20 = below20 if below20 is not None else 50
+        nn = net_nh if net_nh is not None else 0
+        if idx_up and weak200 < 40 and nn >= 0:
+            label, color = "추세유지", "green"
+            premise = "상승 추세 견조 — 다수 종목이 200일선 위, 신고가 우위. 눌림목 매수 우호."
+        elif (not idx_up) or weak200 > 60:
+            label, color = "조정 국면", "red"
+            premise = "다수 종목이 200일선 이탈 — 눌림목 매수 저확률, 현금·방어 비중 우선."
+        elif idx_up and (weak20 > 60 or nn < 0):
+            label, color = "상승 둔화", "yellow"
+            premise = "지수는 위지만 신고가 줄고 이탈 증가 — 주도 섹터·대장주만 선별 대응."
         else:
-            label, color, premise = "중립·혼조", "yellow", "선별 대응 — 강한 섹터·대장주 위주로만."
+            label, color = "관망 후 대응", "yellow"
+            premise = "방향 불명확 — 신호 확인 후 대응, 신규 진입 신중."
 
-        out[mkt] = {"label": label, "color": color, "premise": premise,
-                    "score": score, "total": total, "signals": signals, "reasons": reasons,
-                    "breadth": {"above200": round(b200, 1) if b200 is not None else None,
-                                "above60": round(b60, 1) if b60 is not None else None,
-                                "newhigh": round(bnew, 1) if bnew is not None else None, "n": n},
+        out[mkt] = {"label": label, "color": color, "premise": premise, "reasons": reasons,
+                    "breadth": {"below20": below20, "below200": below200, "above200": above200,
+                                "new_high": new_high, "near_high": near_high, "new_low": new_low,
+                                "net_new_high": net_nh, "n": n},
                     "indexes": idxs}
     return out
 

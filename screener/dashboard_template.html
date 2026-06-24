@@ -93,6 +93,7 @@
   <p class="sub"><b>트랙①</b> 섹터 ETF→대장주 · <b>트랙②</b> 개별 RS Top10(최상위 3 심층). 종목을 누르면 차트·이격도·RSI·엘리어트(추정)가 열립니다.</p>
   <div id="chips" class="chips"></div>
   <div class="seg" id="mkSeg"><button data-m="US" class="on">🟢 미국</button><button data-m="KR">🔵 한국</button></div>
+  <div id="regime"></div>
 
   <div class="layout">
     <div>
@@ -165,6 +166,15 @@ if(!DATA){
   const stocks=mk([...US,...KR,...CMD]);
   DATA={demo:true,bar_date:"예시",generated_at:"예시 데이터",config:{zigzag_pct:7},
     commodities:CMD.map(r=>r.id),
+    regime:{
+      US:{label:"추세유지",color:"green",premise:"상승 추세 견조 — 다수 종목이 200일선 위, 신고가 우위. 눌림목 매수 우호.",
+        reasons:["S&P500 200일선 위(+6.2%, 정배열)","200일선 이탈 32% · 20일선 이탈 41% (낮을수록 강세)","52주 신고가 16% · 신저가 4% (순증 +12)"],
+        breadth:{below20:41,below200:32,above200:68,new_high:16,near_high:24,new_low:4,net_new_high:12,n:480},
+        indexes:[{name:"S&P500",close:5600,above200:true,golden:true,rsi:58},{name:"나스닥",close:18200,above200:true,golden:true,rsi:60}]},
+      KR:{label:"상승 둔화",color:"yellow",premise:"지수는 위지만 신고가 줄고 이탈 증가 — 주도 섹터·대장주만 선별 대응.",
+        reasons:["코스피 200일선 위(+1.1%, 정배열)","200일선 이탈 52% · 20일선 이탈 63% (낮을수록 강세)","52주 신고가 7% · 신저가 9% (순증 -2)"],
+        breadth:{below20:63,below200:52,above200:48,new_high:7,near_high:13,new_low:9,net_new_high:-2,n:240},
+        indexes:[{name:"코스피",close:2700,above200:true,golden:true,rsi:51},{name:"코스닥",close:850,above200:false,golden:false,rsi:45}]}},
     counts:{stocks:US.length+KR.length,touched:3,near:3},stocks,
     markets:{
       US:{sectors:[
@@ -199,7 +209,27 @@ const pbBadge=r=>r.touched?'<span class="bdg t">터치</span>':r.near?'<span cla
 $("mkSeg").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
   market=b.dataset.m;$("mkSeg").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));render();}));
 
+function renderRegime(){
+  const rg=(DATA.regime||{})[market], el=$("regime");
+  if(!rg){el.innerHTML="";return;}
+  const lc={green:"🟢",yellow:"🟡",red:"🔴"}[rg.color]||"⚪", b=rg.breadth||{};
+  const idx=(rg.indexes||[]).map(x=>`<div class="ic">${x.name} <b>${fmt(x.close)}</b><br>
+    <span class="${x.above200?'pos':'neg'}">${x.above200?'▲200MA':'▼200MA'}</span> ${x.golden?'·정배열':'·역배열'} ·RSI ${x.rsi}</div>`).join("");
+  const bar=(v,col)=>`<div class="bar"><i style="width:${Math.max(0,Math.min(100,v||0))}%;background:${col}"></i></div>`;
+  el.innerHTML=`<div class="rbanner ${rg.color}">
+    <div><div class="rlight">${lc} ${rg.label} <small>${rg.premise}</small></div>
+      <div class="reasons">${(rg.reasons||[]).join(" · ")}</div></div>
+    <div><div class="ridx">${idx}</div>
+      <div style="margin-top:8px">
+        <div style="font-size:11.5px;color:var(--muted)">200일선 위 종목 ${b.above200??'–'}% <span style="color:#7a8294">(이탈 ${b.below200??'–'}%)</span></div>${bar(b.above200,'#3ddc97')}
+        <div style="font-size:11.5px;color:var(--muted)">52주 신고가 ${b.new_high??'–'}% vs 신저가 ${b.new_low??'–'}% · 순증 ${b.net_new_high>0?'+':''}${b.net_new_high??'–'}</div>
+        ${bar(50+(b.net_new_high||0)*2,b.net_new_high>=0?'#3ddc97':'#ff6b6b')}
+        <div style="font-size:11px;color:var(--muted)">신고가 근접 ${b.near_high??'–'}% · 표본 ${b.n}종목</div>
+      </div></div></div>`;
+}
+
 function render(){
+  renderRegime();
   const mk=DATA.markets[market]||{sectors:[],top_ids:[]};
   // 트랙①
   $("sectors").innerHTML=(mk.sectors||[]).map(s=>{
