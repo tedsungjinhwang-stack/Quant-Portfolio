@@ -100,6 +100,13 @@
   .cyc-flag{color:var(--down);font-weight:700;font-size:11.5px}
   .msig{color:var(--muted)}.msig i{font-style:normal;opacity:.8;font-size:11px}
   .msig .sig-green{color:var(--up)}.msig .sig-yellow{color:var(--warn)}.msig .sig-red{color:var(--down)}
+  .mpos{margin-top:7px;font-size:12.5px;display:flex;align-items:baseline;flex-wrap:wrap;gap:5px 9px}
+  .mpos-ph{font-weight:800;padding:2px 9px;border-radius:999px;font-size:12.5px;background:transparent}
+  .mpos-ph.ph-green{color:var(--up);background:rgba(61,220,151,.12)}
+  .mpos-ph.ph-blue{color:#7ea6ff;background:rgba(91,140,255,.12)}
+  .mpos-ph.ph-amber{color:var(--warn);background:rgba(255,176,32,.12)}
+  .mpos-ph.ph-red{color:var(--down);background:rgba(255,107,107,.12)}
+  .mpos-x{color:var(--muted)}
   /* 글로벌 매크로 패널 */
   .macro{margin-bottom:14px}
   .macro .mttl{font-size:13px;font-weight:700;margin-bottom:10px;color:var(--txt);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
@@ -396,12 +403,12 @@ if(!DATA){
         exposure:{stance:"적극 투자",equity:"80~100%",cash:"0~20%"},
         reasons:["S&P500 240일선 위(+6.2%, 정배열)","240일선 이탈 32% · 20일선 이탈 41% (낮을수록 강세)","52주 신고가 16% · 신저가 4% (순증 +12)"],
         breadth:{below20:41,below200:32,above200:68,new_high:16,near_high:24,new_low:4,net_new_high:12,n:480},
-        indexes:[{name:"S&P500",close:5600,above200:true,golden:true,rsi:58,ret1d:0.4,ret1m:3.1,ret_ytd:12.5,ret1y:21.0,wyckoff:"상승 추세 (Markup)"},{name:"나스닥",close:18200,above200:true,golden:true,rsi:60,ret1d:0.6,ret1m:4.2,ret_ytd:15.0,ret1y:28.0,wyckoff:"상승 추세 (Markup)"}],macro:{risk:{score:62,net:3,on:["CPI","기대인플레","M2 통화량","구리(Dr.)","신규실업수당"],off:["기준금리","VIX 변동성"],label:"위험선호(완화적)",tone:"green"},cycle:{phase:"회복",desc:"성장↑·물가↓ — 디스인플레 회복",favored:"주식·성장주 우호",growth:2,inflation:-2,flags:["장단기 금리 역전(침체 선행)"]}}},
+        indexes:[{name:"S&P500",close:5600,above200:true,golden:true,rsi:58,ret1d:0.4,ret1m:3.1,ret_ytd:12.5,ret1y:21.0,wyckoff:"상승 추세 (Markup)"},{name:"나스닥",close:18200,above200:true,golden:true,rsi:60,ret1d:0.6,ret1m:4.2,ret_ytd:15.0,ret1y:28.0,wyckoff:"상승 추세 (Markup)"}],macro:{risk:{score:62,net:3,on:["CPI","기대인플레","M2 통화량","구리(Dr.)","신규실업수당"],off:["기준금리","VIX 변동성"],label:"위험선호(완화적)",tone:"green"},cycle:{phase:"회복",desc:"성장↑·물가↓ — 디스인플레 회복",stance:"주식 비중확대 · 방어 강화",prefer:"성장주·반도체·경기민감 ↑ / 현금·장기채 ↓",growth:2,inflation:-2,flags:["장단기 금리 역전(침체 선행)"]}}},
       KR:{label:"상승 둔화",color:"yellow",premise:"지수는 위지만 신고가 줄고 이탈 증가 — 주도 섹터·대장주만 선별 대응.",
         exposure:{stance:"중립·선별",equity:"50~70%",cash:"30~50%"},
         reasons:["코스피 240일선 위(+1.1%, 정배열)","240일선 이탈 52% · 20일선 이탈 63% (낮을수록 강세)","52주 신고가 7% · 신저가 9% (순증 -2)"],
         breadth:{below20:63,below200:52,above200:48,new_high:7,near_high:13,new_low:9,net_new_high:-2,n:240},
-        indexes:[{name:"코스피",close:2700,above200:true,golden:true,rsi:51,ret1d:-0.3,ret1m:1.2,ret_ytd:4.0,ret1y:6.5,wyckoff:"분산 추정 (Distribution)"},{name:"코스닥",close:850,above200:false,golden:false,rsi:45,ret1d:-0.8,ret1m:-3.5,ret_ytd:-6.0,ret1y:-9.0,wyckoff:"하락 추세 (Markdown)"}],macro:{risk:{score:62,net:3,on:["CPI","기대인플레","M2 통화량","구리(Dr.)","신규실업수당"],off:["기준금리","VIX 변동성"],label:"위험선호(완화적)",tone:"green"},cycle:{phase:"회복",desc:"성장↑·물가↓ — 디스인플레 회복",favored:"주식·성장주 우호",growth:2,inflation:-2,flags:["장단기 금리 역전(침체 선행)"]}}}},
+        indexes:[{name:"코스피",close:2700,above200:true,golden:true,rsi:51,ret1d:-0.3,ret1m:1.2,ret_ytd:4.0,ret1y:6.5,wyckoff:"분산 추정 (Distribution)"},{name:"코스닥",close:850,above200:false,golden:false,rsi:45,ret1d:-0.8,ret1m:-3.5,ret_ytd:-6.0,ret1y:-9.0,wyckoff:"하락 추세 (Markdown)"}],macro:{risk:{score:62,net:3,on:["CPI","기대인플레","M2 통화량","구리(Dr.)","신규실업수당"],off:["기준금리","VIX 변동성"],label:"위험선호(완화적)",tone:"green"},cycle:{phase:"회복",desc:"성장↑·물가↓ — 디스인플레 회복",stance:"주식 비중확대 · 방어 강화",prefer:"성장주·반도체·경기민감 ↑ / 현금·장기채 ↓",growth:2,inflation:-2,flags:["장단기 금리 역전(침체 선행)"]}}}},
     counts:{stocks:US.length+KR.length,touched:3,near:3},stocks,
     markets:{
       US:{sectors:[
@@ -479,10 +486,11 @@ function renderRegime(){
   const phC={"회복":"green","확장·과열":"blue","둔화·스태그":"amber","침체·디플레":"red"}[mac&&mac.cycle.phase]||"amber";
   const mblock=mac?`<div class="mcyc">
       <span class="cyc-ph ph-${phC}">🔄 경기국면 · ${mac.cycle.phase}</span>
-      <span class="cyc-x">${mac.cycle.desc} → <b>${mac.cycle.favored}</b></span>
+      <span class="cyc-x">${mac.cycle.desc}</span>
       ${mac.cycle.flags&&mac.cycle.flags.length?`<span class="cyc-flag">⚠ ${mac.cycle.flags.join(" · ")}</span>`:''}
       <span class="msig">🌐 매크로 신호 <b class="sig-${mac.risk.tone}">${mac.risk.label} ${mac.risk.score}</b> <i>완화 ${mac.risk.on.length}/긴축 ${mac.risk.off.length}</i></span>
-    </div>`:'';
+    </div>
+    <div class="mpos">📌 매크로 포지션 <b class="mpos-ph ph-${phC}">${mac.cycle.stance}</b> <span class="mpos-x">${mac.cycle.prefer||''}</span></div>`:'';
   el.innerHTML=`<div class="rbanner ${rg.color}">
     <div><div class="rlight">${lc} ${rg.label} <small>${rg.premise}</small></div>
       ${ex?`<div class="stance">💰 권장 스탠스 <b class="st-main">${ex.stance}</b> <span class="st-div">·</span> 주식 <b>${ex.equity}</b> / 현금 <b>${ex.cash}</b> <span class="st-ref">(참고용)</span></div>`:''}

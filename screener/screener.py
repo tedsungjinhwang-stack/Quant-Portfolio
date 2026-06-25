@@ -716,21 +716,34 @@ def macro_assessment(macro):
         d = dr(lab)
         infl += 1 if d > 0 else (-1 if d < 0 else 0)
     g_up, i_up = growth > 0, infl > 0
+    # 국면 → (설명, 자산 포지션 스탠스, 선호/회피)
+    PHASE = {
+        ("회복"):       ("성장↑·물가↓ — 디스인플레 회복", "주식 비중확대",       "성장주·반도체·경기민감 ↑ / 현금·장기채 ↓"),
+        ("확장·과열"):  ("성장↑·물가↑ — 경기 확장",       "주식 유지·경기민감 확대", "에너지·소재·금융·가치 ↑ / 장기채 ↓"),
+        ("둔화·스태그"): ("성장↓·물가↑ — 둔화 압력",       "주식 축소·방어 전환",    "헬스케어·필수소비·현금·원자재 ↑ / 고밸류 성장주 ↓"),
+        ("침체·디플레"): ("성장↓·물가↓ — 수축",            "주식 최소·방어 우선",    "국채·현금·배당방어주 ↑ / 경기민감·고베타 ↓"),
+    }
     if g_up and not i_up:
-        phase, desc, fav = "회복", "성장↑·물가↓ — 디스인플레 회복", "주식·성장주 우호"
+        phase = "회복"
     elif g_up and i_up:
-        phase, desc, fav = "확장·과열", "성장↑·물가↑ — 경기 확장", "경기민감·원자재 우위"
+        phase = "확장·과열"
     elif (not g_up) and i_up:
-        phase, desc, fav = "둔화·스태그", "성장↓·물가↑ — 둔화 압력", "방어주·현금·원자재"
+        phase = "둔화·스태그"
     else:
-        phase, desc, fav = "침체·디플레", "성장↓·물가↓ — 수축", "채권·방어주, 주식 비중축소"
+        phase = "침체·디플레"
+    desc, stance, prefer = PHASE[phase]
     flags = []
     curve, vix = val("장단기차"), val("VIX 변동성")
     if curve is not None and curve < 0:
         flags.append("장단기 금리 역전(침체 선행)")
     if vix is not None and vix >= 22:
         flags.append(f"VIX 경계({vix})")
-    cycle = {"phase": phase, "desc": desc, "favored": fav,
+    # 위험선호 신호·침체 플래그로 스탠스 보정
+    if risk["net"] <= -3 or flags:
+        stance += " · 방어 강화"
+    elif risk["net"] >= 3 and phase in ("회복", "확장·과열"):
+        stance += " · 리스크온"
+    cycle = {"phase": phase, "desc": desc, "stance": stance, "prefer": prefer,
              "growth": growth, "inflation": infl, "flags": flags}
     return {"risk": risk, "cycle": cycle}
 
