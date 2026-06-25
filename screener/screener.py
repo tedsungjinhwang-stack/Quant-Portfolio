@@ -660,12 +660,14 @@ def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, grow
             lines.append(f"  📅 {se['month']}월 계절 강세: " + ", ".join(s["label"] for s in se["strong"]))
         secs = mk.get("sectors", [])
         if secs:
-            lines.append("· 트랙① 강한 섹터: " + ", ".join(s["sector"] for s in secs))
+            lines.append("· 💪 강한 섹터(RS): " + ", ".join(f"{s['sector']} {s['etf_rs']:.0f}" for s in secs))
             for s in secs:
                 names = []
                 for i in s["leader_ids"]:
                     r = stocks[i]
-                    names.append(f"{r['name']}{'🟢터치' if r['touched'] else ''}")
+                    st = r.get("trend_state")
+                    warn = "🔴" if st == "하락추세" else ("🟠" if st == "하락전환" else "")
+                    names.append(f"{r['name']}{'🟢눌림' if r['touched'] else ''}{warn}")
                 if names:
                     lines.append(f"   - {s['sector']}: " + ", ".join(names))
         touched = [stocks[i] for i in mk.get("top_ids", []) if stocks[i]["touched"]]
