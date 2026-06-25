@@ -83,6 +83,13 @@ INDEXES = {
     "KR": [("^KS11", "코스피"), ("^KQ11", "코스닥")],
 }
 
+# 신규상장·성장주 워치리스트 (직접 추가/삭제). RS·200일선이 없어도 완화 지표로 추적.
+# US: 야후 티커 그대로 / KR: 6자리 코드(.KS/.KQ 자동). ※ 아래는 예시 — 본인 관심종목으로 교체.
+WATCHLIST = {
+    "US": ["PLTR", "RDDT", "ARM", "APP", "HOOD", "SMCI", "ASTS", "CRWV"],
+    "KR": [],
+}
+
 # 한국 KODEX 섹터 ETF(코드는 yfinance .KS) + 대표 구성종목(대장주 후보).
 # KRX/pykrx 로그인 없이 동작하도록, ETF는 RS 랭킹용·구성종목은 직접 정의.
 KR_SECTOR_ETFS = {
@@ -271,9 +278,11 @@ def trend_state(last, v20, v60, v120, ma200_up, rsi_last, piv):
     return "추세유지", ["120·60·20일선 위 · 스윙 저점 유지"]
 
 
-def metrics(meta, df):
-    """종목 1개의 지표 dict(또는 None)."""
-    if df is None or len(df) < 60:
+def metrics(meta, df, relaxed=False):
+    """종목 1개의 지표 dict(또는 None).
+    relaxed=True: 신규상장·짧은 데이터용 — 최소 봉수 완화 + RS는 가용 구간 수익률로 대용."""
+    min_bars = 25 if relaxed else 60
+    if df is None or len(df) < min_bars:
         return None
     close = df["Close"].astype(float)
     last = float(close.iloc[-1])
@@ -282,7 +291,15 @@ def metrics(meta, df):
         return None
     rs, m3, m6, m12 = rs_value(close)
     if rs is None:
-        return None
+        if not relaxed:
+            return None
+        n = len(close) - 1
+        base = float(close.iloc[0])
+        since = (last / base - 1) if base > 0 else 0.0   # 상장 후(가용 구간) 수익률
+        m3 = pct_return(close, min(63, n)) or since
+        m6 = pct_return(close, min(126, n)) or since
+        m12 = pct_return(close, min(252, n)) or m6
+        rs = m3  # RS 대용
 
     ma20 = close.rolling(CONFIG["ma_pullback"]).mean()
     ma60 = close.rolling(60).mean()
@@ -332,6 +349,7 @@ def metrics(meta, df):
         "trend_state": tstate, "trend_reasons": treasons, "ma200_up": ma200_up,
         "high52_pct": round((last / high52 - 1) * 100, 1) if high52 > 0 else None,
         "low52_pct": round((last / low52 - 1) * 100, 1) if low52 > 0 else None,
+        "days": len(df), "is_new": bool(len(df) < 252),
         "vol_ratio": round(vr, 2) if vr else None,
         "elliott": ell, "elliott_note": note,
         "ret3m": round(m3 * 100, 1), "ret6m": round(m6 * 100, 1),
@@ -420,6 +438,40 @@ def build_regime(allrecs, idx_map):
     return out
 
 
+# ----------------------------------------------------------------------
+# 신규상장 · 성장주
+# ----------------------------------------------------------------------
+def fundamentals(sym):
+    """yfinance에서 매출·이익 성장률(분수). 실패 시 (None, None)."""
+    try:
+        import yfinance as yf
+        info = yf.Ticker(sym).get_info()
+        rg = info.get("revenueGrowth")
+        eg = info.get("earningsGrowth") or info.get("earningsQuarterlyGrowth")
+        return (float(rg) if rg is not None else None,
+                float(eg) if eg is not None else None)
+    except Exception:
+        return (None, None)
+
+
+def growth_score(rec, rev_g, earn_g):
+    """가격 모멘텀 + 신고가 + 거래량 + (선택)펀더멘털 → 0~100 성장 점수."""
+    s = 50.0
+    if rec.get("ret3m") is not None:
+        s += max(-20, min(30, rec["ret3m"] * 0.4))          # 3개월 모멘텀
+    if rec.get("high52_pct") is not None and rec["high52_pct"] >= -3:
+        s += 8                                              # 신고가 근접/갱신
+    if rec.get("vol_ratio") and rec["vol_ratio"] >= 1.5:
+        s += 6                                              # 거래량 급증
+    if rev_g is not None:
+        s += max(-10, min(20, rev_g * 100 * 0.4))           # 매출 성장률
+    if earn_g is not None:
+        s += max(-6, min(12, earn_g * 100 * 0.15))          # 이익 성장률
+    if rec.get("trend_state") in ("하락전환", "하락추세"):
+        s -= 12
+    return round(max(0, min(100, s)), 1)
+
+
 def build_tracks(allrecs, units_by_market):
     """units_by_market = {'US':[unit...], 'KR':[unit...]}; unit={etf,label,kind,rs,members?}.
        kind 'sector' = GICS 섹터태그로 대장주 매칭(미국 SPDR), 'theme' = 구성종목 리스트."""
@@ -477,7 +529,7 @@ def latest_bar_date(data):
         return dt.date.today().isoformat()
 
 
-def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None):
+def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, growth_ids=()):
     regime = regime or {}
     flag = lambda m: "🟢" if m == "US" else "🔵"
     light = {"green": "🟢", "yellow": "🟡", "red": "🔴"}
@@ -515,10 +567,13 @@ def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None):
         if down:
             lines.append("🔴 하락추세(120선 이탈): " + ", ".join(down))
     if commodity_ids:
-        cm = [stocks[i] for i in commodity_ids[:5]]
         lines.append("\n🟡 <b>원자재(RS 상위)</b>: " +
                      ", ".join(f"{stocks[i]['name'].split('(')[0]}{'🟢터치' if stocks[i]['touched'] else ''}"
                                for i in commodity_ids[:5]))
+    if growth_ids:
+        lines.append("\n🚀 <b>성장주/신규 워치</b>: " +
+                     ", ".join(f"{stocks[i]['name']}(점수{stocks[i].get('growth_score','-')}"
+                               f"{'·신규' if stocks[i].get('is_new') else ''})" for i in growth_ids[:6]))
     lines.append("\n<i>대시보드(차트·이격도·엘리어트): reports/dashboard.html · 무료 지연 종가</i>")
     return "\n".join(lines)
 
@@ -599,11 +654,19 @@ def main():
                 rows.append({"market": "KR", "code": code, "yahoo": f"{code}{lk['suffix']}",
                              "name": lk["name"], "sector": info["label"]})
 
+    # 신규상장·성장주 워치리스트 (market, code, yahoo, name)
+    watch = []
+    for code in WATCHLIST.get("US", []):
+        watch.append(("US", code, code.replace(".", "-"), code))
+    for code in WATCHLIST.get("KR", []):
+        lk = kr_lookup.get(code, {"suffix": ".KS", "name": code})
+        watch.append(("KR", code, f"{code}{lk['suffix']}", lk["name"]))
+
     index_tickers = {t for lst in INDEXES.values() for t, _ in lst}
     kr_etf_yahoos = {f"{c}.KS" for c in KR_SECTOR_ETFS}
     symbols = ({r["yahoo"] for r in rows} | set(SECTOR_ETFS_US.keys())
                | set(THEME_ETFS_US.keys()) | set(COMMODITY_ETFS.keys())
-               | index_tickers | kr_etf_yahoos)
+               | index_tickers | kr_etf_yahoos | {y for _, _, y, _ in watch})
     data = download_prices(symbols)
     bar_date = latest_bar_date(data)
 
@@ -639,8 +702,24 @@ def main():
         if rec:
             commodities.append(rec)
     commodities.sort(key=lambda r: r["_rs_raw"], reverse=True)
+
+    # 성장주/신규상장 워치(완화 지표 + 펀더멘털)
+    growth = []
+    for mkt, code, yahoo, name in watch:
+        rec = metrics({"market": mkt, "code": code, "name": name, "sector": "성장주/신규"},
+                      ohlc_for(data, yahoo), relaxed=True)
+        if not rec:
+            continue
+        rev_g, earn_g = fundamentals(yahoo)
+        rec["rev_growth"] = round(rev_g * 100, 1) if rev_g is not None else None
+        rec["earn_growth"] = round(earn_g * 100, 1) if earn_g is not None else None
+        rec["growth_score"] = growth_score(rec, rev_g, earn_g)
+        rec.pop("_rs_raw", None)
+        rec["rs_rank"] = 0
+        growth.append(rec)
+    growth.sort(key=lambda r: r["growth_score"], reverse=True)
     print(f"[result] 종목 {len(allrecs)} · US유닛 {sum(1 for u in us_units if u['rs'] is not None)} "
-          f"· KR유닛 {sum(1 for u in kr_units if u['rs'] is not None)} · 원자재 {len(commodities)}")
+          f"· KR유닛 {sum(1 for u in kr_units if u['rs'] is not None)} · 원자재 {len(commodities)} · 성장주 {len(growth)}")
 
     idx_map = {}
     for mkt, lst in INDEXES.items():
@@ -656,6 +735,8 @@ def main():
     for rec in commodities:  # 원자재를 stocks에 추가(상세 차트용)
         c = dict(rec); c.pop("_rs_raw", None); c.setdefault("rs_rank", 0)
         stocks[c["id"]] = c
+    for rec in growth:       # 성장주/신규를 stocks에 추가
+        stocks[rec["id"]] = rec
     payload = {
         "bar_date": bar_date,
         "generated_at": dt.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
@@ -665,12 +746,13 @@ def main():
         "regime": regime,
         "markets": markets, "stocks": stocks,
         "commodities": [c["id"] for c in commodities],
+        "growth": [g["id"] for g in growth],
         "counts": {"stocks": len(stocks),
                    "touched": sum(1 for r in stocks.values() if r["touched"]),
                    "near": sum(1 for r in stocks.values() if r["near"])},
     }
     write_outputs(payload)
-    send_telegram(build_message(markets, stocks, bar_date, payload["commodities"], regime))
+    send_telegram(build_message(markets, stocks, bar_date, payload["commodities"], regime, payload["growth"]))
     print("[done]")
 
 
