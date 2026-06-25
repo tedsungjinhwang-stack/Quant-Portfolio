@@ -1296,6 +1296,9 @@ def main():
         for lid in sec.get("leader_ids", []):
             if lid not in detail_ids:
                 detail_ids.append(lid)
+    for h in hot:                              # 핫한 한국 종목도 증권사별 풀 컨센서스 수집
+        if h.get("market") == "KR" and h["id"] not in detail_ids:
+            detail_ids.append(h["id"])
     cons_detail = {}
     for sid in detail_ids:
         code = stocks.get(sid, {}).get("code")

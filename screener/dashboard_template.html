@@ -304,9 +304,9 @@
     <div class="cons-tabs" id="consTabs"></div>
     <div id="consDetail"></div>
     <div class="cpanel" id="consAggWrap" style="margin-top:16px;display:none">
-      <div class="cttl">🗂️ 기타 종목 컨센서스</div>
+      <div class="cttl">🗂️ 기타 종목 컨센서스 <small>목표가=최고 추정치 우선(미제공 시 평균)</small></div>
       <div class="tbl-scroll"><table class="ctbl"><thead><tr>
-        <th class="l">종목</th><th>현재가</th><th>목표가</th><th>상승여력</th><th class="mhide">의견</th>
+        <th class="l">종목</th><th>현재가</th><th>목표가</th><th>상승여력</th><th class="mhide">의견</th><th class="mhide">작성일</th>
       </tr></thead><tbody id="consAgg"></tbody></table></div>
     </div>
   </div>
@@ -782,11 +782,13 @@ function renderConsAgg(){
   const dm=CDM(),ids=(DATA.consensus||[]).filter(id=>!dm[id]&&S[id]&&S[id].market===consMkt&&S[id].t_mean!=null),wrap=$("consAggWrap");
   if(!ids.length){wrap.style.display="none";return;}
   wrap.style.display="";
-  $("consAgg").innerHTML=ids.map(id=>{const r=S[id],d=r.market==="US"?2:0,up=r.t_upside;
+  $("consAgg").innerHTML=ids.map(id=>{const r=S[id],d=r.market==="US"?2:0;
+    const tgt=(r.t_high!=null?r.t_high:r.t_mean);                 // 최고 추정치 우선, 없으면 평균
+    const up=(tgt&&r.close)?+((tgt/r.close-1)*100).toFixed(1):null;
     return `<tr><td class="l"><b>${r.name}</b> <span class="scode" style="color:#6a7180">${r.code}</span></td>
-      <td>${cnum(r.close,d)}</td><td style="color:#5b8cff">${cnum(r.t_mean,d)}</td>
+      <td>${cnum(r.close,d)}</td><td style="color:#5b8cff">${cnum(tgt,d)}</td>
       <td class="${up>0?'pos':'neg'}"><b>${up==null?'–':(up>0?'+':'')+up+'%'}</b></td>
-      <td class="mhide">${r.t_rec||'-'}</td></tr>`;}).join("");
+      <td class="mhide">${r.t_rec||'-'}</td><td class="mhide" style="color:#aeb8c9">${r.t_date||'–'}</td></tr>`;}).join("");
 }
 function renderConsensus(){
   renderConsTabs();renderConsDetail();renderConsAgg();
