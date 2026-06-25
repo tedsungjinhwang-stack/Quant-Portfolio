@@ -107,22 +107,19 @@
   .mpos-ph.ph-amber{color:var(--warn);background:rgba(255,176,32,.12)}
   .mpos-ph.ph-red{color:var(--down);background:rgba(255,107,107,.12)}
   .mpos-x{color:var(--muted)}
-  /* 글로벌 매크로 패널 */
+  /* 글로벌 매크로 패널 — 카테고리별 한 줄 압축 */
   .macro{margin-bottom:14px}
-  .macro .mttl{font-size:13px;font-weight:700;margin-bottom:10px;color:var(--txt);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .macro .mttl{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--txt);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .macro .mttl small{color:var(--muted);font-weight:500;font-size:11px}
-  .macro .mcat{margin-top:9px}.macro .mcat:first-of-type{margin-top:0}
-  .macro .mcat-l{font-size:10.5px;font-weight:800;color:var(--accent);margin-bottom:5px;letter-spacing:.03em}
-  .macro .mrow{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
-  @media(min-width:560px){.macro .mrow{grid-template-columns:repeat(3,1fr)}}
-  @media(min-width:900px){.macro .mrow{grid-template-columns:repeat(6,1fr)}}
-  .macro .mc{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:1px;min-width:0}
-  .macro .mcl{font-size:10.5px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .macro .mcv{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
-  .macro .mcv i{font-size:10.5px;font-weight:600;color:var(--muted);font-style:normal;margin-left:1px}
-  .macro .mcr{display:flex;align-items:baseline;gap:6px}
-  .macro .mcd{font-size:12px;font-weight:700}.macro .mcd.flat{color:var(--muted)}
-  .macro .mcm{font-size:10px;color:#6a7180;white-space:nowrap}
+  .macro .mline{display:flex;gap:10px;padding:6px 0;border-top:1px solid var(--line);align-items:baseline}
+  .macro .mline:first-of-type{border-top:0}
+  .macro .mline-l{flex:0 0 44px;color:var(--accent);font-weight:800;font-size:11px}
+  .macro .mline-v{flex:1;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline}
+  .macro .mi{white-space:nowrap;font-size:13px}
+  .macro .mi-l{color:var(--muted);font-size:11px}
+  .macro .mi b{font-variant-numeric:tabular-nums;margin-left:3px}
+  .macro .mi-d{font-size:10.5px;font-weight:700;margin-left:3px}
+  .macro .mi-d.pos{color:var(--up)}.macro .mi-d.neg{color:var(--down)}
   /* 계절성 패널 */
   .season{margin-bottom:14px}
   .season .sgrid{display:grid;gap:10px 20px}
@@ -510,13 +507,11 @@ function renderMacro(){
   if(!ms.length){el.innerHTML="";return;}
   const cats=[],byc={};
   ms.forEach(m=>{if(!byc[m.cat]){byc[m.cat]=[];cats.push(m.cat);}byc[m.cat].push(m);});
-  const chip=m=>{const d=m.delta,good=d==0?null:(d>0)===m.up_good,ar=d>0?'▲':(d<0?'▼':'·');
-    const dc=d==null?'':`<span class="mcd ${good===null?'flat':good?'pos':'neg'}">${ar}${Math.abs(d)}</span>`;
-    return `<div class="mc"><span class="mcl">${m.label}</span>
-      <span class="mcv">${cnum(m.value,2)}${m.unit?`<i>${m.unit}</i>`:''}</span>
-      <span class="mcr">${dc}${m.sub?`<span class="mcm">${m.sub}</span>`:''}</span></div>`;};
-  el.innerHTML=`<div class="panel macro"><div class="mttl">🌐 글로벌 매크로 <small>금리·물가·고용·유동성 + 시클리컬 · 색=위험자산 관점</small></div>
-    ${cats.map(c=>`<div class="mcat"><div class="mcat-l">${c}</div><div class="mrow">${byc[c].map(chip).join("")}</div></div>`).join("")}</div>`;
+  const item=m=>{const d=m.delta,good=d==0?null:(d>0)===m.up_good,ar=d>0?'▲':(d<0?'▼':'');
+    const dc=(d==null||d==0)?'':`<span class="mi-d ${good?'pos':'neg'}">${ar}${Math.abs(d)}</span>`;
+    return `<span class="mi"><span class="mi-l">${m.label}</span> <b>${cnum(m.value,2)}${m.unit}</b>${dc}</span>`;};
+  el.innerHTML=`<div class="panel macro"><div class="mttl">🌐 글로벌 매크로 <small>FRED 금리·물가·고용·유동성 + 시클리컬 · 색=위험자산 관점 · 변화=직전 대비</small></div>
+    ${cats.map(c=>`<div class="mline"><span class="mline-l">${c}</span><span class="mline-v">${byc[c].map(item).join("")}</span></div>`).join("")}</div>`;
 }
 function renderSeason(){
   const el=$("season"),se=(DATA.seasonality||{})[market];
