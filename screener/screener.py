@@ -5,7 +5,7 @@
 
 데이터: FinanceDataReader(유니버스) + yfinance(가격).
 
-트랙①  섹터ETF를 RS로 랭킹 → 강한 섹터 3개 → 각 섹터 RS 상위 대장주 3개
+트랙①  섹터ETF를 RS로 랭킹 → 강한 섹터 3개 → 각 섹터 RS 상위 대장주 2개
         (US: SPDR 섹터 ETF 11종 / KR: 섹터 태그별 RS 중앙값 집계)
 트랙②  전체 유니버스 RS 랭킹 → Top 10 → 최상위 3개 '심층'
 
@@ -30,7 +30,7 @@ CONFIG = {
     "ma_pullback": 20,
     "ma_trend": 200,
     "top_sectors": 3,            # 트랙① 강한 섹터 수
-    "leaders_per_sector": 3,     # 트랙① 섹터별 대장주 수
+    "leaders_per_sector": 2,     # 트랙① 섹터별 대장주 수
     "individual_top": 10,        # 트랙② 개별 Top N
     "deep_top": 3,               # 트랙② 심층 분석 수
     "kr_sector_min": 3,          # KR 섹터 집계 최소 종목 수
