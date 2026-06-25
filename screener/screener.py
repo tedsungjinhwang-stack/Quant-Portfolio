@@ -104,6 +104,7 @@ COMMODITY_ETFS = {
 # up_good=True면 상승이 위험자산에 우호적(↑=초록), False면 비우호적(↑=빨강)
 MACRO = {
     "DX-Y.NYB":  {"label": "달러지수",   "unit": "",   "up_good": False},
+    "KRW=X":     {"label": "원/달러",    "unit": "",   "up_good": False},
     "^VIX":      {"label": "VIX 변동성", "unit": "",   "up_good": False},
     "HG=F":      {"label": "구리(Dr.)",  "unit": "$",  "up_good": True},
     "CL=F":      {"label": "WTI 유가",   "unit": "$",  "up_good": True},
@@ -681,7 +682,57 @@ def build_macro(data):
     return out
 
 
-def _fred_series(series_id):
+def macro_assessment(macro):
+    """매크로 지표로 (1)위험선호 신호 (2)경기순환 국면(인베스트먼트 클락) 판정.
+    미국 매크로가 글로벌 위험선호 앵커 → 한·미 공통 적용(한국은 원/달러 추가 참고)."""
+    by = {m["label"]: m for m in macro}
+    def dr(lab):
+        m = by.get(lab)
+        return m["delta"] if m and m.get("delta") is not None else 0
+    def val(lab):
+        m = by.get(lab)
+        return m["value"] if m else None
+
+    # (1) 위험선호 신호 — 각 지표의 '좋은 방향' 움직임 집계
+    on, off = [], []
+    for m in macro:
+        d = m.get("delta")
+        if d is None or d == 0:
+            continue
+        (on if (d > 0) == m["up_good"] else off).append(m["label"])
+    net = len(on) - len(off)
+    risk = {"score": max(0, min(100, round(50 + net * 4))), "net": net,
+            "on": on, "off": off,
+            "label": "위험선호(완화적)" if net >= 3 else ("위험회피(긴축적)" if net <= -3 else "중립"),
+            "tone": "green" if net >= 3 else ("red" if net <= -3 else "yellow")}
+
+    # (2) 경기순환 국면 — 성장축 × 물가축
+    growth = 0
+    for lab, sign in [("비농업고용", 1), ("실업률", -1), ("신규실업수당", -1), ("구리(Dr.)", 1), ("장단기차", 1)]:
+        d = dr(lab)
+        growth += sign * (1 if d > 0 else (-1 if d < 0 else 0))
+    infl = 0
+    for lab in ("CPI", "기대인플레", "WTI 유가"):
+        d = dr(lab)
+        infl += 1 if d > 0 else (-1 if d < 0 else 0)
+    g_up, i_up = growth > 0, infl > 0
+    if g_up and not i_up:
+        phase, desc, fav = "회복", "성장↑·물가↓ — 디스인플레 회복", "주식·성장주 우호"
+    elif g_up and i_up:
+        phase, desc, fav = "확장·과열", "성장↑·물가↑ — 경기 확장", "경기민감·원자재 우위"
+    elif (not g_up) and i_up:
+        phase, desc, fav = "둔화·스태그", "성장↓·물가↑ — 둔화 압력", "방어주·현금·원자재"
+    else:
+        phase, desc, fav = "침체·디플레", "성장↓·물가↓ — 수축", "채권·방어주, 주식 비중축소"
+    flags = []
+    curve, vix = val("장단기차"), val("VIX 변동성")
+    if curve is not None and curve < 0:
+        flags.append("장단기 금리 역전(침체 선행)")
+    if vix is not None and vix >= 22:
+        flags.append(f"VIX 경계({vix})")
+    cycle = {"phase": phase, "desc": desc, "favored": fav,
+             "growth": growth, "inflation": infl, "flags": flags}
+    return {"risk": risk, "cycle": cycle}
     """FRED 무키 CSV → [(date, value)...] (시간순). 결측('.') 제외."""
     import requests
     r = requests.get(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}", timeout=15)
@@ -1202,6 +1253,10 @@ def main():
     macro = build_global_macro() + build_macro(data)
     print(f"[macro] {len(macro)}개 지표(FRED 금리·물가·고용·유동성 + 시클리컬): "
           + ", ".join(f"{m['label']} {m['value']}{m['unit']}" for m in macro))
+    mac = macro_assessment(macro)   # 미국 매크로 = 글로벌 앵커 → 한·미 레짐 공통 적용
+    for mk in regime:
+        regime[mk]["macro"] = mac
+    print(f"[macro] 경기국면={mac['cycle']['phase']} · 위험선호 신호={mac['risk']['label']}({mac['risk']['score']})")
 
     # 계절성: 별도 월간(장기) 데이터로 '이번 달' 섹터 평균수익률
     try:
