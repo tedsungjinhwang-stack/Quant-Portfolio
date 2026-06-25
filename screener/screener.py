@@ -26,7 +26,7 @@ import pandas as pd
 
 # ----------------------------------------------------------------------
 CONFIG = {
-    "rs_weights": {"m3": 0.40, "m6": 0.40, "m12": 0.20},
+    "rs_weights": {"m1": 0.30, "m3": 0.40, "m6": 0.30},   # 단기중기(1·3·6개월), 지수 대비 RS
     "ma_pullback": 20,
     "ma_trend": 200,
     "top_sectors": 3,            # 트랙① 강한 섹터 수
@@ -227,12 +227,13 @@ def pct_return(close, n):
 
 
 def rs_value(close):
+    """단기중기 가중모멘텀(1·3·6개월). 반환: (rs, m3, m6)."""
     w = CONFIG["rs_weights"]
-    m3, m6 = pct_return(close, 63), pct_return(close, 126)
+    m1, m3, m6 = pct_return(close, 21), pct_return(close, 63), pct_return(close, 126)
     if m3 is None or m6 is None:
-        return None, None, None, None
-    m12 = pct_return(close, 252) or m6
-    return w["m3"] * m3 + w["m6"] * m6 + w["m12"] * m12, m3, m6, m12
+        return None, m3, m6
+    m1 = m1 if m1 is not None else m3
+    return w["m1"] * m1 + w["m3"] * m3 + w["m6"] * m6, m3, m6
 
 
 def zigzag(closes, pct):
@@ -381,9 +382,10 @@ def wyckoff_estimate(df, piv=None):
     return phase, " · ".join(events) if events else "주요 이벤트 미감지"
 
 
-def metrics(meta, df, relaxed=False):
+def metrics(meta, df, relaxed=False, bench=0.0):
     """종목 1개의 지표 dict(또는 None).
-    relaxed=True: 신규상장·짧은 데이터용 — 최소 봉수 완화 + RS는 가용 구간 수익률로 대용."""
+    relaxed=True: 신규상장·짧은 데이터용 — 최소 봉수 완화 + RS는 가용 구간 수익률로 대용.
+    bench: 벤치마크(지수) 가중모멘텀. RS = 종목 가중모멘텀 − 지수 가중모멘텀(지수 대비 상대강도)."""
     min_bars = 6 if relaxed else 60
     if df is None or len(df) < min_bars:
         return None
@@ -392,7 +394,7 @@ def metrics(meta, df, relaxed=False):
     floor = CONFIG["min_price_krw"] if meta["market"] == "KR" else CONFIG["min_price_usd"]
     if last < floor:
         return None
-    rs, m3, m6, m12 = rs_value(close)
+    rs, m3, m6 = rs_value(close)
     if rs is None:
         if not relaxed:
             return None
@@ -401,8 +403,8 @@ def metrics(meta, df, relaxed=False):
         since = (last / base - 1) if base > 0 else 0.0   # 상장 후(가용 구간) 수익률
         m3 = pct_return(close, min(63, n)) or since
         m6 = pct_return(close, min(126, n)) or since
-        m12 = pct_return(close, min(252, n)) or m6
         rs = m3  # RS 대용
+    rs -= bench   # 지수 대비 상대강도(초과 모멘텀)
 
     ma20 = close.rolling(CONFIG["ma_pullback"]).mean()
     ma60 = close.rolling(60).mean()
@@ -845,24 +847,33 @@ def main():
     data = download_prices(symbols)
     bar_date = latest_bar_date(data)
 
+    # 벤치마크(지수) 가중모멘텀 — RS를 지수 대비 상대강도로 계산하기 위함
+    bench_rs = {}
+    for mk, tk in (("US", "^GSPC"), ("KR", "^KS11")):
+        d = ohlc_for(data, tk)
+        v = (rs_value(d["Close"].astype(float))[0] if d is not None else None)
+        bench_rs[mk] = v or 0.0
+    bench_rs["CMD"] = bench_rs["US"]
+    print(f"[bench] US={bench_rs['US']*100:.1f} KR={bench_rs['KR']*100:.1f} (지수 가중모멘텀)")
+
     allrecs = []
     for r in rows:
-        rec = metrics(r, ohlc_for(data, r["yahoo"]))
+        rec = metrics(r, ohlc_for(data, r["yahoo"]), bench=bench_rs.get(r["market"], 0.0))
         if rec:
             allrecs.append(rec)
 
-    def etf_rs(sym):
+    def etf_rs(sym, mkt="US"):
         df = ohlc_for(data, sym)
         if df is None:
             return None
         v, *_ = rs_value(df["Close"].astype(float))
-        return v
+        return None if v is None else v - bench_rs.get(mkt, 0.0)
 
     # 섹터/테마 유닛(시장별 한 풀에서 RS 랭킹)
-    us_units = [{"etf": etf, "label": sec, "kind": "sector", "rs": etf_rs(etf)}
+    us_units = [{"etf": etf, "label": sec, "kind": "sector", "rs": etf_rs(etf, "US")}
                 for etf, sec in SECTOR_ETFS_US.items()]
     us_units += [{"etf": etf, "label": info["label"], "kind": "theme",
-                  "members": info["members"], "rs": etf_rs(etf)}
+                  "members": info["members"], "rs": etf_rs(etf, "US")}
                  for etf, info in THEME_ETFS_US.items()]
     rs_by_code = {r["code"]: r["_rs_raw"] for r in allrecs}
     def member_median_rs(members):
@@ -870,7 +881,7 @@ def main():
         return statistics.median(vals) if vals else None
     # KODEX 섹터 ETF: ETF RS, 실패 시 구성종목 RS중앙값으로 폴백
     kr_units = [{"etf": code, "label": info["label"], "kind": "theme", "members": info["members"],
-                 "rs": etf_rs(f"{code}.KS") if etf_rs(f"{code}.KS") is not None else member_median_rs(info["members"])}
+                 "rs": etf_rs(f"{code}.KS", "KR") if etf_rs(f"{code}.KS", "KR") is not None else member_median_rs(info["members"])}
                 for code, info in KR_SECTOR_ETFS.items()]
     # 신규 테마: 구성종목 RS중앙값
     kr_units += [{"etf": "(구성종목)", "label": label, "kind": "theme", "members": members,
@@ -882,7 +893,7 @@ def main():
     commodities = []
     for tk, label in COMMODITY_ETFS.items():
         rec = metrics({"market": "CMD", "code": tk, "name": f"{label}({tk})", "sector": "원자재"},
-                      ohlc_for(data, tk))
+                      ohlc_for(data, tk), bench=bench_rs["CMD"])
         if rec:
             commodities.append(rec)
     commodities.sort(key=lambda r: r["_rs_raw"], reverse=True)
@@ -891,7 +902,7 @@ def main():
     growth = []
     for mkt, code, yahoo, name in watch:
         rec = metrics({"market": mkt, "code": code, "name": name, "sector": "성장주/신규"},
-                      ohlc_for(data, yahoo), relaxed=True)
+                      ohlc_for(data, yahoo), relaxed=True, bench=bench_rs.get(mkt, 0.0))
         if not rec:
             continue
         rev_g, earn_g = fundamentals(yahoo)

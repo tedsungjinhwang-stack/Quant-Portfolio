@@ -81,7 +81,7 @@
 | `ma_pullback` / `ma_trend` | 눌림목선 / 추세필터선 | 20 / 200 |
 | `top_sectors` / `leaders_per_sector` | 강한 섹터 수 / 섹터별 대장주 | 3 / 3 |
 | `individual_top` / `deep_top` | 개별 Top N / 심층 수 | 10 / 3 |
-| `rs_weights` | RS = 3·6·12개월 가중 | 0.4/0.4/0.2 |
+| `rs_weights` | RS = 지수 대비 상대강도, 1·3·6개월 가중 | 0.3/0.4/0.3 |
 | `zigzag_pct` | 엘리어트·스윙 임계치 | 7% |
 | `kr_top_n` | 한국 시총 상위 N | 250 |
 
