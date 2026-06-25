@@ -368,15 +368,16 @@ def wyckoff_estimate(df, piv=None):
     look = min(60, n)
     hi = float(h.tail(look).max())
     lo = float(l.tail(look).min())
-    pos = (last - lo) / (hi - lo) if hi > lo else 0.5     # 레인지 내 위치 0~1
     width = (hi - lo) / lo if lo > 0 else 1.0
-    rangebound = width < 0.18                             # 약 18% 이내 박스권
+    rangebound = width < 0.18                             # 최근 60일 약 18% 이내 박스권
+    # 장기(최대 240일) 레인지 내 위치 — 저점권/고점권 판정(매집 vs 분산 핵심)
+    ll = min(240, n)
+    long_hi = float(h.tail(ll).max())
+    long_lo = float(l.tail(ll).min())
+    long_pos = (last - long_lo) / (long_hi - long_lo) if long_hi > long_lo else 0.5
     ma_long = c.rolling(min(120, n)).mean()
     above = last > float(ma_long.iloc[-1])
     slope_up = float(ma_long.iloc[-1]) > float(ma_long.iloc[-min(21, n - 1)])
-    ref = float(c.iloc[max(0, n - 1 - look * 2)])         # 약 6개월 전(레인지 이전)
-    came_down = ref > hi * 0.98
-    came_up = ref < lo * 1.02
 
     events = []
     vol = df.get("Volume")
@@ -393,11 +394,15 @@ def wyckoff_estimate(df, piv=None):
     if float(h.tail(10).max()) > prior_hi and last < prior_hi:
         events.append("업스러스트(상단 가짜 돌파 후 실패)")
 
-    if rangebound and (came_down or pos < 0.5):
-        phase = "매집 추정 (Accumulation)"
-    elif rangebound and (came_up or pos >= 0.5):
-        phase = "분산 추정 (Distribution)"
-    elif above and slope_up and pos > 0.5:
+    # 국면: 추세 vs 박스권 → 박스권이면 '장기 위치'로 매집(저점)/분산(고점) 구분
+    if rangebound:
+        if long_pos >= 0.6:
+            phase = "분산 추정 (Distribution)"      # 올라서 고점 횡보
+        elif long_pos <= 0.4:
+            phase = "매집 추정 (Accumulation)"       # 내려서 저점 횡보
+        else:
+            phase = "상승 추세 (Markup)" if above else "하락 추세 (Markdown)"
+    elif above and slope_up:
         phase = "상승 추세 (Markup)"
     elif (not above) and (not slope_up):
         phase = "하락 추세 (Markdown)"
