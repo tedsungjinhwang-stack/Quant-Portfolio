@@ -191,7 +191,7 @@
   </div>
   <div id="viewDash">
   <div id="chips" class="chips"></div>
-  <div class="seg" id="mkSeg"><button data-m="US" class="on">🟢 미국</button><button data-m="KR">🔵 한국</button></div>
+  <div class="seg" id="mkSeg"><button data-m="KR" class="on">🔵 한국</button><button data-m="US">🟢 미국</button></div>
   <div id="regime"></div>
 
   <div class="layout">
@@ -359,7 +359,7 @@ $("chips").innerHTML=
   `<span class="chip" style="color:var(--touch)">풀백 <b>${DATA.counts.touched}</b></span>`+
   `<span class="chip" style="color:var(--near)">근접 <b>${DATA.counts.near}</b></span>`;
 
-let market="US", selected=null;
+let market="KR", selected=null;
 const fmt=(v,d=2)=>v==null?"–":Number(v).toLocaleString("ko-KR",{maximumFractionDigits:d});
 const sg=v=>v==null?"":(v>0?"pos":"neg");
 const PR=v=>v==null?"–":(v>0?"+":"")+v+"%";
