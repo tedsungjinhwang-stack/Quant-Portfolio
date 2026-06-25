@@ -295,20 +295,24 @@ def elliott_estimate(closes, pct):
     lows = [(k, p[1]) for k, p in enumerate(piv) if p[2] == 'L']
     if not lows:
         return "판단 보류", "기준 저점 미확인"
-    # 가장 낮은 저점(주요 바닥)을 임펄스 시작점으로 보고, 그 이후 스윙으로 파동 카운트
+    # 가장 낮은 저점(주요 바닥)을 임펄스 시작점으로 보고, 그 이후 스윙으로 파동 카운트.
+    # 추세가 길면 한 사이클(임펄스 5 + 조정 3 = 8파)을 넘기므로, 현재 사이클 안의
+    # 위치(1~5 임펄스 · A·B·C 조정)로 환산한다. 모두 일봉 스윙 기준.
     major_k = min(lows, key=lambda x: x[1])[0]
     after = (len(piv) - 1) - major_k          # 주요 저점 이후 확정된 스윙 수
-    cur = after + 1                           # 현재 진행 중인 파동 번호
     if after <= 0:
         return "1파 진행 추정", "주요 저점에서 첫 상승 시작(추정)"
+    cycles, pos = divmod(after, 8)            # pos: 0~7 = 현재 사이클 내 위치
+    cur = pos + 1                             # 1~8 (1~5 임펄스, 6~8 = ABC)
+    tail = f" · {cycles + 1}번째 사이클" if cycles else ""
     if cur <= 5:
         up = (cur % 2 == 1)
         return (f"{cur}파 {'상승' if up else '조정'} 추정",
-                f"주요 저점 이후 {after}개 스윙 · {'상승(임펄스)' if up else '되돌림'} 국면(추정)")
-    corr = cur - 5
-    if corr <= 3:
-        return f"조정 {'ABC'[corr-1]}파 추정", "임펄스 5파 이후 ABC 조정 국면(추정)"
-    return "사이클 재정렬 추정", "파동 수 과다 — 새 사이클 가능(추정)"
+                f"주요 저점 이후 일봉 {after}개 스윙 · "
+                f"{'상승(임펄스)' if up else '되돌림'} 국면{tail}(추정)")
+    label = "ABC"[cur - 6]
+    return (f"조정 {label}파 추정",
+            f"임펄스 5파 이후 {label}파 조정 국면(일봉){tail}(추정)")
 
 
 def trend_state(last, v20, v60, v120, ma200_up, rsi_last, piv):

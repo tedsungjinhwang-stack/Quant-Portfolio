@@ -301,9 +301,13 @@ function render(){
   // 트랙①
   $("sectors").innerHTML=(mk.sectors||[]).map(s=>{
     const ld=s.leader_ids.map(id=>{const r=S[id];if(!r)return"";
-      return `<div class="ldr ${selected===id?'sel':''}" data-id="${id}">
-        <span class="nm">${r.name} ${pbBadge(r)} ${tsBadge(r.trend_state)}</span>
-        <span class="rk">RS#${r.rs_rank||'-'} · ${(r.dist20>0?'+':'')+r.dist20}%</span></div>`;}).join("")
+      return `<div class="ldr ${selected===id?'sel':''}" data-id="${id}" style="flex-direction:column;align-items:stretch;gap:4px">
+        <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
+          <span class="nm"><b>${r.name}</b></span>
+          <span class="rk">RS#${r.rs_rank||'-'}</span></div>
+        <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+          ${pbBadge(r)} ${tsBadge(r.trend_state)}
+          <span class="rk ${sg(r.dist20)}" style="margin-left:auto">20MA ${(r.dist20>0?'+':'')+r.dist20}%</span></div></div>`;}).join("")
       || '<div class="rk" style="color:var(--muted);font-size:11.5px;padding:4px">구성종목 RS 데이터 없음</div>';
     const kind=s.kind==='theme'?'테마':(s.kind==='sector'?'섹터':'섹터');
     return `<div class="seccard"><h4>${s.sector} <span class="bdg x" style="font-size:9.5px">${kind}</span></h4>
