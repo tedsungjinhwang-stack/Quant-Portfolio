@@ -1321,7 +1321,7 @@ def main():
 
     payload = {
         "bar_date": bar_date,
-        "generated_at": dt.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+        "generated_at": (dt.datetime.utcnow() + dt.timedelta(hours=9)).strftime("%Y-%m-%d %H:%M KST"),
         "config": {k: CONFIG[k] for k in ("ma_pullback", "ma_trend", "top_sectors",
                                           "leaders_per_sector", "individual_top", "deep_top",
                                           "proximity_pct", "rs_weights", "zigzag_pct")},

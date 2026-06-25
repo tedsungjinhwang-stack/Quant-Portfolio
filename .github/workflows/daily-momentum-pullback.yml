@@ -51,5 +51,14 @@ jobs:
             echo "변경 없음 — 커밋 건너뜀"
           else
             git commit -m "screener: report $(date -u +%Y-%m-%d)"
-            git push origin HEAD:${GITHUB_REF_NAME}
+            # 같은 브랜치에 다른 푸시가 끼어들어 거부될 수 있으므로 rebase 후 재시도
+            # (reports/·public/ 은 생성 산출물이라 충돌 시 방금 생성분을 우선 -X theirs)
+            n=0
+            until git push origin HEAD:"${GITHUB_REF_NAME}"; do
+              n=$((n+1))
+              if [ "$n" -gt 5 ]; then echo "push 5회 실패"; exit 1; fi
+              echo "push 거부 — 원격 변경 rebase 후 재시도 ($n/5)"
+              git pull --rebase -X theirs --autostash origin "${GITHUB_REF_NAME}"
+              sleep $((n * 3))
+            done
           fi
