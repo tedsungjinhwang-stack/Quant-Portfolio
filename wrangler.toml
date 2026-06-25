@@ -1,4 +1,4 @@
-name = "quant-portfolio"
+name = "momentum-dashboard"
 compatibility_date = "2025-06-01"
 
 # 정적 대시보드(public/index.html)를 그대로 서빙 — 빌드/서버코드 없음
