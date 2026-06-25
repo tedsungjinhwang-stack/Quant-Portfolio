@@ -798,7 +798,11 @@ def write_outputs(payload):
         html = tpl.replace("/*__DATA__*/null", json.dumps(payload, ensure_ascii=False))
         with open(os.path.join(REPORT_DIR, "dashboard.html"), "w", encoding="utf-8") as f:
             f.write(html)
-        print("[report] reports/dashboard.html 저장")
+        # Cloudflare Pages 배포용(고정 URL 루트). build output dir = public
+        os.makedirs("public", exist_ok=True)
+        with open(os.path.join("public", "index.html"), "w", encoding="utf-8") as f:
+            f.write(html)
+        print("[report] reports/dashboard.html + public/index.html 저장")
     except Exception as e:
         print(f"[report] 대시보드 생성 실패: {e}")
 
