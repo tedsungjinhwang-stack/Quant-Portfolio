@@ -786,16 +786,26 @@ def consensus_detail(code, cap=25):
         except Exception:
             pass
         reports.append(rep)
-    tg = [r["target"] for r in reports if r.get("target")]
+    # 증권사별 '최신 1건'만 컨센서스 통계에 사용(같은 증권사의 과거 목표가 중복 제외).
+    # 급등주는 옛 목표가가 평균을 왜곡하므로 표준 방식(각 사 현재 의견)으로 집계.
+    latest = {}
+    for r in reports:
+        if not r.get("target"):
+            continue
+        b = r.get("broker") or "?"
+        if b not in latest or (r.get("date") or "") > (latest[b].get("date") or ""):
+            latest[b] = r
+    lat = list(latest.values())
+    tg = [r["target"] for r in lat]
     if not tg:
         return None
-    hi = max(reports, key=lambda r: r.get("target", -1))
-    lo = min((r for r in reports if r.get("target")), key=lambda r: r["target"])
+    hi = max(lat, key=lambda r: r["target"])
+    lo = min(lat, key=lambda r: r["target"])
     dist = {}
-    for r in reports:
+    for r in lat:
         if r.get("opinion"):
             dist[r["opinion"]] = dist.get(r["opinion"], 0) + 1
-    return {"reports": reports, "count": len(reports), "with_target": len(tg),
+    return {"reports": reports, "count": len(reports), "brokers": len(lat), "with_target": len(tg),
             "mean": round(statistics.mean(tg)), "median": round(statistics.median(tg)),
             "high": max(tg), "low": min(tg),
             "high_broker": hi.get("broker"), "low_broker": lo.get("broker"), "dist": dist}

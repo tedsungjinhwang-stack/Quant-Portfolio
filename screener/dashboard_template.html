@@ -550,7 +550,7 @@ const CDM=()=>DATA.consensus_detail||{};
 const cdmIds=()=>Object.keys(CDM()).filter(id=>(S[id]||{}).market===consMkt);
 const cnum=(v,d=0)=>v==null?"–":Number(v).toLocaleString("ko-KR",{maximumFractionDigits:d});
 
-function consTimeChart(reports){
+function consTimeChart(reports,meanLine){
   const pts=(reports||[]).filter(r=>r.target&&r.date).map(r=>({...r,t:Date.parse(r.date)})).sort((a,b)=>a.t-b.t);
   if(!pts.length) return '<div class="cempty">목표가 데이터 없음</div>';
   const W=560,H=260,P=46;
@@ -563,7 +563,7 @@ function consTimeChart(reports){
   for(let i=0;i<=3;i++){const v=y0+(y1-y0)*i/3,y=Y(v);
     svg+=`<line x1="${P}" y1="${y}" x2="${W-14}" y2="${y}" stroke="rgba(91,140,255,.12)"/>`;
     svg+=`<text x="${P-6}" y="${y+3}" font-size="9" fill="#6a7180" text-anchor="end">${cnum(Math.round(v))}</text>`;}
-  const mean=ys.reduce((a,b)=>a+b,0)/ys.length, my=Y(mean);
+  const mean=(meanLine!=null?meanLine:ys.reduce((a,b)=>a+b,0)/ys.length), my=Y(mean);
   svg+=`<line x1="${P}" y1="${my}" x2="${W-14}" y2="${my}" stroke="#5b8cff" stroke-dasharray="5 4" opacity=".7"/>`;
   svg+=`<text x="${W-16}" y="${my-4}" font-size="9" fill="#5b8cff" text-anchor="end">평균 ${cnum(Math.round(mean))}</text>`;
   brokers.forEach(b=>{const bp=pts.filter(p=>p.broker===b);
@@ -619,21 +619,24 @@ function renderConsDetail(){
   const d=dm[consSel],s=S[consSel]||{};
   // 상세 뷰는 수집한 리포트 평균(d.mean) 기준으로 괴리 계산 → 스탯·막대 일관성
   const up=(d.mean&&s.close)?+((d.mean/s.close-1)*100).toFixed(1):s.t_upside;
-  const reps=(d.reports||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  // 증권사별 최신 1건만(통계와 동일 기준) — 같은 증권사 과거 리포트 중복 제거
+  const seen={},reps=[];
+  (d.reports||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).forEach(r=>{
+    const b=r.broker||'?'; if(!seen[b]){seen[b]=1;reps.push(r);}});
   host.innerHTML=`
     <div class="cstats">
       <div class="cstat"><div class="lab">평균 목표가</div><div class="val teal">${cnum(d.mean)}원</div><div class="sub">범위 ${cnum(d.low)}~${cnum(d.high)}</div></div>
       <div class="cstat"><div class="lab">상승여력</div><div class="val ${up>0?'teal':'rose'}">${up==null?'–':(up>0?'+':'')+up+'%'}</div><div class="sub">현재가 ${cnum(s.close)}</div></div>
-      <div class="cstat"><div class="lab">중앙값</div><div class="val">${cnum(d.median)}원</div><div class="sub">목표가 ${d.with_target}건</div></div>
+      <div class="cstat"><div class="lab">중앙값</div><div class="val">${cnum(d.median)}원</div><div class="sub">${d.brokers||d.with_target}개사 기준</div></div>
       <div class="cstat"><div class="lab">최고가</div><div class="val amber">${cnum(d.high)}원</div><div class="sub">${d.high_broker||''}</div></div>
       <div class="cstat"><div class="lab">최저가</div><div class="val rose">${cnum(d.low)}원</div><div class="sub">${d.low_broker||''}</div></div>
     </div>
     ${gapBar(s.close,d.low,d.mean,d.high,up)}
     <div class="cgrid">
-      <div class="cpanel"><div class="cttl">📈 목표주가 시계열 <small>점=리포트 1건 · 증권사별 색</small></div>${consTimeChart(d.reports)}</div>
+      <div class="cpanel"><div class="cttl">📈 목표주가 시계열 <small>점=리포트 1건 · 증권사별 색 · 선=현재 컨센서스 평균</small></div>${consTimeChart(d.reports,d.mean)}</div>
       <div class="cpanel"><div class="cttl">🍩 투자의견 분포</div>${consDonut(d.dist)}</div>
     </div>
-    <div class="cpanel" style="margin-top:14px"><div class="cttl">🏦 증권사별 최신 컨센서스 <small>${d.count}건 수집</small></div>
+    <div class="cpanel" style="margin-top:14px"><div class="cttl">🏦 증권사별 최신 컨센서스 <small>${d.brokers||reps.length}개사 · 최근 ${d.count}건 중 최신</small></div>
       <div class="tbl-scroll"><table class="ctbl"><thead><tr><th class="l">증권사</th><th class="l mhide">제목</th><th>투자의견</th><th>목표가</th><th>작성일</th></tr></thead><tbody>
       ${reps.map(r=>`<tr><td class="l"><b>${r.broker||'-'}</b></td><td class="l mhide" style="color:#aeb8c9;max-width:280px;overflow:hidden;text-overflow:ellipsis">${r.title||''}</td>
         <td>${r.opinion?`<span class="obadge">${r.opinion}</span>`:'–'}</td><td><b style="color:#5b8cff">${r.target?cnum(r.target):'–'}</b></td><td style="color:#aeb8c9">${r.date||''}</td></tr>`).join("")}
