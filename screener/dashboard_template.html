@@ -107,11 +107,15 @@
     .dwrap{position:static}              /* 상세를 sticky 해제 — 폰에선 탭하면 스크롤 이동 */
     /* 표: 폰에선 핵심 5열(종목·RS·종가·1D·1M)만, 나머지는 종목칸 배지로 접기 */
     .mhide{display:none!important}
+    .scode{display:none}                 /* 폰에선 종목 코드 숨김(가로폭 절약) */
     .mob-badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
-    table{font-size:14px}
-    th,td{padding:11px 7px}
-    th{font-size:12.5px}
-    .tbl-scroll{max-height:none;overflow:visible}
+    table{font-size:13.5px}
+    th,td{padding:10px 5px}
+    th{font-size:12px}
+    /* 큰 원화 숫자 표(컨센서스)는 폰에서 더 촘촘하게 → 가로 잘림 방지 */
+    #viewCons .ctbl th,#viewCons .ctbl td{padding:8px 4px;font-size:12px}
+    #viewCons .ctbl td:first-child{white-space:normal;line-height:1.3}
+    .tbl-scroll{max-height:none;overflow-x:auto;-webkit-overflow-scrolling:touch}
     tbody tr td:first-child{font-size:14px}
     tbody td{vertical-align:top}
     /* 배지·리더·통계 터치 친화 */
@@ -360,7 +364,8 @@ if(!DATA){
 const $=id=>document.getElementById(id);
 const S=DATA.stocks, isLive=!DATA.demo;
 $("badge").className="badge "+(isLive?"live":"");
-$("badge").textContent=isLive?"● 실데이터":"⚠️ 예시(가짜 데이터) — 스크리너 실행 전 미리보기";
+$("badge").style.display=isLive?"none":"";   // 실데이터일 땐 배지 숨김(데모 경고만 표시)
+$("badge").textContent=isLive?"":"⚠️ 예시(가짜 데이터) — 스크리너 실행 전 미리보기";
 $("chips").innerHTML=
   `<span class="chip">기준일 <b>${DATA.bar_date}</b></span>`+
   `<span class="chip">생성 <b>${DATA.generated_at||'-'}</b></span>`+
@@ -445,7 +450,7 @@ function render(){
       const up=r.t_upside;
       const rng=(r.t_low!=null&&r.t_high!=null)?`${fmt(r.t_low,dec)}~${fmt(r.t_high,dec)}`:"–";
       return `<tr data-id="${r.id}" class="${selected===r.id?'sel':''}">
-        <td class="l"><b>${r.name}</b> <span style="color:var(--muted)">${r.code}</span></td>
+        <td class="l"><b>${r.name}</b> <span class="scode" style="color:var(--muted)">${r.code}</span></td>
         <td class="num">${fmt(r.close,dec)}</td>
         <td class="num" style="color:var(--hl-teal,#5b8cff)">${fmt(r.t_mean,dec)}</td>
         <td class="num ${sg(up)}"><b>${up==null?'–':(up>0?'+':'')+up+'%'}</b></td>
@@ -468,7 +473,7 @@ function render(){
   $("top10").innerHTML=(mk.top_ids||[]).map(id=>{const r=S[id];if(!r)return"";
     const deep=(mk.deep_ids||[]).includes(id);
     return `<tr data-id="${id}" class="${selected===id?'sel':''} ${deep?'deep':''}">
-      <td class="l">${deep?'★ ':''}<b>${r.name}</b> <span style="color:var(--muted)">${r.code}</span><br>
+      <td class="l">${deep?'★ ':''}<b>${r.name}</b> <span class="scode" style="color:var(--muted)">${r.code}</span><br>
         <span style="color:var(--muted);font-size:11px">${r.sector}</span>
         <span class="mob-badges">${pbBadge(r)} ${tsBadge(r.trend_state)}</span></td>
       <td class="num">${r.rs_rank}</td><td class="num">${fmt(r.close)}</td>
@@ -639,7 +644,7 @@ function renderConsAgg(){
   if(!ids.length){wrap.style.display="none";return;}
   wrap.style.display="";
   $("consAgg").innerHTML=ids.map(id=>{const r=S[id],d=r.market==="US"?2:0,up=r.t_upside;
-    return `<tr><td class="l"><b>${r.name}</b> <span style="color:#6a7180">${r.code}</span></td>
+    return `<tr><td class="l"><b>${r.name}</b> <span class="scode" style="color:#6a7180">${r.code}</span></td>
       <td>${cnum(r.close,d)}</td><td style="color:#5b8cff">${cnum(r.t_mean,d)}</td>
       <td class="${up>0?'pos':'neg'}"><b>${up==null?'–':(up>0?'+':'')+up+'%'}</b></td>
       <td class="mhide">${r.t_rec||'-'}</td></tr>`;}).join("");
