@@ -175,6 +175,16 @@
   #viewCons .ctbl th:first-child,#viewCons .ctbl td:first-child{text-align:left}
   #viewCons .obadge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(151,252,228,.14);color:var(--ct2)}
   #viewCons .pos{color:var(--ct)}#viewCons .neg{color:var(--cro)}
+  #viewCons .cgap{background:var(--csurf);border:1px solid rgba(151,252,228,.1);border-radius:14px;padding:14px 16px;margin-bottom:16px}
+  #viewCons .cgap .gh{font-size:13px;color:var(--cdim);margin-bottom:8px;line-height:1.5}
+  #viewCons .cgap .gh b{font-size:15px}
+  #viewCons .cgap .track{position:relative;height:9px;background:rgba(151,252,228,.12);border-radius:6px;margin:30px 10px 10px}
+  #viewCons .cgap .band{position:absolute;height:100%;background:linear-gradient(90deg,#50D2C1,#97FCE4);border-radius:6px;opacity:.6}
+  #viewCons .cgap .mk{position:absolute;top:-4px;width:2px;height:17px;border-radius:2px;transform:translateX(-1px)}
+  #viewCons .cgap .mk.cur{background:#FCD597}#viewCons .cgap .mk.mean{background:#97FCE4}
+  #viewCons .cgap .lbl{position:absolute;top:-25px;font-size:10.5px;font-weight:700;white-space:nowrap;transform:translateX(-50%)}
+  #viewCons .cgap .lbl.cur{color:#FCD597}#viewCons .cgap .lbl.mean{color:#97FCE4}
+  #viewCons .cgap .scale{display:flex;justify-content:space-between;font-size:10.5px;color:#4F7773;margin:0 10px}
   #viewCons .cnote{color:var(--cmut);font-size:11.5px;margin-top:14px;line-height:1.6}
   #viewCons .cempty{color:var(--cdim);text-align:center;padding:40px 12px}
   @media(max-width:640px){#viewCons .cons-tabs button{min-width:90px;font-size:13px;padding:10px}}
@@ -574,6 +584,18 @@ function consDonut(dist){
   const leg=ent.sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<span><i style="background:${OPC[k]||'#97FCE4'}"></i>${k} ${v}</span>`).join("");
   return `<div style="display:flex;flex-direction:column;align-items:center;gap:8px">${svg}<div class="cleg" style="justify-content:center">${leg}</div></div>`;
 }
+function gapBar(close,low,mean,high,up){
+  if(close==null||mean==null) return "";
+  const lo=Math.min(low!=null?low:mean,mean,close), hi=Math.max(high!=null?high:mean,mean,close);
+  const span=(hi-lo)||1, pos=v=>Math.max(0,Math.min(100,(v-lo)/span*100));
+  const cp=pos(close), mp=pos(mean), b0=Math.min(cp,mp), b1=Math.max(cp,mp);
+  const upc=up>0?'#97FCE4':'#FCA5A5';
+  return `<div class="cgap"><div class="gh">현재가 <b style="color:#FCD597">${cnum(close)}</b> → 컨센서스 평균 <b style="color:#97FCE4">${cnum(mean)}</b> · 괴리(상승여력) <b style="color:${upc}">${up==null?'–':(up>0?'+':'')+up+'%'}</b></div>
+    <div class="track"><div class="band" style="left:${b0}%;width:${b1-b0}%"></div>
+      <div class="mk cur" style="left:${cp}%"></div><div class="lbl cur" style="left:${cp}%">현재 ${cnum(close)}</div>
+      <div class="mk mean" style="left:${mp}%"></div><div class="lbl mean" style="left:${mp}%">평균 ${cnum(mean)}</div></div>
+    <div class="scale"><span>${cnum(lo)}</span><span>${cnum(hi)}</span></div></div>`;
+}
 function renderConsTabs(){
   const dm=CDM(),ids=Object.keys(dm),tabs=$("consTabs");
   if(!ids.length){tabs.innerHTML="";return;}
@@ -585,7 +607,8 @@ function renderConsDetail(){
   const dm=CDM(),host=$("consDetail");
   if(!consSel||!dm[consSel]){host.innerHTML="";return;}
   const d=dm[consSel],s=S[consSel]||{};
-  const up=s.t_upside!=null?s.t_upside:(d.mean&&s.close?+((d.mean/s.close-1)*100).toFixed(1):null);
+  // 상세 뷰는 수집한 리포트 평균(d.mean) 기준으로 괴리 계산 → 스탯·막대 일관성
+  const up=(d.mean&&s.close)?+((d.mean/s.close-1)*100).toFixed(1):s.t_upside;
   const reps=(d.reports||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   host.innerHTML=`
     <div class="cstats">
@@ -595,6 +618,7 @@ function renderConsDetail(){
       <div class="cstat"><div class="lab">최고가</div><div class="val amber">${cnum(d.high)}원</div><div class="sub">${d.high_broker||''}</div></div>
       <div class="cstat"><div class="lab">최저가</div><div class="val rose">${cnum(d.low)}원</div><div class="sub">${d.low_broker||''}</div></div>
     </div>
+    ${gapBar(s.close,d.low,d.mean,d.high,up)}
     <div class="cgrid">
       <div class="cpanel"><div class="cttl">📈 목표주가 시계열 <small>점=리포트 1건 · 증권사별 색</small></div>${consTimeChart(d.reports)}</div>
       <div class="cpanel"><div class="cttl">🍩 투자의견 분포</div>${consDonut(d.dist)}</div>
