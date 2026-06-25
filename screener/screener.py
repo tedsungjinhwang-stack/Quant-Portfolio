@@ -472,6 +472,7 @@ def metrics(meta, df, relaxed=False, bench=0.0):
     return {
         "id": f"{meta['market']}:{meta['code']}",
         "market": meta["market"], "code": meta["code"], "name": meta["name"], "sector": meta["sector"],
+        "yahoo": meta.get("yahoo", meta["code"]),
         "close": round(last, 2), "rs": round(rs * 100, 1), "_rs_raw": rs,
         "ma20": round(float(v20), 2) if pd.notna(v20) else None,
         "ma60": round(float(v60), 2) if pd.notna(v60) else None,
@@ -656,6 +657,87 @@ def hot_score(rec):
     return round(max(0.0, min(100.0, s)), 1)
 
 
+# ----------------------------------------------------------------------
+# 컨센서스 목표가(애널리스트) — 선택 종목만 조회
+# ----------------------------------------------------------------------
+# 미국 투자의견 영문 → 한글
+REC_KO = {"strong_buy": "적극매수", "buy": "매수", "hold": "중립",
+          "underperform": "비중축소", "sell": "매도", "none": "-"}
+
+
+def rec_from_naver(rm):
+    """네이버 recommMean(1~5, 높을수록 매수) → 한글 투자의견."""
+    if rm is None:
+        return "-"
+    if rm >= 4.5: return "적극매수"
+    if rm >= 3.5: return "매수"
+    if rm >= 2.5: return "중립"
+    if rm >= 1.5: return "비중축소"
+    return "매도"
+
+
+def consensus_us(sym):
+    """미국: yfinance 집계 컨센서스 → {mean,high,low,n,rec,date} 또는 None."""
+    try:
+        import yfinance as yf
+        i = yf.Ticker(sym).get_info()
+        mean = i.get("targetMeanPrice")
+        if mean is None:
+            return None
+        return {"mean": float(mean),
+                "high": float(i["targetHighPrice"]) if i.get("targetHighPrice") else None,
+                "low": float(i["targetLowPrice"]) if i.get("targetLowPrice") else None,
+                "n": i.get("numberOfAnalystOpinions"),
+                "rec": REC_KO.get(i.get("recommendationKey"), i.get("recommendationKey") or "-"),
+                "date": None}
+    except Exception:
+        return None
+
+
+def consensus_kr(code):
+    """한국: 네이버 증권 통합 API의 consensusInfo(목표주가 평균·투자의견 평균) → dict 또는 None.
+    코스피·코스닥 모두 커버(증권사 컨센서스 집계). 고가/저가/애널수는 미제공."""
+    try:
+        import requests
+        r = requests.get(f"https://m.stock.naver.com/api/stock/{code}/integration", timeout=8,
+                         headers={"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) "
+                                                "AppleWebKit/605.1.15", "Referer": "https://m.stock.naver.com/"})
+        c = (r.json() or {}).get("consensusInfo") or {}
+        ptm = c.get("priceTargetMean")
+        if not ptm:
+            return None
+        rm = c.get("recommMean")
+        return {"mean": float(str(ptm).replace(",", "")), "high": None, "low": None, "n": None,
+                "rec": rec_from_naver(float(rm) if rm else None), "date": c.get("createDate")}
+    except Exception:
+        return None
+
+
+def attach_consensus(stocks):
+    """선택된 종목(원자재 제외)에 컨센서스 목표가·상승여력 부착. 미국=yfinance·한국=네이버.
+    조회된 id 리스트(상승여력 내림차순) 반환."""
+    got = []
+    for sid, s in stocks.items():
+        mkt = s.get("market")
+        if mkt == "CMD":                      # 원자재 ETF는 애널 컨센서스 없음
+            continue
+        c = consensus_kr(s["code"]) if mkt == "KR" else consensus_us(s.get("yahoo") or s["code"])
+        if not c:
+            continue
+        close = s.get("close")
+        s["t_mean"] = round(c["mean"], 2)
+        s["t_high"] = round(c["high"], 2) if c["high"] else None
+        s["t_low"] = round(c["low"], 2) if c["low"] else None
+        s["t_n"] = c["n"]
+        s["t_rec"] = c["rec"]
+        s["t_date"] = c.get("date")
+        s["t_upside"] = round((c["mean"] / close - 1) * 100, 1) if close else None
+        got.append(sid)
+    got.sort(key=lambda i: (stocks[i].get("t_upside") if stocks[i].get("t_upside") is not None else -999),
+             reverse=True)
+    return got
+
+
 def build_tracks(allrecs, units_by_market):
     """units_by_market = {'US':[unit...], 'KR':[unit...]}; unit={etf,label,kind,rs,members?}.
        kind 'sector' = GICS 섹터태그로 대장주 매칭(미국 SPDR), 'theme' = 구성종목 리스트."""
@@ -713,7 +795,8 @@ def latest_bar_date(data):
         return dt.date.today().isoformat()
 
 
-def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, hot_ids=(), seasonality=None):
+def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, hot_ids=(),
+                  seasonality=None, consensus_ids=()):
     regime = regime or {}
     seasonality = seasonality or {}
     flag = lambda m: "🟢" if m == "US" else "🔵"
@@ -772,6 +855,10 @@ def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, hot_
         lines.append("\n🔥 <b>핫한 종목(거래량·단기급등)</b>: " +
                      ", ".join(f"{stocks[i]['name']}(점수{stocks[i].get('hot_score','-')}"
                                f"{'·신규상장' if stocks[i].get('is_new') else ''})" for i in hot_ids[:6]))
+    if consensus_ids:
+        lines.append("\n🎯 <b>컨센서스 상승여력</b>(목표가 대비): " +
+                     ", ".join(f"{stocks[i]['name']}({stocks[i].get('t_upside',0):+.0f}%·{stocks[i].get('t_rec','-')})"
+                               for i in consensus_ids[:6] if stocks[i].get('t_upside') is not None))
     lines.append(f"\n<i>📊 전체 차트·기술적 분석 → {DASHBOARD_URL}\n무료 지연 종가 · RS=지수 대비 상대강도</i>")
     return "\n".join(lines)
 
@@ -969,6 +1056,11 @@ def main():
         else:
             c = dict(rec); c.pop("_rs_raw", None); c.setdefault("rs_rank", 0)
             stocks[rec["id"]] = c
+
+    # 컨센서스 목표가: 선택된 모멘텀 종목만 조회(미국=yfinance·한국=네이버)
+    consensus_ids = attach_consensus(stocks)
+    print(f"[consensus] {len(consensus_ids)}종목 목표가 부착(상승여력 내림차순)")
+
     payload = {
         "bar_date": bar_date,
         "generated_at": dt.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
@@ -979,13 +1071,14 @@ def main():
         "markets": markets, "stocks": stocks,
         "commodities": [c["id"] for c in commodities],
         "hot": [h["id"] for h in hot],
+        "consensus": consensus_ids,
         "counts": {"stocks": len(stocks),
                    "touched": sum(1 for r in stocks.values() if r["touched"]),
                    "near": sum(1 for r in stocks.values() if r["near"])},
     }
     write_outputs(payload)
     send_telegram(build_message(markets, stocks, bar_date, payload["commodities"], regime,
-                                payload["hot"], seasonality))
+                                payload["hot"], seasonality, payload["consensus"]))
     print("[done]")
 
 

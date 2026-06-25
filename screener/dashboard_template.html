@@ -166,6 +166,14 @@
         <div class="ttl"><span class="tk" style="background:#3a2420;color:#ff7a59">핫</span> 핫한 종목 <small>유니버스 전체 자동 발굴 · 거래량 급증 + 단기 급등(1주·1개월) + 신고가 근접</small></div>
         <div class="secrow" id="hot"></div>
       </div>
+      <div class="panel" id="consPanel" style="margin-top:14px;display:none">
+        <div class="ttl"><span class="tk" style="background:#16313a;color:#97FCE4">컨센</span> 컨센서스 목표가 <small>선택 종목 · 애널리스트 평균 목표주가 대비 상승여력 (미국 yfinance · 한국 네이버)</small></div>
+        <div class="tbl-scroll">
+          <table><thead><tr>
+            <th class="l">종목</th><th>현재가</th><th>목표가</th><th>상승여력</th><th class="mhide">의견</th><th class="mhide">범위(최저~최고)</th><th class="mhide">애널</th>
+          </tr></thead><tbody id="consensus"></tbody></table>
+        </div>
+      </div>
       <div class="panel" id="cmdPanel" style="margin-top:14px;display:none">
         <div class="ttl"><span class="tk" style="background:#3a3320;color:#ffce5a">원자재</span> 강한 원자재 <small>ETF 자체 RS·20MA 눌림목 (대장주 없음)</small></div>
         <div class="secrow" id="commodities"></div>
@@ -200,20 +208,25 @@ function stk(o){const b=makeBars(o.seed,130,o.start);return{id:o.market+":"+o.co
   trend_state:o.ts||"추세유지",trend_reasons:o.tr||["120·60·20일선 위 · 스윙 저점 유지"],
   wyckoff:o.wy||"상승 추세 (Markup)",wyckoff_note:o.wn||"주요 이벤트 미감지",
   hot_score:o.hs,is_new:o.new,days:o.days,
+  t_mean:(o.tmpct!=null?+(b.at(-1).c*(1+o.tmpct/100)).toFixed(2):(o.tm??null)),
+  t_high:(o.tmpct!=null&&o.tn!=null?+(b.at(-1).c*(1+(o.tmpct+12)/100)).toFixed(2):(o.th??null)),
+  t_low:(o.tmpct!=null&&o.tn!=null?+(b.at(-1).c*(1+(o.tmpct-10)/100)).toFixed(2):(o.tl??null)),
+  t_n:o.tn,t_rec:o.trec,t_date:o.td,
+  t_upside:(o.tmpct!=null?o.tmpct:(o.tm!=null?+((o.tm/b.at(-1).c-1)*100).toFixed(1):null)),
   bars:b,ma20s:MA(b,20),ma60s:MA(b,60),ma120s:MA(b,45),ma200s:MA(b,90)};}
 if(!DATA){
   const mk=(arr)=>{const s={};arr.forEach(r=>s[r.id]=r);return s;};
   const US=[
-    stk({market:"US",code:"AAA",name:"가상반도체",sector:"Information Technology",rank:1,t:1,d20:0.3,d60:108,d200:121,rsi:52,h52:-4.2,vr:1.6,ell:"3파 상승 추정",note:"저점 이후 2개 스윙·상승 진행(추정)",r3:18,r6:34,rs:30,seed:3,start:80}),
-    stk({market:"US",code:"BBB",name:"가상AI소프트",sector:"Information Technology",rank:2,n:1,d20:0.8,d60:111,d200:128,rsi:58,h52:-2.1,vr:1.2,ell:"5파 마무리 추정",note:"저점 이후 4개 스윙·되돌림 진행(추정)",r3:22,r6:41,rs:36,seed:7,start:60}),
-    stk({market:"US",code:"CCC",name:"가상클라우드",sector:"Information Technology",rank:3,d20:5.1,d60:113,d200:130,rsi:64,h52:-1.0,vr:0.9,ell:"3파 상승 추정",note:"상승 진행(추정)",r3:25,r6:44,rs:38,seed:11,start:55}),
+    stk({market:"US",code:"AAA",name:"가상반도체",sector:"Information Technology",rank:1,t:1,d20:0.3,d60:108,d200:121,rsi:52,h52:-4.2,vr:1.6,ell:"3파 상승 추정",note:"저점 이후 2개 스윙·상승 진행(추정)",r3:18,r6:34,rs:30,seed:3,start:80,tmpct:18.5,tn:42,trec:"매수"}),
+    stk({market:"US",code:"BBB",name:"가상AI소프트",sector:"Information Technology",rank:2,n:1,d20:0.8,d60:111,d200:128,rsi:58,h52:-2.1,vr:1.2,ell:"5파 마무리 추정",note:"저점 이후 4개 스윙·되돌림 진행(추정)",r3:22,r6:41,rs:36,seed:7,start:60,tmpct:9.2,tn:35,trec:"적극매수"}),
+    stk({market:"US",code:"CCC",name:"가상클라우드",sector:"Information Technology",rank:3,d20:5.1,d60:113,d200:130,rsi:64,h52:-1.0,vr:0.9,ell:"3파 상승 추정",note:"상승 진행(추정)",r3:25,r6:44,rs:38,seed:11,start:55,tmpct:-3.4,tn:28,trec:"중립"}),
     stk({market:"US",code:"DDD",name:"가상에너지",sector:"Energy",rank:4,t:1,d20:-0.2,d60:104,d200:115,rsi:47,h52:-7.0,vr:1.9,ell:"2파 조정 추정",note:"되돌림 진행(추정)",r3:14,r6:28,rs:24,seed:5,start:50}),
     stk({market:"US",code:"EEE",name:"가상방산",sector:"Industrials",rank:5,d20:3.4,d60:109,d200:124,rsi:61,h52:-3.3,vr:1.1,ell:"3파 상승 추정",note:"상승 진행(추정)",r3:17,r6:31,rs:27,seed:9,start:48}),
     stk({market:"US",code:"FFF",name:"가상금융",sector:"Financials",rank:6,n:1,d20:0.9,d60:106,d200:118,rsi:43,h52:-5.1,vr:1.0,ell:"4파 조정 추정",note:"되돌림 진행(추정)",r3:13,r6:24,rs:22,seed:13,start:46,ts:"주의",tr:["60일선 이탈","RSI 약세(43)"]}),
   ];
   const KR=[
-    stk({market:"KR",code:"005930",name:"가상전자",sector:"반도체",rank:1,t:1,d20:-0.4,d60:106,d200:118,rsi:42,h52:-6.5,vr:2.1,ell:"2파 조정 추정",note:"저점 이후 1개 스윙·되돌림 진행(추정)",r3:12,r6:25,rs:23,seed:4,start:50,ts:"하락추세",tr:["120일선 이탈(하락 진행)","저점 낮아짐","60일선 이탈"]}),
-    stk({market:"KR",code:"000660",name:"가상하이닉스",sector:"반도체",rank:2,d20:6.2,d60:115,d200:140,rsi:67,h52:-0.5,vr:1.0,ell:"조정(A·B·C) 추정",note:"임펄스 5파 이후 조정 국면(추정)",r3:30,r6:62,rs:40,seed:8,start:40}),
+    stk({market:"KR",code:"005930",name:"가상전자",sector:"반도체",rank:1,t:1,d20:-0.4,d60:106,d200:118,rsi:42,h52:-6.5,vr:2.1,ell:"2파 조정 추정",note:"저점 이후 1개 스윙·되돌림 진행(추정)",r3:12,r6:25,rs:23,seed:4,start:50,ts:"하락추세",tr:["120일선 이탈(하락 진행)","저점 낮아짐","60일선 이탈"],tmpct:29.0,trec:"매수",td:"2026-06-24"}),
+    stk({market:"KR",code:"000660",name:"가상하이닉스",sector:"반도체",rank:2,d20:6.2,d60:115,d200:140,rsi:67,h52:-0.5,vr:1.0,ell:"조정(A·B·C) 추정",note:"임펄스 5파 이후 조정 국면(추정)",r3:30,r6:62,rs:40,seed:8,start:40,tmpct:14.0,trec:"적극매수",td:"2026-06-24"}),
     stk({market:"KR",code:"373220",name:"가상2차전지",sector:"2차전지",rank:3,t:1,d20:0.2,d60:107,d200:122,rsi:50,h52:-8.1,vr:1.7,ell:"3파 상승 추정",note:"상승 진행(추정)",r3:16,r6:33,rs:28,seed:6,start:45}),
     stk({market:"KR",code:"207940",name:"가상바이오",sector:"바이오",rank:4,n:1,d20:0.7,d60:110,d200:126,rsi:46,h52:-2.9,vr:1.3,ell:"4파 조정 추정",note:"되돌림 진행(추정)",r3:19,r6:37,rs:31,seed:10,start:42,ts:"하락전환",tr:["직전 스윙 저점 이탈(저점 낮아짐)","60일선 이탈"]}),
     stk({market:"KR",code:"012450",name:"가상항공우주",sector:"우주항공",rank:5,d20:4.0,d60:112,d200:133,rsi:63,h52:-1.8,vr:1.1,ell:"5파 마무리 추정",note:"되돌림 진행(추정)",r3:24,r6:48,rs:35,seed:12,start:38}),
@@ -230,6 +243,7 @@ if(!DATA){
   const stocks=mk([...US,...KR,...CMD,...HOT]);
   DATA={demo:true,bar_date:"예시",generated_at:"예시 데이터",config:{zigzag_pct:7},
     commodities:CMD.map(r=>r.id), hot:HOT.map(r=>r.id),
+    consensus:[...US,...KR].filter(r=>r.t_mean!=null).sort((a,b)=>(b.t_upside??-999)-(a.t_upside??-999)).map(r=>r.id),
     regime:{
       US:{label:"추세유지",color:"green",premise:"상승 추세 견조 — 다수 종목이 240일선 위, 신고가 우위. 눌림목 매수 우호.",
         exposure:{stance:"적극 투자",equity:"80~100%",cash:"0~20%"},
@@ -334,6 +348,25 @@ function render(){
       </div>`).join("");
   } else { hp.style.display="none"; }
 
+  // 컨센서스 목표가(현재 시장) — 선택 종목, 상승여력 내림차순
+  const cns=(DATA.consensus||[]).map(id=>S[id]).filter(Boolean).filter(r=>r.market===market&&r.t_mean!=null);
+  const csp=$("consPanel");
+  if(cns.length){
+    csp.style.display="";
+    const dec=market==="US"?2:0;
+    $("consensus").innerHTML=cns.map(r=>{
+      const up=r.t_upside;
+      const rng=(r.t_low!=null&&r.t_high!=null)?`${fmt(r.t_low,dec)}~${fmt(r.t_high,dec)}`:"–";
+      return `<tr data-id="${r.id}" class="${selected===r.id?'sel':''}">
+        <td class="l"><b>${r.name}</b> <span style="color:var(--muted)">${r.code}</span></td>
+        <td class="num">${fmt(r.close,dec)}</td>
+        <td class="num" style="color:var(--hl-teal,#97FCE4)">${fmt(r.t_mean,dec)}</td>
+        <td class="num ${sg(up)}"><b>${up==null?'–':(up>0?'+':'')+up+'%'}</b></td>
+        <td class="mhide">${r.t_rec||'-'}</td>
+        <td class="num mhide" style="font-size:12px;color:var(--muted)">${rng}</td>
+        <td class="num mhide">${r.t_n??'–'}</td></tr>`;}).join("");
+  } else { csp.style.display="none"; }
+
   // 원자재(미국 보기에서만)
   const cmds=(DATA.commodities||[]).map(id=>S[id]).filter(Boolean);
   const cp=$("cmdPanel");
@@ -410,6 +443,7 @@ function showDetail(r){
     <div class="treasons">📐 추세 상태: <b style="color:${(TSC[r.trend_state]||['','var(--muted)'])[1]}">${r.trend_state||'-'}</b> — ${(r.trend_reasons||[]).join(' · ')||'—'}
       <div style="color:#6a7180;margin-top:3px">하락전환 = 20MA 이탈 + 직전 스윙 저점 이탈(둘 다) · 하락추세 = 120선 이탈 · 20MA 위 지지 중이면 정상 눌림목/주의</div></div>
     ${r.hot_score!=null?`<div class="treasons" style="border-left:3px solid #ff7a59">🔥 핫 점수 <b style="color:#ff7a59">${r.hot_score}</b> · 거래량 ${r.vol_ratio==null?'–':'20일평균 x'+r.vol_ratio} · 1주 ${r.ret1w==null?'–':(r.ret1w>0?'+':'')+r.ret1w+'%'} · 1개월 ${r.ret1m==null?'–':(r.ret1m>0?'+':'')+r.ret1m+'%'} · 신고가 ${r.high52_pct==null?'–':r.high52_pct+'%'}${r.is_new?' · <b style="color:var(--near)">신규상장(상장후 '+(r.days??'?')+'거래일)</b>':''}</div>`:''}
+    ${r.t_mean!=null?(()=>{const d=r.market==="US"?2:0;return `<div class="treasons" style="border-left:3px solid #97FCE4">🎯 컨센서스 목표가 <b style="color:#97FCE4">${fmt(r.t_mean,d)}</b> · 상승여력 <b style="color:${r.t_upside>0?'var(--up)':'var(--down)'}">${r.t_upside==null?'–':(r.t_upside>0?'+':'')+r.t_upside+'%'}</b> · 의견 <b>${r.t_rec||'-'}</b>${r.t_n!=null?` · 애널 ${r.t_n}명`:''}${(r.t_low!=null&&r.t_high!=null)?` · 범위 ${fmt(r.t_low,d)}~${fmt(r.t_high,d)}`:''}${r.t_date?` · ${r.t_date} 기준`:''}<div style="color:#6a7180;margin-top:3px">${r.market==="US"?'야후 집계(애널리스트 평균)':'네이버 증권사 컨센서스'} · 목표가는 참고용, 추세·타점과 함께 보세요.</div></div>`;})():''}
     <div class="ellbox">🌀 <b>엘리어트 파동(추정): ${r.elliott}</b><br>${r.elliott_note||''}
       <div class="caveat">※ 엘리어트는 분석자마다 카운팅이 달라지는 주관적 기법입니다. 위 라벨은 지그재그 스윙(±${(DATA.config&&DATA.config.zigzag_pct)||7}%) 기반 <b>알고리즘 추정</b>이며, 차트로 직접 카운팅해 확인하세요.</div></div>
     ${r.wyckoff?`<div class="ellbox" style="border-left-color:#b08cff">🔍 <b>와이코프 국면(추정): ${r.wyckoff}</b><br>${r.wyckoff_note||''}
