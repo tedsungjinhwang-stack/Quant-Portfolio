@@ -41,7 +41,7 @@
   .ldr .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ldr .rk{color:var(--muted);font-size:11.5px}
   /* table */
-  .tbl-scroll{max-height:520px;overflow:auto;border-radius:8px;margin-top:4px}
+  .tbl-scroll{max-height:520px;overflow:auto;border-radius:8px;margin-top:4px;-webkit-overflow-scrolling:touch}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{padding:8px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
   th:first-child,td:first-child,.l{text-align:left}
@@ -90,6 +90,45 @@
   .ridx .ic b{font-size:13px}
   .bar{height:8px;background:#222a36;border-radius:5px;overflow:hidden;margin:3px 0 6px}
   .bar > i{display:block;height:100%}
+  /* ===== 모바일 UI (폰) ===== */
+  @media(max-width:640px){
+    body{font-size:15.5px}
+    .wrap{padding:12px 11px 56px}
+    h1{font-size:19px;margin:2px 0}
+    .sub{font-size:13px;margin-bottom:12px}
+    .seg{width:100%}
+    .seg button{flex:1;padding:10px 0;font-size:15px}
+    .panel{padding:12px;border-radius:11px;margin:11px 0}
+    .ttl{font-size:15px}
+    .dwrap{position:static}              /* 상세를 sticky 해제 — 폰에선 탭하면 스크롤 이동 */
+    /* 표: 폰에서 글자·터치 키우고 세로 스크롤 허용 */
+    table{font-size:14px}
+    th,td{padding:10px 8px}
+    th{font-size:12.5px}
+    .tbl-scroll{max-height:none}
+    tbody tr td:first-child{font-size:13.5px}
+    /* 배지·리더·통계 터치 친화 */
+    .bdg{font-size:12px;padding:4px 10px}
+    .ldr{padding:10px 8px;font-size:14px}
+    .ldr .rk{font-size:12.5px}
+    .seccard{padding:12px}
+    .stats{grid-template-columns:repeat(2,1fr);gap:6px 14px}
+    .stat{font-size:14.5px;padding:8px 0}
+    .chip{font-size:12.5px;padding:5px 11px}
+    /* 레짐 배너·지수 카드 */
+    .rlight{font-size:19px}
+    .reasons{font-size:13px}
+    .ridx{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .ridx .ic{font-size:12.5px}
+    .legend{font-size:12.5px}
+    .dhead h2{font-size:20px}
+    .ellbox,.treasons{font-size:13.5px}
+  }
+  /* 아주 작은 폰 */
+  @media(max-width:380px){
+    .ridx{grid-template-columns:1fr}
+    h1{font-size:17.5px}
+  }
 </style>
 </head>
 <body>
@@ -310,7 +349,8 @@ function render(){
     || '<tr><td colspan="10" class="empty">데이터 없음</td></tr>';
 
   document.querySelectorAll("[data-id]").forEach(el=>el.addEventListener("click",()=>{
-    selected=el.dataset.id;render();showDetail(S[selected]);}));
+    selected=el.dataset.id;render();showDetail(S[selected]);
+    if(window.innerWidth<1000){const d=$("detail");if(d)d.scrollIntoView({behavior:"smooth",block:"start"});}}));
 }
 
 function chartSVG(r){
