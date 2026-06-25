@@ -140,6 +140,7 @@ KR_THEME_MEMBERS = {
 
 REPORT_DIR = "reports"
 TEMPLATE = os.path.join(os.path.dirname(__file__), "dashboard_template.html")
+DASHBOARD_URL = "https://quant-portfolio.tedsungjinhwang.workers.dev/"   # 라이브 대시보드(고정 URL)
 
 
 # ----------------------------------------------------------------------
@@ -718,7 +719,8 @@ def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, grow
     seasonality = seasonality or {}
     flag = lambda m: "🟢" if m == "US" else "🔵"
     light = {"green": "🟢", "yellow": "🟡", "red": "🔴"}
-    lines = [f"📈 <b>2트랙 모멘텀 스크리너</b> · 기준일 {bar_date}"]
+    lines = [f"📈 <b>증시 추세추종 스크리너</b> · 기준일 {bar_date}",
+             f"📊 대시보드: {DASHBOARD_URL}"]
     for mkt in ("US", "KR"):
         mk = markets.get(mkt, {})
         if not mk.get("sectors") and not mk.get("top_ids"):
@@ -771,7 +773,7 @@ def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, grow
         lines.append("\n🚀 <b>성장주/신규 워치</b>: " +
                      ", ".join(f"{stocks[i]['name']}(점수{stocks[i].get('growth_score','-')}"
                                f"{'·신규' if stocks[i].get('is_new') else ''})" for i in growth_ids[:6]))
-    lines.append("\n<i>대시보드(차트·이격도·엘리어트): reports/dashboard.html · 무료 지연 종가</i>")
+    lines.append(f"\n<i>📊 전체 차트·기술적 분석 → {DASHBOARD_URL}\n무료 지연 종가 · RS=지수 대비 상대강도</i>")
     return "\n".join(lines)
 
 
