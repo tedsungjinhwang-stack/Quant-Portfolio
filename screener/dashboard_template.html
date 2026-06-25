@@ -107,7 +107,9 @@
   .mpos-ph.ph-amber{color:var(--warn);background:rgba(255,176,32,.12)}
   .mpos-ph.ph-red{color:var(--down);background:rgba(255,107,107,.12)}
   .mpos-x{color:var(--muted)}
-  /* 글로벌 매크로 패널 — 카테고리별 한 줄 압축 */
+  /* 글로벌 매크로 — 레짐 배너 우측 빈공간에 배치(카테고리별 한 줄 압축) */
+  .rmacro{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .rmacro .macro{margin-bottom:0}
   .macro{margin-bottom:14px}
   .macro .mttl{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--txt);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .macro .mttl small{color:var(--muted);font-weight:500;font-size:11px}
@@ -259,7 +261,6 @@
   <div id="chips" class="chips"></div>
   <div class="seg" id="mkSeg"><button data-m="KR" class="on">🔵 한국</button><button data-m="US">🟢 미국</button></div>
   <div id="regime"></div>
-  <div id="macro"></div>
   <div id="season"></div>
 
   <div class="layout">
@@ -499,18 +500,19 @@ function renderRegime(){
         <div style="font-size:11.5px;color:var(--muted)">52주 신고가 ${b.new_high??'–'}% vs 신저가 ${b.new_low??'–'}% · 순증 ${b.net_new_high>0?'+':''}${b.net_new_high??'–'}</div>
         ${bar(50+(b.net_new_high||0)*2,b.net_new_high>=0?'#3ddc97':'#ff6b6b')}
         <div style="font-size:11px;color:var(--muted)">신고가 근접 ${b.near_high??'–'}% · 표본 ${b.n}종목</div>
-      </div></div></div>`;
+      </div>
+      <div class="rmacro">${macroBlockHTML()}</div></div></div>`;
 }
 
-function renderMacro(){
-  const el=$("macro"),ms=DATA.macro||[];
-  if(!ms.length){el.innerHTML="";return;}
+function macroBlockHTML(){
+  const ms=DATA.macro||[];
+  if(!ms.length) return "";
   const cats=[],byc={};
   ms.forEach(m=>{if(!byc[m.cat]){byc[m.cat]=[];cats.push(m.cat);}byc[m.cat].push(m);});
   const item=m=>{const d=m.delta,good=d==0?null:(d>0)===m.up_good,ar=d>0?'▲':(d<0?'▼':'');
     const dc=(d==null||d==0)?'':`<span class="mi-d ${good?'pos':'neg'}">${ar}${Math.abs(d)}</span>`;
     return `<span class="mi"><span class="mi-l">${m.label}</span> <b>${cnum(m.value,2)}${m.unit}</b>${dc}</span>`;};
-  el.innerHTML=`<div class="panel macro"><div class="mttl">🌐 글로벌 매크로 <small>FRED 금리·물가·고용·유동성 + 시클리컬 · 색=위험자산 관점 · 변화=직전 대비</small></div>
+  return `<div class="macro"><div class="mttl">🌐 글로벌 매크로 <small>FRED + 시클리컬 · 색=위험자산 관점</small></div>
     ${cats.map(c=>`<div class="mline"><span class="mline-l">${c}</span><span class="mline-v">${byc[c].map(item).join("")}</span></div>`).join("")}</div>`;
 }
 function renderSeason(){
@@ -531,7 +533,6 @@ function renderSeason(){
 
 function render(){
   renderRegime();
-  renderMacro();
   renderSeason();
   const mk=DATA.markets[market]||{sectors:[],top_ids:[]};
   // 트랙①
