@@ -1124,16 +1124,22 @@ def main():
     consensus_ids = attach_consensus(stocks)
     print(f"[consensus] {len(consensus_ids)}종목 목표가 부착(상승여력 내림차순)")
 
-    # 핵심 한국 딥 Top3만 증권사별 풀 컨센서스(시계열·의견분포) 수집
+    # 한국 딥 Top3 + 섹터 대장주만 증권사별 풀 컨센서스(시계열·의견분포) 수집(중복 제거)
+    kr = markets.get("KR", {})
+    detail_ids = list(kr.get("deep_ids", []))
+    for sec in kr.get("sectors", []):
+        for lid in sec.get("leader_ids", []):
+            if lid not in detail_ids:
+                detail_ids.append(lid)
     cons_detail = {}
-    for sid in markets.get("KR", {}).get("deep_ids", []):
+    for sid in detail_ids:
         code = stocks.get(sid, {}).get("code")
         if not code:
             continue
         d = consensus_detail(code)
         if d:
             cons_detail[sid] = d
-    print(f"[consensus] 한국 딥 {len(cons_detail)}종목 증권사별 시계열 수집")
+    print(f"[consensus] 한국 딥+대장주 {len(cons_detail)}종목 증권사별 시계열 수집")
 
     payload = {
         "bar_date": bar_date,

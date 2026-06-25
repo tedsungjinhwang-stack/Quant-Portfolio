@@ -318,6 +318,7 @@ if(!DATA){
   const _cd={};
   _cd[stocks["KR:005930"].id]=_mkDetail(stocks["KR:005930"].close,16);
   _cd[stocks["KR:000660"].id]=_mkDetail(stocks["KR:000660"].close,14);
+  _cd[stocks["KR:373220"].id]=_mkDetail(stocks["KR:373220"].close,12);
   DATA={demo:true,bar_date:"예시",generated_at:"예시 데이터",config:{zigzag_pct:7},
     consensus_detail:_cd,
     commodities:CMD.map(r=>r.id), hot:HOT.map(r=>r.id),
