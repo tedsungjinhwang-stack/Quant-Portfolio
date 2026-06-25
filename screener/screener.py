@@ -751,7 +751,7 @@ def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, grow
                     lines.append(f"   - {s['sector']}: " + ", ".join(names))
         touched = [stocks[i] for i in mk.get("top_ids", []) if stocks[i]["touched"]]
         if touched:
-            lines.append("· 트랙② Top10 중 눌림목: " + ", ".join(f"{r['name']}(RS#{r['rs_rank']})" for r in touched))
+            lines.append("· 트랙② Top10 중 풀백 타점: " + ", ".join(f"{r['name']}(RS#{r['rs_rank']})" for r in touched))
         deep = [stocks[i] for i in mk.get("deep_ids", [])]
         if deep:
             lines.append("· 심층 Top3: " + ", ".join(
@@ -765,7 +765,7 @@ def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, grow
             lines.append("🔴 하락추세(120선 이탈): " + ", ".join(down))
     if commodity_ids:
         lines.append("\n🟡 <b>원자재(RS 상위)</b>: " +
-                     ", ".join(f"{stocks[i]['name'].split('(')[0]}{'🟢터치' if stocks[i]['touched'] else ''}"
+                     ", ".join(f"{stocks[i]['name'].split('(')[0]}{'🟢풀백' if stocks[i]['touched'] else ''}"
                                for i in commodity_ids[:5]))
     if growth_ids:
         lines.append("\n🚀 <b>성장주/신규 워치</b>: " +
@@ -809,16 +809,16 @@ def write_outputs(payload):
         md.append("### 트랙① 강한 섹터 → 대장주")
         for s in mk.get("sectors", []):
             names = ", ".join(f"{payload['stocks'][i]['name']}({payload['stocks'][i]['code']})"
-                              + ("🟢터치" if payload['stocks'][i]['touched'] else "") for i in s["leader_ids"])
+                              + ("🟢풀백" if payload['stocks'][i]['touched'] else "") for i in s["leader_ids"])
             md.append(f"- **{s['sector']}** [{s['etf']} RS {s['etf_rs']}]: {names or '해당 없음'}")
         fr = lambda v: "–" if v is None else f"{v:+.1f}"
         fr2 = lambda v: "–" if v is None else f"{v:+.2f}"
         md.append("\n### 트랙② 개별 RS Top10 (RS=지수 대비)")
-        md.append("| RS# | 종목 | 종가 | 1D% | 7D% | 1M% | 3M% | RS | 20MA% | RSI | 눌림목 | 추세 | 엘리어트 |")
+        md.append("| RS# | 종목 | 종가 | 1D% | 7D% | 1M% | 3M% | RS | 20MA% | RSI | 풀백 | 추세 | 엘리어트 |")
         md.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
         for i in mk.get("top_ids", []):
             r = payload["stocks"][i]
-            pb = "터치" if r["touched"] else ("근접" if r["near"] else "–")
+            pb = "풀백 타점" if r["touched"] else ("근접" if r["near"] else "–")
             star = " ★" if i in mk.get("deep_ids", []) else ""
             md.append(f"| {r['rs_rank']} | {r['name']}({r['code']}) | {r['close']:,} | "
                       f"{fr2(r.get('ret1d'))} | {fr(r.get('ret1w'))} | {fr(r.get('ret1m'))} | {fr(r.get('ret3m'))} | "

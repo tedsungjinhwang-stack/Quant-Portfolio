@@ -111,7 +111,7 @@
         <div class="ttl"><span class="tk">트랙②</span> 개별 RS Top 10 <small>★ = 최상위 심층</small></div>
         <div class="tbl-scroll">
           <table><thead><tr>
-            <th class="l">종목</th><th>RS</th><th>종가</th><th>1D%</th><th>1M%</th><th>눌림목</th><th>추세</th>
+            <th class="l">종목</th><th>RS</th><th>종가</th><th>1D%</th><th>1M%</th><th>풀백</th><th>추세</th>
             <th>20MA%</th><th>RSI</th><th class="l">엘리어트</th>
           </tr></thead><tbody id="top10"></tbody></table>
         </div>
@@ -218,7 +218,7 @@ $("chips").innerHTML=
   `<span class="chip">기준일 <b>${DATA.bar_date}</b></span>`+
   `<span class="chip">생성 <b>${DATA.generated_at||'-'}</b></span>`+
   `<span class="chip">분석 종목 <b>${DATA.counts.stocks}</b></span>`+
-  `<span class="chip" style="color:var(--touch)">터치 <b>${DATA.counts.touched}</b></span>`+
+  `<span class="chip" style="color:var(--touch)">풀백 <b>${DATA.counts.touched}</b></span>`+
   `<span class="chip" style="color:var(--near)">근접 <b>${DATA.counts.near}</b></span>`;
 
 let market="US", selected=null;
@@ -226,7 +226,7 @@ const fmt=(v,d=2)=>v==null?"–":Number(v).toLocaleString("ko-KR",{maximumFracti
 const sg=v=>v==null?"":(v>0?"pos":"neg");
 const PR=v=>v==null?"–":(v>0?"+":"")+v+"%";
 const prc=v=>v==null?"<span style='color:#7a8294'>–</span>":`<span class="${sg(v)}">${(v>0?'+':'')+v}</span>`;
-const pbBadge=r=>r.touched?'<span class="bdg t">터치</span>':r.near?'<span class="bdg n">근접</span>':'<span class="bdg x">—</span>';
+const pbBadge=r=>r.touched?'<span class="bdg t">풀백 타점</span>':r.near?'<span class="bdg n">근접</span>':'<span class="bdg x">—</span>';
 const TSC={"추세유지":["up","var(--up)"],"주의":["cau","var(--near)"],"하락전환":["flip","#ff8a50"],"하락추세":["dn","var(--down)"],"데이터 부족":["x","var(--muted)"]};
 const tsBadge=s=>{const m=TSC[s];return m?`<span class="bdg ${m[0]}">${s}</span>`:'';};
 
@@ -337,7 +337,7 @@ function showDetail(r){
   $("detail").innerHTML=`
     <div class="dhead"><div><h2>${r.market==="US"?"🟢":"🔵"} ${r.name} <span style="color:var(--muted);font-size:14px">${r.code}</span></h2>
       <div class="meta">${r.sector} · RS#${r.rs_rank||'-'} · 종가 ${fmt(r.close)}</div></div>
-      <div style="text-align:right">${r.touched?'<span class="bdg t">눌림목 터치</span>':r.near?'<span class="bdg n">근접</span>':'<span class="bdg x">관망</span>'} ${tsBadge(r.trend_state)}</div></div>
+      <div style="text-align:right">${r.touched?'<span class="bdg t">풀백 타점</span>':r.near?'<span class="bdg n">근접</span>':'<span class="bdg x">관망</span>'} ${tsBadge(r.trend_state)}</div></div>
     <div class="chartbox">${chartSVG(r)}</div>
     <div class="legend"><span><i style="background:#ffce5a"></i>20MA</span><span><i style="background:#5b8cff"></i>60MA</span>
       <span><i style="background:#b08cff"></i>120MA(수급선)</span><span><i style="background:#ff7a85"></i>200MA</span><span>🟢/🔴 일봉</span></div>
