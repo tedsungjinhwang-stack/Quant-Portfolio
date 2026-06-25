@@ -202,27 +202,43 @@ def rs_value(close):
 
 
 def zigzag(closes, pct):
-    if len(closes) < 3:
+    """퍼센트 지그재그 피벗: [(i, price, 'H'/'L'), ...]. thr% 이상 반전 시 피벗 확정."""
+    n = len(closes)
+    if n < 3:
         return []
-    piv, thr = [], pct / 100.0
-    ext_i, ext_p, direction = 0, closes[0], 0
-    for i in range(1, len(closes)):
+    thr = pct / 100.0
+    piv = []
+    hi_i, hi_p = 0, closes[0]
+    lo_i, lo_p = 0, closes[0]
+    direction = 0   # 0=미정, 1=상승(저점 후 고점 탐색), -1=하락(고점 후 저점 탐색)
+    for i in range(1, n):
         p = closes[i]
-        if direction >= 0 and p > ext_p:
-            ext_i, ext_p = i, p
-        elif direction <= 0 and p < ext_p:
-            ext_i, ext_p = i, p
-        if direction >= 0 and p <= ext_p * (1 - thr):
-            piv.append((ext_i, ext_p, 'H')); direction, ext_i, ext_p = -1, i, p
-        elif direction <= 0 and p >= ext_p * (1 + thr):
-            piv.append((ext_i, ext_p, 'L')); direction, ext_i, ext_p = 1, i, p
+        if direction >= 0:                      # 고점 추적
+            if p > hi_p:
+                hi_i, hi_p = i, p
+            if p <= hi_p * (1 - thr):            # 고점 대비 thr% 하락 → 고점 확정
+                piv.append((hi_i, hi_p, 'H'))
+                direction = -1
+                lo_i, lo_p = i, p
+        if direction <= 0:                      # 저점 추적
+            if p < lo_p:
+                lo_i, lo_p = i, p
+            if p >= lo_p * (1 + thr):            # 저점 대비 thr% 상승 → 저점 확정
+                piv.append((lo_i, lo_p, 'L'))
+                direction = 1
+                hi_i, hi_p = i, p
     return piv
 
 
 def elliott_estimate(closes, pct):
     piv = zigzag(closes, pct)
+    # 강세 추세주는 깊은 되돌림이 드물어 7%로 스윙이 안 잡힘 → 임계치를 자동으로 낮춰 카운팅
+    for finer in (pct * 0.6, pct * 0.4, pct * 0.25):
+        if len(piv) >= 2:
+            break
+        piv = zigzag(closes, finer)
     if len(piv) < 2:
-        return "판단 보류", "스윙이 부족해 추정 불가"
+        return "판단 보류", "변동성 매우 낮음(스윙 미형성)"
     last_low = max((k for k, p in enumerate(piv) if p[2] == 'L'), default=None)
     if last_low is None:
         return "판단 보류", "기준 저점 미확인"
