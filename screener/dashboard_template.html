@@ -151,6 +151,7 @@ function stk(o){const b=makeBars(o.seed,130,o.start);return{id:o.market+":"+o.co
   touched:!!o.t,near:!!o.n,dist20:o.d20,disp20:100+o.d20,disp60:o.d60,disp200:o.d200,rsi:o.rsi,
   high52_pct:o.h52,low52_pct:o.l52||30,vol_ratio:o.vr,elliott:o.ell,elliott_note:o.note,ret3m:o.r3,ret6m:o.r6,rs:o.rs,rs_rank:o.rank,
   trend_state:o.ts||"추세유지",trend_reasons:o.tr||["120·60·20일선 위 · 스윙 저점 유지"],
+  wyckoff:o.wy||"상승 추세 (Markup)",wyckoff_note:o.wn||"주요 이벤트 미감지",
   growth_score:o.gs,rev_growth:o.rg,earn_growth:o.eg,is_new:o.new,days:o.days,
   bars:b,ma20s:MA(b,20),ma60s:MA(b,60),ma120s:MA(b,45),ma200s:MA(b,90)};}
 if(!DATA){
@@ -184,13 +185,15 @@ if(!DATA){
     commodities:CMD.map(r=>r.id), growth:GR.map(r=>r.id),
     regime:{
       US:{label:"추세유지",color:"green",premise:"상승 추세 견조 — 다수 종목이 200일선 위, 신고가 우위. 눌림목 매수 우호.",
+        exposure:{stance:"적극 투자",equity:"80~100%",cash:"0~20%"},
         reasons:["S&P500 200일선 위(+6.2%, 정배열)","200일선 이탈 32% · 20일선 이탈 41% (낮을수록 강세)","52주 신고가 16% · 신저가 4% (순증 +12)"],
         breadth:{below20:41,below200:32,above200:68,new_high:16,near_high:24,new_low:4,net_new_high:12,n:480},
-        indexes:[{name:"S&P500",close:5600,above200:true,golden:true,rsi:58},{name:"나스닥",close:18200,above200:true,golden:true,rsi:60}]},
+        indexes:[{name:"S&P500",close:5600,above200:true,golden:true,rsi:58,wyckoff:"상승 추세 (Markup)"},{name:"나스닥",close:18200,above200:true,golden:true,rsi:60,wyckoff:"상승 추세 (Markup)"}]},
       KR:{label:"상승 둔화",color:"yellow",premise:"지수는 위지만 신고가 줄고 이탈 증가 — 주도 섹터·대장주만 선별 대응.",
+        exposure:{stance:"중립·선별",equity:"50~70%",cash:"30~50%"},
         reasons:["코스피 200일선 위(+1.1%, 정배열)","200일선 이탈 52% · 20일선 이탈 63% (낮을수록 강세)","52주 신고가 7% · 신저가 9% (순증 -2)"],
         breadth:{below20:63,below200:52,above200:48,new_high:7,near_high:13,new_low:9,net_new_high:-2,n:240},
-        indexes:[{name:"코스피",close:2700,above200:true,golden:true,rsi:51},{name:"코스닥",close:850,above200:false,golden:false,rsi:45}]}},
+        indexes:[{name:"코스피",close:2700,above200:true,golden:true,rsi:51,wyckoff:"분산 추정 (Distribution)"},{name:"코스닥",close:850,above200:false,golden:false,rsi:45,wyckoff:"하락 추세 (Markdown)"}]}},
     counts:{stocks:US.length+KR.length,touched:3,near:3},stocks,
     markets:{
       US:{sectors:[
@@ -221,7 +224,7 @@ let market="US", selected=null;
 const fmt=(v,d=2)=>v==null?"–":Number(v).toLocaleString("ko-KR",{maximumFractionDigits:d});
 const sg=v=>v==null?"":(v>0?"pos":"neg");
 const pbBadge=r=>r.touched?'<span class="bdg t">터치</span>':r.near?'<span class="bdg n">근접</span>':'<span class="bdg x">—</span>';
-const TSC={"추세유지":["up","var(--up)"],"주의":["cau","var(--near)"],"하락전환":["flip","#ff8a50"],"하락추세":["dn","var(--down)"]};
+const TSC={"추세유지":["up","var(--up)"],"주의":["cau","var(--near)"],"하락전환":["flip","#ff8a50"],"하락추세":["dn","var(--down)"],"데이터 부족":["x","var(--muted)"]};
 const tsBadge=s=>{const m=TSC[s];return m?`<span class="bdg ${m[0]}">${s}</span>`:'';};
 
 $("mkSeg").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
@@ -232,10 +235,13 @@ function renderRegime(){
   if(!rg){el.innerHTML="";return;}
   const lc={green:"🟢",yellow:"🟡",red:"🔴"}[rg.color]||"⚪", b=rg.breadth||{};
   const idx=(rg.indexes||[]).map(x=>`<div class="ic">${x.name} <b>${fmt(x.close)}</b><br>
-    <span class="${x.above200?'pos':'neg'}">${x.above200?'▲200MA':'▼200MA'}</span> ${x.golden?'·정배열':'·역배열'} ·RSI ${x.rsi}</div>`).join("");
+    <span class="${x.above200?'pos':'neg'}">${x.above200?'▲200MA':'▼200MA'}</span> ${x.golden?'·정배열':'·역배열'} ·RSI ${x.rsi}
+    ${x.wyckoff?`<br><span style="color:#b08cff">🔍 ${x.wyckoff}</span>`:''}</div>`).join("");
   const bar=(v,col)=>`<div class="bar"><i style="width:${Math.max(0,Math.min(100,v||0))}%;background:${col}"></i></div>`;
+  const ex=rg.exposure;
   el.innerHTML=`<div class="rbanner ${rg.color}">
     <div><div class="rlight">${lc} ${rg.label} <small>${rg.premise}</small></div>
+      ${ex?`<div class="reasons">💰 권장 스탠스: <b style="color:var(--txt)">${ex.stance}</b> · 주식 ${ex.equity} / 현금 ${ex.cash} <span style="color:#6a7180">(참고용)</span></div>`:''}
       <div class="reasons">${(rg.reasons||[]).join(" · ")}</div></div>
     <div><div class="ridx">${idx}</div>
       <div style="margin-top:8px">
@@ -342,7 +348,9 @@ function showDetail(r){
       <div style="color:#6a7180;margin-top:3px">하락전환 = 직전 스윙 저점 이탈(저점 낮아짐, 아직 120선 위) · 하락추세 = 120선 이탈(하락 진행)</div></div>
     ${r.growth_score!=null?`<div class="treasons" style="border-left:3px solid var(--up)">🚀 성장 점수 <b style="color:var(--up)">${r.growth_score}</b> · 매출성장 ${r.rev_growth==null?'–':r.rev_growth+'%'} · 이익성장 ${r.earn_growth==null?'–':r.earn_growth+'%'} · 상장후 ${r.days??'?'}거래일${r.is_new?' · <b style="color:var(--near)">신규상장(데이터 짧음)</b>':''}</div>`:''}
     <div class="ellbox">🌀 <b>엘리어트 파동(추정): ${r.elliott}</b><br>${r.elliott_note||''}
-      <div class="caveat">※ 엘리어트는 분석자마다 카운팅이 달라지는 주관적 기법입니다. 위 라벨은 지그재그 스윙(±${(DATA.config&&DATA.config.zigzag_pct)||7}%) 기반 <b>알고리즘 추정</b>이며, 차트로 직접 카운팅해 확인하세요.</div></div>`;
+      <div class="caveat">※ 엘리어트는 분석자마다 카운팅이 달라지는 주관적 기법입니다. 위 라벨은 지그재그 스윙(±${(DATA.config&&DATA.config.zigzag_pct)||7}%) 기반 <b>알고리즘 추정</b>이며, 차트로 직접 카운팅해 확인하세요.</div></div>
+    ${r.wyckoff?`<div class="ellbox" style="border-left-color:#b08cff">🔍 <b>와이코프 국면(추정): ${r.wyckoff}</b><br>${r.wyckoff_note||''}
+      <div class="caveat">※ 가격+거래량 기반 알고리즘 추정 — 매집(Accumulation)/상승(Markup)/분산(Distribution)/하락(Markdown) + 스프링·업스러스트·거래량 이벤트. 차트로 확인하세요.</div></div>`:''}`;
 }
 
 render();

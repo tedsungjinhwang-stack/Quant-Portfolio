@@ -86,7 +86,7 @@ INDEXES = {
 # 신규상장·성장주 워치리스트 (직접 추가/삭제). RS·200일선이 없어도 완화 지표로 추적.
 # US: 야후 티커 그대로 / KR: 6자리 코드(.KS/.KQ 자동). ※ 아래는 예시 — 본인 관심종목으로 교체.
 WATCHLIST = {
-    "US": ["PLTR", "RDDT", "ARM", "APP", "HOOD", "SMCI", "ASTS", "CRWV"],
+    "US": ["SPCX", "PLTR", "RDDT", "ARM", "APP", "HOOD", "SMCI", "ASTS", "CRWV"],
     "KR": [],
 }
 
@@ -243,6 +243,8 @@ def trend_state(last, v20, v60, v120, ma200_up, rsi_last, piv):
       - 하락전환: 직전 스윙 저점 이탈(저점 낮아짐). 아직 120선 위 — 전환이 '일어나는' 시점.
       - 하락추세: 120일선(수급선) 종가 이탈. 전환은 이미 끝, 하락이 '진행' 중(확정).
       - '20MA 닿고 반등'=눌림목(추세유지) / '닿고 직전 저점까지 깸'=하락전환."""
+    if v20 is None and v60 is None:        # 상장 초기 — 이동평균 산출 전
+        return "데이터 부족", ["상장 초기 · 이동평균 산출 전"]
     lows = [p[1] for p in piv if p[2] == 'L']
     highs = [p[1] for p in piv if p[2] == 'H']
     broke_low = bool(lows and last < lows[-1])           # 직전 스윙 저점 이탈(저점 낮아짐)
@@ -278,10 +280,61 @@ def trend_state(last, v20, v60, v120, ma200_up, rsi_last, piv):
     return "추세유지", ["120·60·20일선 위 · 스윙 저점 유지"]
 
 
+def wyckoff_estimate(df, piv=None):
+    """가격+거래량 기반 와이코프 국면 '추정'(참고용):
+       매집(Accumulation)/상승(Markup)/분산(Distribution)/하락(Markdown) + 이벤트."""
+    c = df["Close"].astype(float)
+    h = df["High"].astype(float)
+    l = df["Low"].astype(float)
+    if len(c) < 40:
+        return "판단 보류", "데이터 부족"
+    n = len(c)
+    last = float(c.iloc[-1])
+    look = min(60, n)
+    hi = float(h.tail(look).max())
+    lo = float(l.tail(look).min())
+    pos = (last - lo) / (hi - lo) if hi > lo else 0.5     # 레인지 내 위치 0~1
+    width = (hi - lo) / lo if lo > 0 else 1.0
+    rangebound = width < 0.18                             # 약 18% 이내 박스권
+    ma_long = c.rolling(min(120, n)).mean()
+    above = last > float(ma_long.iloc[-1])
+    slope_up = float(ma_long.iloc[-1]) > float(ma_long.iloc[-min(21, n - 1)])
+    ref = float(c.iloc[max(0, n - 1 - look * 2)])         # 약 6개월 전(레인지 이전)
+    came_down = ref > hi * 0.98
+    came_up = ref < lo * 1.02
+
+    events = []
+    vol = df.get("Volume")
+    if vol is not None and len(vol) >= 60 and float(vol.tail(60).mean()) > 0:
+        base_v = float(vol.tail(60).mean())
+        if float(vol.tail(10).mean()) < base_v * 0.8:
+            events.append("거래량 마름(매집 성숙)")
+        if float(vol.tail(5).max()) > base_v * 2.5:
+            events.append("거래량 클라이맥스")
+    prior_lo = float(l.iloc[max(0, n - look):max(1, n - 10)].min())
+    prior_hi = float(h.iloc[max(0, n - look):max(1, n - 10)].max())
+    if float(l.tail(10).min()) < prior_lo and last > prior_lo:
+        events.append("스프링(하단 가짜 이탈 후 복귀)")
+    if float(h.tail(10).max()) > prior_hi and last < prior_hi:
+        events.append("업스러스트(상단 가짜 돌파 후 실패)")
+
+    if rangebound and (came_down or pos < 0.5):
+        phase = "매집 추정 (Accumulation)"
+    elif rangebound and (came_up or pos >= 0.5):
+        phase = "분산 추정 (Distribution)"
+    elif above and slope_up and pos > 0.5:
+        phase = "상승 추세 (Markup)"
+    elif (not above) and (not slope_up):
+        phase = "하락 추세 (Markdown)"
+    else:
+        phase = "상승 추세 (Markup)" if above else "하락 추세 (Markdown)"
+    return phase, " · ".join(events) if events else "주요 이벤트 미감지"
+
+
 def metrics(meta, df, relaxed=False):
     """종목 1개의 지표 dict(또는 None).
     relaxed=True: 신규상장·짧은 데이터용 — 최소 봉수 완화 + RS는 가용 구간 수익률로 대용."""
-    min_bars = 25 if relaxed else 60
+    min_bars = 6 if relaxed else 60
     if df is None or len(df) < min_bars:
         return None
     close = df["Close"].astype(float)
@@ -318,6 +371,7 @@ def metrics(meta, df, relaxed=False):
     closes_tail = close.tolist()[-260:]
     piv = zigzag(closes_tail, CONFIG["zigzag_pct"])
     ell, note = elliott_estimate(closes_tail, CONFIG["zigzag_pct"])
+    wyck, wyck_note = wyckoff_estimate(df, piv)
     ma200_up = bool(pd.notna(v200) and len(ma200.dropna()) > 21 and v200 > ma200.iloc[-21])
     rsi_last = float(rsi(close).iloc[-1])
     tstate, treasons = trend_state(
@@ -352,6 +406,7 @@ def metrics(meta, df, relaxed=False):
         "days": len(df), "is_new": bool(len(df) < 252),
         "vol_ratio": round(vr, 2) if vr else None,
         "elliott": ell, "elliott_note": note,
+        "wyckoff": wyck, "wyckoff_note": wyck_note,
         "ret3m": round(m3 * 100, 1), "ret6m": round(m6 * 100, 1),
         "trend_ok": bool(pd.notna(v200) and last > float(v200)),
         "bars": bars, "ma20s": arr(ma20), "ma60s": arr(ma60),
@@ -374,8 +429,10 @@ def index_health(name, ticker, df):
     ma200 = close.rolling(min(200, len(close))).mean()
     v50, v200 = ma50.iloc[-1], ma200.iloc[-1]
     slope_up = bool(pd.notna(v200) and len(ma200.dropna()) > 21 and v200 > ma200.iloc[-21])
+    wyck, wyck_note = wyckoff_estimate(df)
     return {
         "name": name, "ticker": ticker, "close": round(last, 2),
+        "wyckoff": wyck, "wyckoff_note": wyck_note,
         "ma50": round(float(v50), 2) if pd.notna(v50) else None,
         "ma200": round(float(v200), 2) if pd.notna(v200) else None,
         "above200": bool(pd.notna(v200) and last > v200),
@@ -430,11 +487,59 @@ def build_regime(allrecs, idx_map):
             label, color = "관망 후 대응", "yellow"
             premise = "방향 불명확 — 신호 확인 후 대응, 신규 진입 신중."
 
+        # 레짐 → 권장 스탠스(현금/투자 비중) — 참고용 휴리스틱
+        EXPOSURE = {
+            "추세유지": {"stance": "적극 투자", "equity": "80~100%", "cash": "0~20%"},
+            "상승 둔화": {"stance": "중립·선별", "equity": "50~70%", "cash": "30~50%"},
+            "관망 후 대응": {"stance": "방어적 관망", "equity": "30~50%", "cash": "50~70%"},
+            "조정 국면": {"stance": "현금 우선", "equity": "0~30%", "cash": "70~100%"},
+        }
         out[mkt] = {"label": label, "color": color, "premise": premise, "reasons": reasons,
+                    "exposure": EXPOSURE.get(label),
                     "breadth": {"below20": below20, "below200": below200, "above200": above200,
                                 "new_high": new_high, "near_high": near_high, "new_low": new_low,
                                 "net_new_high": net_nh, "n": n},
                     "indexes": idxs}
+    return out
+
+
+# ----------------------------------------------------------------------
+# 계절성(시클리컬)
+# ----------------------------------------------------------------------
+def build_seasonality(monthly, month):
+    """과거 월간 데이터로 '이번 달' 섹터별 평균 수익률·승률(계절성) 계산."""
+    pools = {
+        "US": list(SECTOR_ETFS_US.items()),
+        "KR": [(f"{c}.KS", info["label"]) for c, info in KR_SECTOR_ETFS.items()],
+    }
+    idx = {"US": ("^GSPC", "S&P500"), "KR": ("^KS11", "코스피")}
+    out = {}
+    for mkt in ("US", "KR"):
+        secs = []
+        for etf, label in pools[mkt]:
+            df = ohlc_for(monthly, etf)
+            if df is None:
+                continue
+            r = df["Close"].astype(float).pct_change().dropna()
+            mr = r[r.index.month == month]
+            if len(mr) < 3:
+                continue
+            secs.append({"etf": etf.replace(".KS", ""), "label": label,
+                         "avg": round(float(mr.mean()) * 100, 2),
+                         "hit": int(round(float((mr > 0).mean()) * 100)), "n": int(len(mr))})
+        secs.sort(key=lambda x: x["avg"], reverse=True)
+        it, inm = idx[mkt]
+        idf = ohlc_for(monthly, it)
+        iavg = ihit = None
+        if idf is not None:
+            ir = idf["Close"].astype(float).pct_change().dropna()
+            im = ir[ir.index.month == month]
+            if len(im) >= 3:
+                iavg = round(float(im.mean()) * 100, 2)
+                ihit = int(round(float((im > 0).mean()) * 100))
+        window = "강세 구간 (11~4월)" if month in (11, 12, 1, 2, 3, 4) else "약세 구간 (5~10월 · Sell in May)"
+        out[mkt] = {"month": month, "sectors": secs, "strong": secs[:3], "weak": secs[-3:][::-1],
+                    "index": {"name": inm, "avg": iavg, "hit": ihit}, "window": window}
     return out
 
 
@@ -529,8 +634,9 @@ def latest_bar_date(data):
         return dt.date.today().isoformat()
 
 
-def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, growth_ids=()):
+def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, growth_ids=(), seasonality=None):
     regime = regime or {}
+    seasonality = seasonality or {}
     flag = lambda m: "🟢" if m == "US" else "🔵"
     light = {"green": "🟢", "yellow": "🟡", "red": "🔴"}
     lines = [f"📈 <b>2트랙 모멘텀 스크리너</b> · 기준일 {bar_date}"]
@@ -543,6 +649,15 @@ def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, grow
         lines.append(f"\n{flag(mkt)} <b>{'미국' if mkt=='US' else '한국'}</b>{rg_txt}")
         if rg:
             lines.append(f"  대전제: {rg['premise']}")
+            ex = rg.get("exposure")
+            if ex:
+                lines.append(f"  💰 권장: {ex['stance']} (주식 {ex['equity']} / 현금 {ex['cash']})")
+            idxs = rg.get("indexes") or []
+            if idxs and idxs[0].get("wyckoff"):
+                lines.append(f"  🔍 와이코프(지수): {idxs[0]['name']} {idxs[0]['wyckoff']}")
+        se = seasonality.get(mkt)
+        if se and se.get("strong"):
+            lines.append(f"  📅 {se['month']}월 계절 강세: " + ", ".join(s["label"] for s in se["strong"]))
         secs = mk.get("sectors", [])
         if secs:
             lines.append("· 트랙① 강한 섹터: " + ", ".join(s["sector"] for s in secs))
@@ -558,7 +673,8 @@ def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, grow
             lines.append("· 트랙② Top10 중 눌림목: " + ", ".join(f"{r['name']}(RS#{r['rs_rank']})" for r in touched))
         deep = [stocks[i] for i in mk.get("deep_ids", [])]
         if deep:
-            lines.append("· 심층 Top3: " + ", ".join(f"{r['name']}·{r['elliott']}" for r in deep))
+            lines.append("· 심층 Top3: " + ", ".join(
+                f"{r['name']}({r.get('wyckoff','').split('(')[0].strip()}·{r['elliott']})" for r in deep))
         watch_ids = set(mk.get("top_ids", [])) | {i for s in mk.get("sectors", []) for i in s["leader_ids"]}
         flip = [stocks[i]["name"] for i in watch_ids if stocks[i].get("trend_state") == "하락전환"]
         down = [stocks[i]["name"] for i in watch_ids if stocks[i].get("trend_state") == "하락추세"]
@@ -730,6 +846,18 @@ def main():
     regime = build_regime(allrecs, idx_map)
     print(f"[regime] US={regime['US']['label']} KR={regime['KR']['label']}")
 
+    # 계절성: 별도 월간(장기) 데이터로 '이번 달' 섹터 평균수익률
+    try:
+        import yfinance as yf
+        season_syms = (set(SECTOR_ETFS_US) | {f"{c}.KS" for c in KR_SECTOR_ETFS} | {"^GSPC", "^KS11"})
+        monthly = yf.download(list(season_syms), period="15y", interval="1mo",
+                              group_by="ticker", auto_adjust=False, threads=True, progress=False)
+        seasonality = build_seasonality(monthly, int(bar_date[5:7]))
+        print(f"[season] {bar_date[5:7]}월 · US섹터 {len(seasonality['US']['sectors'])} KR섹터 {len(seasonality['KR']['sectors'])}")
+    except Exception as e:
+        print(f"[season] 실패: {e}")
+        seasonality = {}
+
     markets = build_tracks(allrecs, units_by_market)
     stocks = collect_selected(markets, allrecs)
     for rec in commodities:  # 원자재를 stocks에 추가(상세 차트용)
@@ -743,7 +871,7 @@ def main():
         "config": {k: CONFIG[k] for k in ("ma_pullback", "ma_trend", "top_sectors",
                                           "leaders_per_sector", "individual_top", "deep_top",
                                           "proximity_pct", "rs_weights", "zigzag_pct")},
-        "regime": regime,
+        "regime": regime, "seasonality": seasonality,
         "markets": markets, "stocks": stocks,
         "commodities": [c["id"] for c in commodities],
         "growth": [g["id"] for g in growth],
@@ -752,7 +880,8 @@ def main():
                    "near": sum(1 for r in stocks.values() if r["near"])},
     }
     write_outputs(payload)
-    send_telegram(build_message(markets, stocks, bar_date, payload["commodities"], regime, payload["growth"]))
+    send_telegram(build_message(markets, stocks, bar_date, payload["commodities"], regime,
+                                payload["growth"], seasonality))
     print("[done]")
 
 
