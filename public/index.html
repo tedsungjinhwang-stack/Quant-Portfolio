@@ -224,14 +224,14 @@ if(!DATA){
   DATA={demo:true,bar_date:"예시",generated_at:"예시 데이터",config:{zigzag_pct:7},
     commodities:CMD.map(r=>r.id), growth:GR.map(r=>r.id),
     regime:{
-      US:{label:"추세유지",color:"green",premise:"상승 추세 견조 — 다수 종목이 200일선 위, 신고가 우위. 눌림목 매수 우호.",
+      US:{label:"추세유지",color:"green",premise:"상승 추세 견조 — 다수 종목이 240일선 위, 신고가 우위. 눌림목 매수 우호.",
         exposure:{stance:"적극 투자",equity:"80~100%",cash:"0~20%"},
-        reasons:["S&P500 200일선 위(+6.2%, 정배열)","200일선 이탈 32% · 20일선 이탈 41% (낮을수록 강세)","52주 신고가 16% · 신저가 4% (순증 +12)"],
+        reasons:["S&P500 240일선 위(+6.2%, 정배열)","240일선 이탈 32% · 20일선 이탈 41% (낮을수록 강세)","52주 신고가 16% · 신저가 4% (순증 +12)"],
         breadth:{below20:41,below200:32,above200:68,new_high:16,near_high:24,new_low:4,net_new_high:12,n:480},
         indexes:[{name:"S&P500",close:5600,above200:true,golden:true,rsi:58,ret1d:0.4,ret1m:3.1,ret_ytd:12.5,ret1y:21.0,wyckoff:"상승 추세 (Markup)"},{name:"나스닥",close:18200,above200:true,golden:true,rsi:60,ret1d:0.6,ret1m:4.2,ret_ytd:15.0,ret1y:28.0,wyckoff:"상승 추세 (Markup)"}]},
       KR:{label:"상승 둔화",color:"yellow",premise:"지수는 위지만 신고가 줄고 이탈 증가 — 주도 섹터·대장주만 선별 대응.",
         exposure:{stance:"중립·선별",equity:"50~70%",cash:"30~50%"},
-        reasons:["코스피 200일선 위(+1.1%, 정배열)","200일선 이탈 52% · 20일선 이탈 63% (낮을수록 강세)","52주 신고가 7% · 신저가 9% (순증 -2)"],
+        reasons:["코스피 240일선 위(+1.1%, 정배열)","240일선 이탈 52% · 20일선 이탈 63% (낮을수록 강세)","52주 신고가 7% · 신저가 9% (순증 -2)"],
         breadth:{below20:63,below200:52,above200:48,new_high:7,near_high:13,new_low:9,net_new_high:-2,n:240},
         indexes:[{name:"코스피",close:2700,above200:true,golden:true,rsi:51,ret1d:-0.3,ret1m:1.2,ret_ytd:4.0,ret1y:6.5,wyckoff:"분산 추정 (Distribution)"},{name:"코스닥",close:850,above200:false,golden:false,rsi:45,ret1d:-0.8,ret1m:-3.5,ret_ytd:-6.0,ret1y:-9.0,wyckoff:"하락 추세 (Markdown)"}]}},
     counts:{stocks:US.length+KR.length,touched:3,near:3},stocks,
@@ -277,7 +277,7 @@ function renderRegime(){
   if(!rg){el.innerHTML="";return;}
   const lc={green:"🟢",yellow:"🟡",red:"🔴"}[rg.color]||"⚪", b=rg.breadth||{};
   const idx=(rg.indexes||[]).map(x=>`<div class="ic">${x.name} <b>${fmt(x.close)}</b><br>
-    <span class="${x.above200?'pos':'neg'}">${x.above200?'▲200MA':'▼200MA'}</span> ${x.golden?'·정배열':'·역배열'} ·RSI ${x.rsi}
+    <span class="${x.above200?'pos':'neg'}">${x.above200?'▲240MA':'▼240MA'}</span> ${x.golden?'·정배열':'·역배열'} ·RSI ${x.rsi}
     <br><span style="font-size:10.5px">1D ${prc(x.ret1d)} · 1M ${prc(x.ret1m)} · YTD ${prc(x.ret_ytd)} · 1Y ${prc(x.ret1y)}</span>
     ${x.wyckoff?`<br><span style="color:#b08cff">🔍 ${x.wyckoff}</span>`:''}</div>`).join("");
   const bar=(v,col)=>`<div class="bar"><i style="width:${Math.max(0,Math.min(100,v||0))}%;background:${col}"></i></div>`;
@@ -288,7 +288,7 @@ function renderRegime(){
       <div class="reasons">${(rg.reasons||[]).join(" · ")}</div></div>
     <div><div class="ridx">${idx}</div>
       <div style="margin-top:8px">
-        <div style="font-size:11.5px;color:var(--muted)">200일선 위 종목 ${b.above200??'–'}% <span style="color:#7a8294">(이탈 ${b.below200??'–'}%)</span></div>${bar(b.above200,'#3ddc97')}
+        <div style="font-size:11.5px;color:var(--muted)">240일선 위 종목 ${b.above200??'–'}% <span style="color:#7a8294">(이탈 ${b.below200??'–'}%)</span></div>${bar(b.above200,'#3ddc97')}
         <div style="font-size:11.5px;color:var(--muted)">52주 신고가 ${b.new_high??'–'}% vs 신저가 ${b.new_low??'–'}% · 순증 ${b.net_new_high>0?'+':''}${b.net_new_high??'–'}</div>
         ${bar(50+(b.net_new_high||0)*2,b.net_new_high>=0?'#3ddc97':'#ff6b6b')}
         <div style="font-size:11px;color:var(--muted)">신고가 근접 ${b.near_high??'–'}% · 표본 ${b.n}종목</div>
@@ -380,10 +380,10 @@ function showDetail(r){
       <div style="text-align:right">${r.touched?'<span class="bdg t">풀백 타점</span>':r.near?'<span class="bdg n">근접</span>':'<span class="bdg x">관망</span>'} ${tsBadge(r.trend_state)}</div></div>
     <div class="chartbox">${chartSVG(r)}</div>
     <div class="legend"><span><i style="background:#ffce5a"></i>20MA</span><span><i style="background:#5b8cff"></i>60MA</span>
-      <span><i style="background:#b08cff"></i>120MA(수급선)</span><span><i style="background:#ff7a85"></i>200MA</span><span>🟢/🔴 일봉</span></div>
+      <span><i style="background:#b08cff"></i>120MA(수급선)</span><span><i style="background:#ff7a85"></i>240MA(추세)</span><span>🟢/🔴 일봉</span></div>
     <div class="stats">
       ${st("20MA 이격(거리)",(r.dist20>0?'+':'')+(r.dist20??'–')+'%',sg(r.dist20))}
-      ${st("20일 이격도",r.disp20??'–')}${st("60일 이격도",r.disp60??'–')}${st("200일 이격도",r.disp200??'–')}
+      ${st("20일 이격도",r.disp20??'–')}${st("60일 이격도",r.disp60??'–')}${st("240일 이격도",r.disp200??'–')}
       ${st("RSI(14)",r.rsi,r.rsi>=70?'neg':r.rsi<=30?'pos':'')}
       ${st("52주 고점대비",(r.high52_pct??'–')+'%',sg(r.high52_pct))}
       ${st("1D 수익률",PR(r.ret1d),sg(r.ret1d))}

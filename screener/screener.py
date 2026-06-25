@@ -28,7 +28,7 @@ import pandas as pd
 CONFIG = {
     "rs_weights": {"m1": 0.30, "m3": 0.40, "m6": 0.30},   # 단기중기(1·3·6개월), 지수 대비 RS
     "ma_pullback": 20,
-    "ma_trend": 200,
+    "ma_trend": 240,            # 장기 추세선(240일=년선)
     "top_sectors": 3,            # 트랙① 강한 섹터 수
     "leaders_per_sector": 2,     # 트랙① 섹터별 대장주 수
     "individual_top": 10,        # 트랙② 개별 Top N
@@ -104,7 +104,7 @@ INDEXES = {
     "KR": [("^KS11", "코스피"), ("^KQ11", "코스닥")],
 }
 
-# 신규상장·성장주 워치리스트 (직접 추가/삭제). RS·200일선이 없어도 완화 지표로 추적.
+# 신규상장·성장주 워치리스트 (직접 추가/삭제). RS·240일선이 없어도 완화 지표로 추적.
 # US: 야후 티커 그대로 / KR: 6자리 코드(.KS/.KQ 자동). ※ 아래는 예시 — 본인 관심종목으로 교체.
 WATCHLIST = {
     "US": ["SPCX", "PLTR", "RDDT", "ARM", "APP", "HOOD", "SMCI", "ASTS", "CRWV"],
@@ -285,25 +285,30 @@ def zigzag(closes, pct):
 
 def elliott_estimate(closes, pct):
     piv = zigzag(closes, pct)
-    # 강세 추세주는 깊은 되돌림이 드물어 7%로 스윙이 안 잡힘 → 임계치를 자동으로 낮춰 카운팅
+    # 강세 추세주는 깊은 되돌림이 드물어 임계치를 자동으로 낮춰 스윙 확보
     for finer in (pct * 0.6, pct * 0.4, pct * 0.25):
-        if len(piv) >= 2:
+        if len(piv) >= 3:
             break
         piv = zigzag(closes, finer)
     if len(piv) < 2:
-        return "판단 보류", "변동성 매우 낮음(스윙 미형성)"
-    last_low = max((k for k, p in enumerate(piv) if p[2] == 'L'), default=None)
-    if last_low is None:
+        return "판단 보류", "스윙 미형성(변동성 낮음)"
+    lows = [(k, p[1]) for k, p in enumerate(piv) if p[2] == 'L']
+    if not lows:
         return "판단 보류", "기준 저점 미확인"
-    legs = len(piv) - 1 - last_low
-    cur_up = closes[-1] > piv[-1][1]
-    if legs <= 0:
-        return "1파 형성 추정", "주요 저점에서 막 반등 시작(추정)"
-    if legs >= 5:
-        return "조정(A·B·C) 추정", "임펄스 5파 이후 조정 국면일 수 있음(추정)"
-    names = {2: "2파 조정", 3: "3파 상승", 4: "4파 조정", 5: "5파 마무리"}
-    label = names.get(legs + 1, f"{legs+1}파")
-    return f"{label} 추정", f"저점 이후 {legs}개 스윙 · {'상승' if cur_up else '되돌림'} 진행(추정)"
+    # 가장 낮은 저점(주요 바닥)을 임펄스 시작점으로 보고, 그 이후 스윙으로 파동 카운트
+    major_k = min(lows, key=lambda x: x[1])[0]
+    after = (len(piv) - 1) - major_k          # 주요 저점 이후 확정된 스윙 수
+    cur = after + 1                           # 현재 진행 중인 파동 번호
+    if after <= 0:
+        return "1파 진행 추정", "주요 저점에서 첫 상승 시작(추정)"
+    if cur <= 5:
+        up = (cur % 2 == 1)
+        return (f"{cur}파 {'상승' if up else '조정'} 추정",
+                f"주요 저점 이후 {after}개 스윙 · {'상승(임펄스)' if up else '되돌림'} 국면(추정)")
+    corr = cur - 5
+    if corr <= 3:
+        return f"조정 {'ABC'[corr-1]}파 추정", "임펄스 5파 이후 ABC 조정 국면(추정)"
+    return "사이클 재정렬 추정", "파동 수 과다 — 새 사이클 가능(추정)"
 
 
 def trend_state(last, v20, v60, v120, ma200_up, rsi_last, piv):
@@ -342,7 +347,7 @@ def trend_state(last, v20, v60, v120, ma200_up, rsi_last, piv):
     if below20: reasons.append("20일선 종가 이탈(단기 약화)")
     if broke_low: reasons.append("직전 스윙 저점 이탈(단, 20MA 지지 시도)")
     if lower_high: reasons.append("고점 낮아짐")
-    if not ma200_up: reasons.append("200일선 하락")
+    if not ma200_up: reasons.append("240일선 하락")
     if rsi_last is not None and rsi_last < 45: reasons.append(f"RSI 약세({rsi_last:.0f})")
 
     if reasons:
@@ -502,7 +507,7 @@ def index_health(name, ticker, df):
     close = df["Close"].astype(float)
     last = float(close.iloc[-1])
     ma50 = close.rolling(50).mean()
-    ma200 = close.rolling(min(200, len(close))).mean()
+    ma200 = close.rolling(min(240, len(close))).mean()
     v50, v200 = ma50.iloc[-1], ma200.iloc[-1]
     slope_up = bool(pd.notna(v200) and len(ma200.dropna()) > 21 and v200 > ma200.iloc[-21])
     wyck, wyck_note = wyckoff_estimate(df)
@@ -533,7 +538,7 @@ def build_regime(allrecs, idx_map):
         pct = lambda c: round(sum(1 for r in pool if c(r)) / n * 100, 1) if n else None
 
         below20 = pct(lambda r: r["close"] < r["ma20"])      # 20일선 이탈비율(↑=약세)
-        below200 = pct(lambda r: r["close"] < r["ma200"])    # 200일선 이탈비율(↑=약세)
+        below200 = pct(lambda r: r["close"] < r["ma200"])    # 240일선 이탈비율(↑=약세)
         above200 = round(100 - below200, 1) if below200 is not None else None
         new_high = pct(lambda r: r.get("high52_pct") is not None and r["high52_pct"] >= -0.5)  # 52주 신고가
         near_high = pct(lambda r: r.get("high52_pct") is not None and r["high52_pct"] >= -3)   # 신고가 근접
@@ -544,10 +549,10 @@ def build_regime(allrecs, idx_map):
         idx_up = bool(primary and primary["above200"])
         reasons = []
         if primary:
-            reasons.append(f"{primary['name']} {'200일선 위' if primary['above200'] else '200일선 아래'}"
+            reasons.append(f"{primary['name']} {'240일선 위' if primary['above200'] else '240일선 아래'}"
                            f"({primary['dist200']:+.1f}%, {'정배열' if primary['golden'] else '역배열'})")
         if below200 is not None:
-            reasons.append(f"200일선 이탈 {below200:.0f}% · 20일선 이탈 {below20:.0f}% (낮을수록 강세)")
+            reasons.append(f"240일선 이탈 {below200:.0f}% · 20일선 이탈 {below20:.0f}% (낮을수록 강세)")
             reasons.append(f"52주 신고가 {new_high:.0f}% · 신저가 {new_low:.0f}% (순증 {net_nh:+.0f})")
 
         # 국면 판정 (StockEasy 라벨 체계)
@@ -556,10 +561,10 @@ def build_regime(allrecs, idx_map):
         nn = net_nh if net_nh is not None else 0
         if idx_up and weak200 < 40 and nn >= 0:
             label, color = "추세유지", "green"
-            premise = "상승 추세 견조 — 다수 종목이 200일선 위, 신고가 우위. 눌림목 매수 우호."
+            premise = "상승 추세 견조 — 다수 종목이 240일선 위, 신고가 우위. 눌림목 매수 우호."
         elif (not idx_up) or weak200 > 60:
             label, color = "조정 국면", "red"
-            premise = "다수 종목이 200일선 이탈 — 눌림목 매수 저확률, 현금·방어 비중 우선."
+            premise = "다수 종목이 240일선 이탈 — 눌림목 매수 저확률, 현금·방어 비중 우선."
         elif idx_up and (weak20 > 60 or nn < 0):
             label, color = "상승 둔화", "yellow"
             premise = "지수는 위지만 신고가 줄고 이탈 증가 — 주도 섹터·대장주만 선별 대응."
