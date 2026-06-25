@@ -931,8 +931,12 @@ def main():
     for rec in commodities:  # 원자재를 stocks에 추가(상세 차트용)
         c = dict(rec); c.pop("_rs_raw", None); c.setdefault("rs_rank", 0)
         stocks[c["id"]] = c
-    for rec in growth:       # 성장주/신규를 stocks에 추가
-        stocks[rec["id"]] = rec
+    for rec in growth:       # 성장주/신규를 stocks에 추가(이미 대장주면 성장 필드만 병합)
+        if rec["id"] in stocks:
+            stocks[rec["id"]].update({k: rec[k] for k in
+                ("growth_score", "rev_growth", "earn_growth", "is_new", "days")})
+        else:
+            stocks[rec["id"]] = rec
     payload = {
         "bar_date": bar_date,
         "generated_at": dt.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
