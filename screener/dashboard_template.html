@@ -356,7 +356,7 @@ function showDetail(r){
       ${st("120일선(하락전환선)",r.ma120==null?'–':(r.close>=r.ma120?'위 ✓':'이탈 ✕'),r.close>=(r.ma120||0)?'pos':'neg')}
       ${st("거래량비(20일평균)",(r.vol_ratio??'–')+'x')}</div>
     <div class="treasons">📐 추세 상태: <b style="color:${(TSC[r.trend_state]||['','var(--muted)'])[1]}">${r.trend_state||'-'}</b> — ${(r.trend_reasons||[]).join(' · ')||'—'}
-      <div style="color:#6a7180;margin-top:3px">하락전환 = 직전 스윙 저점 이탈(저점 낮아짐, 아직 120선 위) · 하락추세 = 120선 이탈(하락 진행)</div></div>
+      <div style="color:#6a7180;margin-top:3px">하락전환 = 20MA 이탈 + 직전 스윙 저점 이탈(둘 다) · 하락추세 = 120선 이탈 · 20MA 위 지지 중이면 정상 눌림목/주의</div></div>
     ${r.growth_score!=null?`<div class="treasons" style="border-left:3px solid var(--up)">🚀 성장 점수 <b style="color:var(--up)">${r.growth_score}</b> · 매출성장 ${r.rev_growth==null?'–':r.rev_growth+'%'} · 이익성장 ${r.earn_growth==null?'–':r.earn_growth+'%'} · 상장후 ${r.days??'?'}거래일${r.is_new?' · <b style="color:var(--near)">신규상장(데이터 짧음)</b>':''}</div>`:''}
     <div class="ellbox">🌀 <b>엘리어트 파동(추정): ${r.elliott}</b><br>${r.elliott_note||''}
       <div class="caveat">※ 엘리어트는 분석자마다 카운팅이 달라지는 주관적 기법입니다. 위 라벨은 지그재그 스윙(±${(DATA.config&&DATA.config.zigzag_pct)||7}%) 기반 <b>알고리즘 추정</b>이며, 차트로 직접 카운팅해 확인하세요.</div></div>

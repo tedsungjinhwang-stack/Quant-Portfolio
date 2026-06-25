@@ -308,9 +308,9 @@ def elliott_estimate(closes, pct):
 def trend_state(last, v20, v60, v120, ma200_up, rsi_last, piv):
     """종목 추세 상태 (단계 분리):
       추세유지 → 주의 → 하락전환 → 하락추세
-      - 하락전환: 직전 스윙 저점 이탈(저점 낮아짐). 아직 120선 위 — 전환이 '일어나는' 시점.
-      - 하락추세: 120일선(수급선) 종가 이탈. 전환은 이미 끝, 하락이 '진행' 중(확정).
-      - '20MA 닿고 반등'=눌림목(추세유지) / '닿고 직전 저점까지 깸'=하락전환."""
+      - 하락전환: '20MA에 닿고(=종가 20일선 이탈) + 직전 스윙 저점 이탈'. 전환이 '일어나는' 시점.
+      - 하락추세: 120일선(수급선) 종가 이탈. 하락이 '진행' 중(확정).
+      - 20MA 위에서 지지 중이면(저점만 살짝 깨도) 정상 눌림목/주의 — 하락전환 아님."""
     if v20 is None and v60 is None:        # 상장 초기 — 이동평균 산출 전
         return "데이터 부족", ["상장 초기 · 이동평균 산출 전"]
     lows = [p[1] for p in piv if p[2] == 'L']
@@ -321,31 +321,32 @@ def trend_state(last, v20, v60, v120, ma200_up, rsi_last, piv):
     below60 = v60 is not None and last < v60
     below20 = v20 is not None and last < v20
 
-    # 하락추세(확정): 120선 이탈 — 전환은 그 전에 이미 끝남
+    # 하락추세(확정): 120선 이탈
     if below120:
         reasons = ["120일선 이탈(하락 진행)"]
         if broke_low: reasons.append("저점 낮아짐")
         if below60: reasons.append("60일선 이탈")
         return "하락추세", reasons
 
-    # 하락전환(신호): 직전 스윙 저점 이탈, 아직 120선 위
-    if broke_low:
-        reasons = ["직전 스윙 저점 이탈(저점 낮아짐)"]
+    # 하락전환: 20MA 이탈 + 직전 스윙 저점 이탈 (둘 다 충족해야)
+    if below20 and broke_low:
+        reasons = ["20일선 이탈 + 직전 스윙 저점 이탈(저점 낮아짐)"]
         if below60: reasons.append("60일선 이탈")
         if lower_high: reasons.append("고점도 낮아짐")
         return "하락전환", reasons
 
-    # 주의: 저점은 지켰지만 약화 신호
+    # 주의: 약화 신호(아직 20MA 위에서 지지 중이거나 일부만 이탈)
     reasons = []
     if below60: reasons.append("60일선 이탈")
+    if below20: reasons.append("20일선 종가 이탈(단기 약화)")
+    if broke_low: reasons.append("직전 스윙 저점 이탈(단, 20MA 지지 시도)")
     if lower_high: reasons.append("고점 낮아짐")
     if not ma200_up: reasons.append("200일선 하락")
     if rsi_last is not None and rsi_last < 45: reasons.append(f"RSI 약세({rsi_last:.0f})")
-    if below20 and not below60: reasons.append("20일선 종가 이탈(단기 약화)")
 
     if reasons:
         return "주의", reasons
-    return "추세유지", ["120·60·20일선 위 · 스윙 저점 유지"]
+    return "추세유지", ["20·60·120일선 위 · 스윙 저점 유지"]
 
 
 def wyckoff_estimate(df, piv=None):
