@@ -100,16 +100,32 @@ COMMODITY_ETFS = {
     "DBA": "농산물", "DBC": "원자재종합", "URA": "우라늄", "GDX": "금광업",
 }
 
-# 매크로/시클리컬 지표(지수와 함께 표시) — 금리·달러·변동성·경기민감 원자재
-# up_good=True면 상승이 위험자산에 우호적(↑=초록), False면 상승이 비우호적(↑=빨강)
+# 시클리컬/심리 지표(yfinance) — 달러·변동성·경기민감 원자재
+# up_good=True면 상승이 위험자산에 우호적(↑=초록), False면 비우호적(↑=빨강)
 MACRO = {
-    "^TNX":      {"label": "美 10Y금리", "unit": "%",  "up_good": False},
     "DX-Y.NYB":  {"label": "달러지수",   "unit": "",   "up_good": False},
     "^VIX":      {"label": "VIX 변동성", "unit": "",   "up_good": False},
     "HG=F":      {"label": "구리(Dr.)",  "unit": "$",  "up_good": True},
     "CL=F":      {"label": "WTI 유가",   "unit": "$",  "up_good": True},
     "GC=F":      {"label": "금",         "unit": "$",  "up_good": True},
 }
+
+# 글로벌 매크로(FRED 무키 CSV) — 금리·물가·고용·유동성. 시장 판단의 경제 펀더멘털.
+# (cat, FRED id, label, kind, unit, up_good[위험자산 관점])
+#   kind: level=현재값 · yoy=전년동월비% · mom_k=전월대비(천 단위) · lvl_k=값/1000 · lvl_t=값/1e6(조)
+FRED_MACRO = [
+    ("금리",   "DFF",      "기준금리",      "level", "%",  False),
+    ("금리",   "DGS10",    "10년물",        "level", "%",  False),
+    ("금리",   "T10Y2Y",   "장단기차",      "level", "%p", True),
+    ("물가",   "CPIAUCSL", "CPI",           "yoy",   "%",  False),
+    ("물가",   "CPILFESL", "근원CPI",       "yoy",   "%",  False),
+    ("물가",   "T10YIE",   "기대인플레",    "level", "%",  False),
+    ("고용",   "UNRATE",   "실업률",        "level", "%",  False),
+    ("고용",   "PAYEMS",   "비농업고용",    "mom_k", "K",  True),
+    ("고용",   "ICSA",     "신규실업수당",  "lvl_k", "K",  False),
+    ("유동성", "M2SL",     "M2 통화량",     "yoy",   "%",  True),
+    ("유동성", "WALCL",    "연준 자산",     "lvl_t", "조$", True),
+]
 
 # 시장 건강도(레짐) 판단용 지수
 INDEXES = {
@@ -649,7 +665,7 @@ def build_seasonality(monthly, month):
 
 
 def build_macro(data):
-    """매크로/시클리컬 지표 현재값 + 1일·1개월 변화율(지수와 함께 표시용)."""
+    """시클리컬/심리 지표(yfinance) — 현재값 + 전일 변화율. cat='시클리컬'."""
     out = []
     for tk, info in MACRO.items():
         df = ohlc_for(data, tk)
@@ -659,9 +675,57 @@ def build_macro(data):
         last = float(c.iloc[-1])
         r1 = round((last / float(c.iloc[-2]) - 1) * 100, 2) if len(c) >= 2 else None
         r20 = round((last / float(c.iloc[-21]) - 1) * 100, 1) if len(c) >= 21 else None
-        out.append({"ticker": tk, "label": info["label"], "unit": info["unit"],
-                    "up_good": info["up_good"], "close": round(last, 2),
-                    "ret1d": r1, "ret1m": r20})
+        out.append({"cat": "시클리컬", "label": info["label"], "unit": info["unit"],
+                    "up_good": info["up_good"], "value": round(last, 2),
+                    "delta": r1, "sub": (f"1M {'+' if (r20 or 0) >= 0 else ''}{r20}%" if r20 is not None else "")})
+    return out
+
+
+def _fred_series(series_id):
+    """FRED 무키 CSV → [(date, value)...] (시간순). 결측('.') 제외."""
+    import requests
+    r = requests.get(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}", timeout=15)
+    rows = []
+    for line in r.text.strip().splitlines()[1:]:
+        p = line.split(",")
+        if len(p) >= 2 and p[1] not in ("", "."):
+            try:
+                rows.append((p[0], float(p[1])))
+            except ValueError:
+                pass
+    return rows
+
+
+def build_global_macro():
+    """글로벌 매크로(FRED) — 금리·물가·고용·유동성. 각 지표 현재값 + 직전 대비 변화·기준일."""
+    out = []
+    for cat, sid, label, kind, unit, up_good in FRED_MACRO:
+        try:
+            rows = _fred_series(sid)
+            if len(rows) < 2:
+                continue
+            asof, last = rows[-1]
+            prev = rows[-2][1]
+            if kind == "level":
+                val, delta = round(last, 2), round(last - prev, 2)
+            elif kind == "lvl_k":
+                val, delta = round(last / 1000, 1), round((last - prev) / 1000, 1)
+            elif kind == "lvl_t":
+                val, delta = round(last / 1e6, 2), round((last - prev) / 1e6, 2)
+            elif kind == "mom_k":
+                val = delta = round(last - prev)          # PAYEMS는 천 단위 → 전월대비 증감(천명)
+            elif kind == "yoy":
+                if len(rows) < 13:
+                    continue
+                val = round((last / rows[-13][1] - 1) * 100, 1)
+                prev_yoy = round((rows[-2][1] / rows[-14][1] - 1) * 100, 1) if len(rows) >= 14 else val
+                delta = round(val - prev_yoy, 2)
+            else:
+                continue
+            out.append({"cat": cat, "label": label, "value": val, "unit": unit,
+                        "delta": delta, "up_good": up_good, "sub": asof})
+        except Exception:
+            continue
     return out
 
 
@@ -1135,8 +1199,9 @@ def main():
     regime = build_regime(allrecs, idx_map)
     print(f"[regime] US={regime['US']['label']} KR={regime['KR']['label']}")
 
-    macro = build_macro(data)
-    print(f"[macro] {len(macro)}개 지표: " + ", ".join(f"{m['label']} {m['close']}" for m in macro))
+    macro = build_global_macro() + build_macro(data)
+    print(f"[macro] {len(macro)}개 지표(FRED 금리·물가·고용·유동성 + 시클리컬): "
+          + ", ".join(f"{m['label']} {m['value']}{m['unit']}" for m in macro))
 
     # 계절성: 별도 월간(장기) 데이터로 '이번 달' 섹터 평균수익률
     try:
