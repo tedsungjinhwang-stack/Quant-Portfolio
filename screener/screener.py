@@ -733,6 +733,9 @@ def macro_assessment(macro):
     cycle = {"phase": phase, "desc": desc, "favored": fav,
              "growth": growth, "inflation": infl, "flags": flags}
     return {"risk": risk, "cycle": cycle}
+
+
+def _fred_series(series_id):
     """FRED 무키 CSV → [(date, value)...] (시간순). 결측('.') 제외."""
     import requests
     r = requests.get(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}", timeout=15)
