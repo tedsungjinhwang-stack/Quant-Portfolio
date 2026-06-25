@@ -100,6 +100,17 @@ COMMODITY_ETFS = {
     "DBA": "농산물", "DBC": "원자재종합", "URA": "우라늄", "GDX": "금광업",
 }
 
+# 매크로/시클리컬 지표(지수와 함께 표시) — 금리·달러·변동성·경기민감 원자재
+# up_good=True면 상승이 위험자산에 우호적(↑=초록), False면 상승이 비우호적(↑=빨강)
+MACRO = {
+    "^TNX":      {"label": "美 10Y금리", "unit": "%",  "up_good": False},
+    "DX-Y.NYB":  {"label": "달러지수",   "unit": "",   "up_good": False},
+    "^VIX":      {"label": "VIX 변동성", "unit": "",   "up_good": False},
+    "HG=F":      {"label": "구리(Dr.)",  "unit": "$",  "up_good": True},
+    "CL=F":      {"label": "WTI 유가",   "unit": "$",  "up_good": True},
+    "GC=F":      {"label": "금",         "unit": "$",  "up_good": True},
+}
+
 # 시장 건강도(레짐) 판단용 지수
 INDEXES = {
     "US": [("^GSPC", "S&P500"), ("^IXIC", "나스닥")],
@@ -637,6 +648,23 @@ def build_seasonality(monthly, month):
     return out
 
 
+def build_macro(data):
+    """매크로/시클리컬 지표 현재값 + 1일·1개월 변화율(지수와 함께 표시용)."""
+    out = []
+    for tk, info in MACRO.items():
+        df = ohlc_for(data, tk)
+        if df is None or len(df) < 2:
+            continue
+        c = df["Close"]
+        last = float(c.iloc[-1])
+        r1 = round((last / float(c.iloc[-2]) - 1) * 100, 2) if len(c) >= 2 else None
+        r20 = round((last / float(c.iloc[-21]) - 1) * 100, 1) if len(c) >= 21 else None
+        out.append({"ticker": tk, "label": info["label"], "unit": info["unit"],
+                    "up_good": info["up_good"], "close": round(last, 2),
+                    "ret1d": r1, "ret1m": r20})
+    return out
+
+
 # ----------------------------------------------------------------------
 # 핫한 종목(거래량 급증 + 단기 모멘텀)
 # ----------------------------------------------------------------------
@@ -1032,7 +1060,7 @@ def main():
     kr_etf_yahoos = {f"{c}.KS" for c in KR_SECTOR_ETFS}
     symbols = ({r["yahoo"] for r in rows} | set(SECTOR_ETFS_US.keys())
                | set(THEME_ETFS_US.keys()) | set(COMMODITY_ETFS.keys())
-               | index_tickers | kr_etf_yahoos)
+               | set(MACRO.keys()) | index_tickers | kr_etf_yahoos)
     data = download_prices(symbols)
     bar_date = latest_bar_date(data)
 
@@ -1107,6 +1135,9 @@ def main():
     regime = build_regime(allrecs, idx_map)
     print(f"[regime] US={regime['US']['label']} KR={regime['KR']['label']}")
 
+    macro = build_macro(data)
+    print(f"[macro] {len(macro)}개 지표: " + ", ".join(f"{m['label']} {m['close']}" for m in macro))
+
     # 계절성: 별도 월간(장기) 데이터로 '이번 달' 섹터 평균수익률
     try:
         import yfinance as yf
@@ -1158,7 +1189,7 @@ def main():
         "config": {k: CONFIG[k] for k in ("ma_pullback", "ma_trend", "top_sectors",
                                           "leaders_per_sector", "individual_top", "deep_top",
                                           "proximity_pct", "rs_weights", "zigzag_pct")},
-        "regime": regime, "seasonality": seasonality,
+        "regime": regime, "seasonality": seasonality, "macro": macro,
         "markets": markets, "stocks": stocks,
         "commodities": [c["id"] for c in commodities],
         "hot": [h["id"] for h in hot],
