@@ -517,9 +517,9 @@ function showDetail(r){
       <span><i style="background:#b08cff"></i>120MA(수급선)</span><span><i style="background:#ff7a85"></i>240MA(추세)</span><span>🟢/🔴 일봉</span></div>
     <div class="stats">
       ${st("20MA 이격(거리)",(r.dist20>0?'+':'')+(r.dist20??'–')+'%',sg(r.dist20))}
-      ${st("20일 이격도",r.disp20??'–')}${st("60일 이격도",r.disp60??'–')}${st("240일 이격도",r.disp200??'–')}
       ${st("RSI(14)",r.rsi,r.rsi>=70?'neg':r.rsi<=30?'pos':'')}
       ${st("52주 고점대비",(r.high52_pct??'–')+'%',sg(r.high52_pct))}
+      ${st("컨센 괴리율(목표가)",r.t_upside!=null?(r.t_upside>0?'+':'')+r.t_upside+'%':'–',sg(r.t_upside))}
       ${st("1D 수익률",PR(r.ret1d),sg(r.ret1d))}
       ${st("7D 수익률",PR(r.ret1w),sg(r.ret1w))}
       ${st("1M 수익률",PR(r.ret1m),sg(r.ret1m))}
