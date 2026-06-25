@@ -500,6 +500,7 @@ def metrics(meta, df, relaxed=False, bench=0.0):
         "trend_ok": bool(pd.notna(v200) and last > float(v200)),
         "bars": bars, "ma20s": arr(ma20), "ma60s": arr(ma60),
         "ma120s": arr(ma120), "ma200s": arr(ma200),
+        "rsis": [None if pd.isna(x) else round(float(x), 1) for x in rsi(close).tail(cb)],
     }
 
 

@@ -89,9 +89,22 @@
   .rlight{font-size:21px;font-weight:800;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
   .rlight small{color:var(--muted);font-size:13px;font-weight:500}
   .reasons{color:var(--muted);font-size:12.5px;margin-top:7px;line-height:1.55}
+  /* 권장 스탠스 — 강조 콜아웃(레짐 색 따라감) */
+  .stance{display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:5px;margin:9px 0 3px;
+    padding:8px 13px;border-radius:10px;font-size:14.5px;font-weight:600;color:var(--txt);
+    background:var(--st-bg,rgba(91,140,255,.13));border:1px solid var(--st-bd,rgba(91,140,255,.4))}
+  .stance .st-main{font-size:16px;font-weight:800;color:var(--st-fg,var(--accent));letter-spacing:-.2px}
+  .stance b{color:var(--txt);font-weight:800}
+  .stance .st-div{opacity:.45;font-weight:400}
+  .stance .st-ref{font-size:11px;font-weight:400;color:var(--muted);opacity:.8}
+  .rbanner.green .stance{--st-bg:rgba(61,220,151,.13);--st-bd:rgba(61,220,151,.4);--st-fg:var(--up)}
+  .rbanner.yellow .stance{--st-bg:rgba(255,176,32,.14);--st-bd:rgba(255,176,32,.45);--st-fg:var(--warn)}
+  .rbanner.red .stance{--st-bg:rgba(255,107,107,.13);--st-bd:rgba(255,107,107,.45);--st-fg:var(--down)}
   .ridx{display:flex;gap:8px;flex-wrap:wrap}
   .ridx .ic{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:12px;line-height:1.5}
   .ridx .ic b{font-size:13px}
+  .ridx .ic .ixn{font-size:13px;font-weight:700;color:var(--txt)}
+  .ridx .ic .ixv{font-size:20px;font-weight:800;letter-spacing:-.4px;color:var(--txt);vertical-align:-1px}
   .bar{height:8px;background:#222a36;border-radius:5px;overflow:hidden;margin:3px 0 6px}
   .bar > i{display:block;height:100%}
   /* ===== 모바일 UI (폰) ===== */
@@ -158,7 +171,7 @@
     backdrop-filter:blur(10px);box-shadow:0 4px 30px rgba(0,0,0,.3)}
   #viewCons .cttl{font-size:15px;font-weight:700;color:var(--ctx);margin-bottom:12px;display:flex;align-items:center;gap:6px 8px;flex-wrap:wrap}
   #viewCons .cttl small{color:var(--cdim);font-weight:500;font-size:12px}
-  #viewCons .cstats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+  #viewCons .cstats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
   @media(max-width:760px){#viewCons .cstats{grid-template-columns:repeat(2,1fr)}}
   #viewCons .cstat{background:var(--csurf);border:1px solid rgba(91,140,255,.15);border-radius:14px;padding:13px 15px;position:relative;overflow:hidden}
   #viewCons .cstat::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--ct),transparent);opacity:.35}
@@ -195,7 +208,6 @@
 <div class="wrap">
   <div id="badge" class="badge">⚠️ 예시(가짜 데이터)</div>
   <h1>증시 추세추종 · 기술적 분석 대시보드</h1>
-  <p class="sub"><b>트랙①</b> 섹터 ETF→대장주 · <b>트랙②</b> 개별 RS Top10(최상위 3 심층). 종목을 누르면 차트·이격도·RSI·엘리어트(추정)가 열립니다.</p>
   <div class="topnav" id="topnav">
     <button data-v="dash" class="on">📊 대시보드</button>
     <button data-v="cons">🎯 컨센서스</button>
@@ -272,6 +284,10 @@ function makeBars(seed,n,start){let b=[],p=start,s=seed;const rnd=()=>{s=(s*9301
     hi=Math.max(o,c)*(1+rnd()*0.012),lo=Math.min(o,c)*(1-rnd()*0.012);
     b.push({d:`d${i}`,o:+o.toFixed(2),h:+hi.toFixed(2),l:+lo.toFixed(2),c:+c.toFixed(2)});}return b;}
 function MA(b,w){return b.map((_,i)=>i<w-1?null:+(b.slice(i-w+1,i+1).reduce((a,x)=>a+x.c,0)/w).toFixed(2));}
+function RSIs(b,n=14){const out=[];let g=0,l=0;for(let i=0;i<b.length;i++){if(i===0){out.push(null);continue;}
+  const ch=b[i].c-b[i-1].c,up=Math.max(0,ch),dn=Math.max(0,-ch);
+  if(i<=n){g+=up;l+=dn;if(i<n){out.push(null);continue;}g/=n;l/=n;}else{g=(g*(n-1)+up)/n;l=(l*(n-1)+dn)/n;}
+  out.push(+(l===0?100:100-100/(1+g/l)).toFixed(1));}return out;}
 function stk(o){const b=makeBars(o.seed,130,o.start);return{id:o.market+":"+o.code,market:o.market,code:o.code,
   name:o.name,sector:o.sector,close:b.at(-1).c,ma20:MA(b,20).at(-1),ma60:MA(b,60).at(-1),ma120:MA(b,45).at(-1),ma200:MA(b,90).at(-1),
   touched:!!o.t,near:!!o.n,dist20:o.d20,disp20:100+o.d20,disp60:o.d60,disp200:o.d200,rsi:o.rsi,
@@ -285,7 +301,7 @@ function stk(o){const b=makeBars(o.seed,130,o.start);return{id:o.market+":"+o.co
   t_low:(o.tmpct!=null&&o.tn!=null?+(b.at(-1).c*(1+(o.tmpct-10)/100)).toFixed(2):(o.tl??null)),
   t_n:o.tn,t_rec:o.trec,t_date:o.td,
   t_upside:(o.tmpct!=null?o.tmpct:(o.tm!=null?+((o.tm/b.at(-1).c-1)*100).toFixed(1):null)),
-  bars:b,ma20s:MA(b,20),ma60s:MA(b,60),ma120s:MA(b,45),ma200s:MA(b,90)};}
+  bars:b,ma20s:MA(b,20),ma60s:MA(b,60),ma120s:MA(b,45),ma200s:MA(b,90),rsis:RSIs(b)};}
 if(!DATA){
   const mk=(arr)=>{const s={};arr.forEach(r=>s[r.id]=r);return s;};
   const US=[
@@ -389,7 +405,7 @@ function renderRegime(){
   const rg=(DATA.regime||{})[market], el=$("regime");
   if(!rg){el.innerHTML="";return;}
   const lc={green:"🟢",yellow:"🟡",red:"🔴"}[rg.color]||"⚪", b=rg.breadth||{};
-  const idx=(rg.indexes||[]).map(x=>`<div class="ic">${x.name} <b>${fmt(x.close)}</b><br>
+  const idx=(rg.indexes||[]).map(x=>`<div class="ic"><span class="ixn">${x.name}</span> <b class="ixv">${fmt(x.close)}</b><br>
     <span class="${x.above200?'pos':'neg'}">${x.above200?'▲240MA':'▼240MA'}</span> ${x.golden?'·정배열':'·역배열'} ·RSI ${x.rsi}
     <br><span style="font-size:10.5px">1D ${prc(x.ret1d)} · 1M ${prc(x.ret1m)} · YTD ${prc(x.ret_ytd)} · 1Y ${prc(x.ret1y)}</span>
     ${x.wyckoff?`<br><span style="color:#b08cff">🔍 ${x.wyckoff}</span>`:''}</div>`).join("");
@@ -397,7 +413,7 @@ function renderRegime(){
   const ex=rg.exposure;
   el.innerHTML=`<div class="rbanner ${rg.color}">
     <div><div class="rlight">${lc} ${rg.label} <small>${rg.premise}</small></div>
-      ${ex?`<div class="reasons">💰 권장 스탠스: <b style="color:var(--txt)">${ex.stance}</b> · 주식 ${ex.equity} / 현금 ${ex.cash} <span style="color:#6a7180">(참고용)</span></div>`:''}
+      ${ex?`<div class="stance">💰 권장 스탠스 <b class="st-main">${ex.stance}</b> <span class="st-div">·</span> 주식 <b>${ex.equity}</b> / 현금 <b>${ex.cash}</b> <span class="st-ref">(참고용)</span></div>`:''}
       <div class="reasons">${(rg.reasons||[]).join(" · ")}</div></div>
     <div><div class="ridx">${idx}</div>
       <div style="margin-top:8px">
@@ -416,7 +432,7 @@ function render(){
     const ld=s.leader_ids.map(id=>{const r=S[id];if(!r)return"";
       return `<div class="ldr ${selected===id?'sel':''}" data-id="${id}" style="flex-direction:column;align-items:stretch;gap:4px">
         <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
-          <span class="nm"><b>${r.name}</b></span>
+          <span class="nm"><b>${r.name}</b> <span class="rk" style="font-weight:600">${fmt(r.close,r.market==='US'?2:0)}</span></span>
           <span class="rk">RS#${r.rs_rank||'-'}</span></div>
         <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
           ${pbBadge(r)} ${tsBadge(r.trend_state)}
@@ -491,11 +507,13 @@ function render(){
 }
 
 function chartSVG(r){
-  const W=560,H=240,padL=44,padR=10,padT=10,padB=18,bars=r.bars,n=bars.length,iw=(W-padL-padR)/n;
+  const W=560,padL=44,padR=10,padT=10,padB=16,bars=r.bars,n=bars.length,iw=(W-padL-padR)/n;
+  const hasRsi=r.rsis&&r.rsis.some(v=>v!=null);
+  const PH=hasRsi?206:240,GAP=10,RH=hasRsi?66:0,TH=PH+(hasRsi?GAP+RH:0);   // 가격패널 + RSI 서브패널
   let lo=Math.min(...bars.map(b=>b.l)),hi=Math.max(...bars.map(b=>b.h));
   [r.ma200s,r.ma120s,r.ma60s,r.ma20s].forEach(s=>s&&s.forEach(v=>{if(v!=null){lo=Math.min(lo,v);hi=Math.max(hi,v);}}));
   const pd=(hi-lo)*0.05;lo-=pd;hi+=pd;
-  const Y=v=>padT+(H-padT-padB)*(1-(v-lo)/(hi-lo)),X=i=>padL+iw*(i+0.5);let s="";
+  const Y=v=>padT+(PH-padT-padB)*(1-(v-lo)/(hi-lo)),X=i=>padL+iw*(i+0.5);let s="";
   for(let g=0;g<=4;g++){const v=lo+(hi-lo)*g/4,y=Y(v);
     s+=`<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#222a36"/>`+
        `<text x="4" y="${y+3}" fill="#7a8294" font-size="9">${v.toLocaleString("ko-KR",{maximumFractionDigits:0})}</text>`;}
@@ -505,7 +523,19 @@ function chartSVG(r){
   const lp=(arr,col)=>{if(!arr)return"";let d="",st=false;arr.forEach((v,i)=>{if(v==null)return;
     d+=(st?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)+" ";st=true;});return d?`<path d="${d}" fill="none" stroke="${col}" stroke-width="1.5"/>`:"";};
   s+=lp(r.ma200s,"#ff7a85")+lp(r.ma120s,"#b08cff")+lp(r.ma60s,"#5b8cff")+lp(r.ma20s,"#ffce5a");
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${s}</svg>`;
+  // RSI(14) 서브패널 — 가격과 X축 정렬(다이버전스 비교용)
+  if(hasRsi){
+    const ry0=PH+GAP,RY=v=>ry0+RH*(1-Math.max(0,Math.min(100,v))/100);
+    s+=`<rect x="${padL}" y="${ry0}" width="${W-padL-padR}" height="${RH}" fill="rgba(255,255,255,.025)" rx="3"/>`;
+    s+=`<rect x="${padL}" y="${RY(70)}" width="${W-padL-padR}" height="${RY(30)-RY(70)}" fill="rgba(91,140,255,.05)"/>`;
+    [70,50,30].forEach(g=>{const y=RY(g),ob=g!==50;
+      s+=`<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="${ob?'rgba(255,176,32,.3)':'#222a36'}" ${ob?'stroke-dasharray="3 3"':''}/>`+
+         `<text x="4" y="${y+3}" fill="#7a8294" font-size="9">${g}</text>`;});
+    let d="",st=false;r.rsis.forEach((v,i)=>{if(v==null)return;d+=(st?"L":"M")+X(i).toFixed(1)+" "+RY(v).toFixed(1)+" ";st=true;});
+    s+=`<path d="${d}" fill="none" stroke="#4fd1e0" stroke-width="1.4"/>`;
+    s+=`<text x="${padL+3}" y="${ry0+11}" fill="#aeb8c9" font-size="9.5" font-weight="700">RSI(14)</text>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${TH}" width="100%" style="display:block">${s}</svg>`;
 }
 
 function showDetail(r){
@@ -626,7 +656,8 @@ function renderConsDetail(){
   host.innerHTML=`
     <div class="cstats">
       <div class="cstat"><div class="lab">평균 목표가</div><div class="val teal">${cnum(d.mean)}원</div><div class="sub">범위 ${cnum(d.low)}~${cnum(d.high)}</div></div>
-      <div class="cstat"><div class="lab">상승여력</div><div class="val ${up>0?'teal':'rose'}">${up==null?'–':(up>0?'+':'')+up+'%'}</div><div class="sub">현재가 ${cnum(s.close)}</div></div>
+      <div class="cstat"><div class="lab">현재가</div><div class="val amber">${cnum(s.close)}원</div><div class="sub">오늘 종가</div></div>
+      <div class="cstat"><div class="lab">상승여력</div><div class="val ${up>0?'teal':'rose'}">${up==null?'–':(up>0?'+':'')+up+'%'}</div><div class="sub">현재가 ${cnum(s.close)} → 평균 ${cnum(d.mean)}</div></div>
       <div class="cstat"><div class="lab">중앙값</div><div class="val">${cnum(d.median)}원</div><div class="sub">${d.brokers||d.with_target}개사 기준</div></div>
       <div class="cstat"><div class="lab">최고가</div><div class="val amber">${cnum(d.high)}원</div><div class="sub">${d.high_broker||''}</div></div>
       <div class="cstat"><div class="lab">최저가</div><div class="val rose">${cnum(d.low)}원</div><div class="sub">${d.low_broker||''}</div></div>
