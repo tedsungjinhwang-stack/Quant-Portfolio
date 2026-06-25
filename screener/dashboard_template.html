@@ -89,6 +89,18 @@
   .rlight{font-size:21px;font-weight:800;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
   .rlight small{color:var(--muted);font-size:13px;font-weight:500}
   .reasons{color:var(--muted);font-size:12.5px;margin-top:7px;line-height:1.55}
+  /* 계절성 패널 */
+  .season{margin-bottom:14px}
+  .season .sgrid{display:grid;gap:10px 20px}
+  @media(min-width:560px){.season .sgrid{grid-template-columns:1fr 1fr}}
+  .season .slab{font-size:12px;font-weight:700;margin:2px 0 5px}
+  .season .slab.pos{color:var(--up)}.season .slab.neg{color:var(--down)}
+  .season .srow{display:flex;align-items:baseline;gap:8px;padding:5px 7px;border-radius:7px;font-size:13.5px}
+  .season .srow:hover{background:#1b2030}
+  .season .snm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .season .sav{font-weight:800;font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
+  .season .shit{color:var(--muted);font-size:11.5px;min-width:74px;text-align:right}
+  .season .shit b{color:var(--txt);font-weight:700}.season .shit i{opacity:.65;font-style:normal}
   /* 권장 스탠스 — 강조 콜아웃(레짐 색 따라감) */
   .stance{display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:5px;margin:9px 0 3px;
     padding:8px 13px;border-radius:10px;font-size:14.5px;font-weight:600;color:var(--txt);
@@ -216,6 +228,7 @@
   <div id="chips" class="chips"></div>
   <div class="seg" id="mkSeg"><button data-m="KR" class="on">🔵 한국</button><button data-m="US">🟢 미국</button></div>
   <div id="regime"></div>
+  <div id="season"></div>
 
   <div class="layout">
     <div>
@@ -373,6 +386,14 @@ if(!DATA){
         {sector:"2차전지",etf:"305720",etf_rs:29.0,leader_ids:["KR:373220"]},
         {sector:"바이오",etf:"244580",etf_rs:24.0,leader_ids:["KR:207940"]}],
         top_ids:KR.map(r=>r.id),deep_ids:["KR:005930","KR:000660","KR:373220"]}
+    },
+    seasonality:{
+      US:{month:6,window:"약세 구간 (5~10월 · Sell in May)",index:{name:"S&P500",avg:0.8,hit:60},
+        strong:[{label:"Health Care",etf:"XLV",avg:1.5,hit:73,n:15},{label:"Info Tech",etf:"XLK",avg:1.4,hit:53,n:15},{label:"Consumer Disc.",etf:"XLY",avg:1.3,hit:73,n:15}],
+        weak:[{label:"Materials",etf:"XLB",avg:-1.2,hit:33,n:15},{label:"Energy",etf:"XLE",avg:-0.9,hit:40,n:15},{label:"Utilities",etf:"XLU",avg:-0.4,hit:47,n:15}]},
+      KR:{month:6,window:"약세 구간 (5~10월 · Sell in May)",index:{name:"코스피",avg:-0.5,hit:47},
+        strong:[{label:"반도체",etf:"091160",avg:2.1,hit:67,n:15},{label:"바이오",etf:"244580",avg:1.3,hit:60,n:15},{label:"2차전지",etf:"305720",avg:0.9,hit:53,n:15}],
+        weak:[{label:"건설",etf:"117700",avg:-2.0,hit:33,n:15},{label:"증권",etf:"102970",avg:-1.1,hit:40,n:15},{label:"철강",etf:"117680",avg:-0.7,hit:40,n:15}]}
     }};
 }
 
@@ -423,8 +444,25 @@ function renderRegime(){
       </div></div></div>`;
 }
 
+function renderSeason(){
+  const el=$("season"),se=(DATA.seasonality||{})[market];
+  if(!se||!se.strong||!se.strong.length){el.innerHTML="";return;}
+  const pc=v=>v==null?'–':(v>0?'+':'')+v+'%';
+  const row=s=>`<div class="srow"><span class="snm">${s.label}</span>
+    <span class="sav ${s.avg>=0?'pos':'neg'}">${pc(s.avg)}</span>
+    <span class="shit">승률 <b>${s.hit}%</b> <i>·${s.n}년</i></span></div>`;
+  const ix=se.index?`${se.index.name} 평균 <b class="${se.index.avg>=0?'pos':'neg'}">${pc(se.index.avg)}</b>·승률 ${se.index.hit}%`:'';
+  el.innerHTML=`<div class="panel season">
+    <div class="ttl"><span class="tk" style="background:#2a2440;color:#b08cff">계절</span> ${se.month}월 계절성 <small>${se.window} · 과거 15년${ix?' · '+ix:''}</small></div>
+    <div class="sgrid">
+      <div><div class="slab pos">▲ ${se.month}월 강세 섹터</div>${se.strong.map(row).join("")}</div>
+      <div><div class="slab neg">▼ ${se.month}월 약세 섹터</div>${se.weak.map(row).join("")}</div>
+    </div></div>`;
+}
+
 function render(){
   renderRegime();
+  renderSeason();
   const mk=DATA.markets[market]||{sectors:[],top_ids:[]};
   // 트랙①
   $("sectors").innerHTML=(mk.sectors||[]).map(s=>{
