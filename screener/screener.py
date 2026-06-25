@@ -226,6 +226,23 @@ def pct_return(close, n):
     return close.iloc[-1] / close.iloc[-(n + 1)] - 1.0
 
 
+def ytd_return(close):
+    """연초 대비(YTD) 수익률. 전년 말 종가를 기준으로."""
+    try:
+        last = float(close.iloc[-1])
+        yr = close.index[-1].year
+        before = close[close.index.year < yr]
+        base = float(before.iloc[-1]) if len(before) else float(close[close.index.year == yr].iloc[0])
+        return (last / base - 1.0) if base > 0 else None
+    except Exception:
+        return None
+
+
+def pc(v):
+    """수익률(분수) → 퍼센트 반올림 또는 None."""
+    return round(v * 100, 1) if v is not None else None
+
+
 def rs_value(close):
     """단기중기 가중모멘텀(1·3·6개월). 반환: (rs, m3, m6)."""
     w = CONFIG["rs_weights"]
@@ -464,6 +481,7 @@ def metrics(meta, df, relaxed=False, bench=0.0):
         "ret1w": round(r1w * 100, 1) if r1w is not None else None,
         "ret1m": round(r1m * 100, 1) if r1m is not None else None,
         "ret3m": round(m3 * 100, 1), "ret6m": round(m6 * 100, 1),
+        "ret1y": pc(pct_return(close, 252)), "ret_ytd": pc(ytd_return(close)),
         "trend_ok": bool(pd.notna(v200) and last > float(v200)),
         "bars": bars, "ma20s": arr(ma20), "ma60s": arr(ma60),
         "ma120s": arr(ma120), "ma200s": arr(ma200),
@@ -496,6 +514,10 @@ def index_health(name, ticker, df):
         "dist200": round((last / float(v200) - 1) * 100, 1) if pd.notna(v200) else None,
         "slope_up": slope_up,
         "rsi": round(float(rsi(close).iloc[-1]), 1),
+        "ret1d": (lambda v: round(v * 100, 2) if v is not None else None)(pct_return(close, 1)),
+        "ret1w": pc(pct_return(close, 5)), "ret1m": pc(pct_return(close, 21)),
+        "ret3m": pc(pct_return(close, 63)), "ret6m": pc(pct_return(close, 126)),
+        "ret1y": pc(pct_return(close, 252)), "ret_ytd": pc(ytd_return(close)),
     }
 
 

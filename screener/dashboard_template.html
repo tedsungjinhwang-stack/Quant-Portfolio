@@ -150,7 +150,7 @@ function stk(o){const b=makeBars(o.seed,130,o.start);return{id:o.market+":"+o.co
   name:o.name,sector:o.sector,close:b.at(-1).c,ma20:MA(b,20).at(-1),ma60:MA(b,60).at(-1),ma120:MA(b,45).at(-1),ma200:MA(b,90).at(-1),
   touched:!!o.t,near:!!o.n,dist20:o.d20,disp20:100+o.d20,disp60:o.d60,disp200:o.d200,rsi:o.rsi,
   high52_pct:o.h52,low52_pct:o.l52||30,vol_ratio:o.vr,elliott:o.ell,elliott_note:o.note,
-  ret1d:(o.r1d??1.1),ret1w:(o.r1w??3.2),ret1m:(o.r1m??8.5),ret3m:o.r3,ret6m:o.r6,rs:o.rs,rs_rank:o.rank,
+  ret1d:(o.r1d??1.1),ret1w:(o.r1w??3.2),ret1m:(o.r1m??8.5),ret3m:o.r3,ret6m:o.r6,ret1y:(o.r1y??52),ret_ytd:(o.rytd??24),rs:o.rs,rs_rank:o.rank,
   trend_state:o.ts||"추세유지",trend_reasons:o.tr||["120·60·20일선 위 · 스윙 저점 유지"],
   wyckoff:o.wy||"상승 추세 (Markup)",wyckoff_note:o.wn||"주요 이벤트 미감지",
   growth_score:o.gs,rev_growth:o.rg,earn_growth:o.eg,is_new:o.new,days:o.days,
@@ -189,12 +189,12 @@ if(!DATA){
         exposure:{stance:"적극 투자",equity:"80~100%",cash:"0~20%"},
         reasons:["S&P500 200일선 위(+6.2%, 정배열)","200일선 이탈 32% · 20일선 이탈 41% (낮을수록 강세)","52주 신고가 16% · 신저가 4% (순증 +12)"],
         breadth:{below20:41,below200:32,above200:68,new_high:16,near_high:24,new_low:4,net_new_high:12,n:480},
-        indexes:[{name:"S&P500",close:5600,above200:true,golden:true,rsi:58,wyckoff:"상승 추세 (Markup)"},{name:"나스닥",close:18200,above200:true,golden:true,rsi:60,wyckoff:"상승 추세 (Markup)"}]},
+        indexes:[{name:"S&P500",close:5600,above200:true,golden:true,rsi:58,ret1d:0.4,ret1m:3.1,ret_ytd:12.5,ret1y:21.0,wyckoff:"상승 추세 (Markup)"},{name:"나스닥",close:18200,above200:true,golden:true,rsi:60,ret1d:0.6,ret1m:4.2,ret_ytd:15.0,ret1y:28.0,wyckoff:"상승 추세 (Markup)"}]},
       KR:{label:"상승 둔화",color:"yellow",premise:"지수는 위지만 신고가 줄고 이탈 증가 — 주도 섹터·대장주만 선별 대응.",
         exposure:{stance:"중립·선별",equity:"50~70%",cash:"30~50%"},
         reasons:["코스피 200일선 위(+1.1%, 정배열)","200일선 이탈 52% · 20일선 이탈 63% (낮을수록 강세)","52주 신고가 7% · 신저가 9% (순증 -2)"],
         breadth:{below20:63,below200:52,above200:48,new_high:7,near_high:13,new_low:9,net_new_high:-2,n:240},
-        indexes:[{name:"코스피",close:2700,above200:true,golden:true,rsi:51,wyckoff:"분산 추정 (Distribution)"},{name:"코스닥",close:850,above200:false,golden:false,rsi:45,wyckoff:"하락 추세 (Markdown)"}]}},
+        indexes:[{name:"코스피",close:2700,above200:true,golden:true,rsi:51,ret1d:-0.3,ret1m:1.2,ret_ytd:4.0,ret1y:6.5,wyckoff:"분산 추정 (Distribution)"},{name:"코스닥",close:850,above200:false,golden:false,rsi:45,ret1d:-0.8,ret1m:-3.5,ret_ytd:-6.0,ret1y:-9.0,wyckoff:"하락 추세 (Markdown)"}]}},
     counts:{stocks:US.length+KR.length,touched:3,near:3},stocks,
     markets:{
       US:{sectors:[
@@ -224,6 +224,8 @@ $("chips").innerHTML=
 let market="US", selected=null;
 const fmt=(v,d=2)=>v==null?"–":Number(v).toLocaleString("ko-KR",{maximumFractionDigits:d});
 const sg=v=>v==null?"":(v>0?"pos":"neg");
+const PR=v=>v==null?"–":(v>0?"+":"")+v+"%";
+const prc=v=>v==null?"<span style='color:#7a8294'>–</span>":`<span class="${sg(v)}">${(v>0?'+':'')+v}</span>`;
 const pbBadge=r=>r.touched?'<span class="bdg t">터치</span>':r.near?'<span class="bdg n">근접</span>':'<span class="bdg x">—</span>';
 const TSC={"추세유지":["up","var(--up)"],"주의":["cau","var(--near)"],"하락전환":["flip","#ff8a50"],"하락추세":["dn","var(--down)"],"데이터 부족":["x","var(--muted)"]};
 const tsBadge=s=>{const m=TSC[s];return m?`<span class="bdg ${m[0]}">${s}</span>`:'';};
@@ -237,6 +239,7 @@ function renderRegime(){
   const lc={green:"🟢",yellow:"🟡",red:"🔴"}[rg.color]||"⚪", b=rg.breadth||{};
   const idx=(rg.indexes||[]).map(x=>`<div class="ic">${x.name} <b>${fmt(x.close)}</b><br>
     <span class="${x.above200?'pos':'neg'}">${x.above200?'▲200MA':'▼200MA'}</span> ${x.golden?'·정배열':'·역배열'} ·RSI ${x.rsi}
+    <br><span style="font-size:10.5px">1D ${prc(x.ret1d)} · 1M ${prc(x.ret1m)} · YTD ${prc(x.ret_ytd)} · 1Y ${prc(x.ret1y)}</span>
     ${x.wyckoff?`<br><span style="color:#b08cff">🔍 ${x.wyckoff}</span>`:''}</div>`).join("");
   const bar=(v,col)=>`<div class="bar"><i style="width:${Math.max(0,Math.min(100,v||0))}%;background:${col}"></i></div>`;
   const ex=rg.exposure;
@@ -343,10 +346,13 @@ function showDetail(r){
       ${st("20일 이격도",r.disp20??'–')}${st("60일 이격도",r.disp60??'–')}${st("200일 이격도",r.disp200??'–')}
       ${st("RSI(14)",r.rsi,r.rsi>=70?'neg':r.rsi<=30?'pos':'')}
       ${st("52주 고점대비",(r.high52_pct??'–')+'%',sg(r.high52_pct))}
-      ${st("1D 수익률",r.ret1d==null?'–':(r.ret1d>0?'+':'')+r.ret1d+'%',sg(r.ret1d))}
-      ${st("7D 수익률",r.ret1w==null?'–':(r.ret1w>0?'+':'')+r.ret1w+'%',sg(r.ret1w))}
-      ${st("1M 수익률",r.ret1m==null?'–':(r.ret1m>0?'+':'')+r.ret1m+'%',sg(r.ret1m))}
-      ${st("3M 수익률",r.ret3m==null?'–':(r.ret3m>0?'+':'')+r.ret3m+'%',sg(r.ret3m))}
+      ${st("1D 수익률",PR(r.ret1d),sg(r.ret1d))}
+      ${st("7D 수익률",PR(r.ret1w),sg(r.ret1w))}
+      ${st("1M 수익률",PR(r.ret1m),sg(r.ret1m))}
+      ${st("3M 수익률",PR(r.ret3m),sg(r.ret3m))}
+      ${st("6M 수익률",PR(r.ret6m),sg(r.ret6m))}
+      ${st("YTD 수익률",PR(r.ret_ytd),sg(r.ret_ytd))}
+      ${st("1Y 수익률",PR(r.ret1y),sg(r.ret1y))}
       ${st("120일선(하락전환선)",r.ma120==null?'–':(r.close>=r.ma120?'위 ✓':'이탈 ✕'),r.close>=(r.ma120||0)?'pos':'neg')}
       ${st("거래량비(20일평균)",(r.vol_ratio??'–')+'x')}</div>
     <div class="treasons">📐 추세 상태: <b style="color:${(TSC[r.trend_state]||['','var(--muted)'])[1]}">${r.trend_state||'-'}</b> — ${(r.trend_reasons||[]).join(' · ')||'—'}
