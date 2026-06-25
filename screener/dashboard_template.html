@@ -54,6 +54,12 @@
   .bdg.n{background:rgba(255,206,90,.18);color:var(--near)}
   .bdg.x{background:#222734;color:var(--muted)}
   .bdg.deep{background:rgba(255,176,32,.18);color:var(--warn)}
+  .bdg.up{background:rgba(61,220,151,.18);color:var(--up)}
+  .bdg.cau{background:rgba(255,206,90,.18);color:var(--near)}
+  .bdg.flip{background:rgba(255,138,80,.2);color:#ff8a50}
+  .bdg.dn{background:rgba(255,107,107,.18);color:var(--down)}
+  .treasons{margin-top:8px;font-size:11.5px;color:var(--muted)}
+  .treasons b{color:var(--down)}
   .num{font-variant-numeric:tabular-nums}.pos{color:var(--up)}.neg{color:var(--down)}
   /* detail */
   .dwrap{position:sticky;top:10px}
@@ -105,7 +111,7 @@
         <div class="ttl"><span class="tk">트랙②</span> 개별 RS Top 10 <small>★ = 최상위 심층</small></div>
         <div class="tbl-scroll">
           <table><thead><tr>
-            <th class="l">종목</th><th>RS#</th><th>종가</th><th>눌림목</th>
+            <th class="l">종목</th><th>RS#</th><th>종가</th><th>눌림목</th><th>추세</th>
             <th>20이격%</th><th>RSI</th><th>52H%</th><th class="l">엘리어트(추정)</th>
           </tr></thead><tbody id="top10"></tbody></table>
         </div>
@@ -137,10 +143,11 @@ function makeBars(seed,n,start){let b=[],p=start,s=seed;const rnd=()=>{s=(s*9301
     b.push({d:`d${i}`,o:+o.toFixed(2),h:+hi.toFixed(2),l:+lo.toFixed(2),c:+c.toFixed(2)});}return b;}
 function MA(b,w){return b.map((_,i)=>i<w-1?null:+(b.slice(i-w+1,i+1).reduce((a,x)=>a+x.c,0)/w).toFixed(2));}
 function stk(o){const b=makeBars(o.seed,130,o.start);return{id:o.market+":"+o.code,market:o.market,code:o.code,
-  name:o.name,sector:o.sector,close:b.at(-1).c,ma20:MA(b,20).at(-1),ma60:MA(b,60).at(-1),ma200:MA(b,90).at(-1),
+  name:o.name,sector:o.sector,close:b.at(-1).c,ma20:MA(b,20).at(-1),ma60:MA(b,60).at(-1),ma120:MA(b,45).at(-1),ma200:MA(b,90).at(-1),
   touched:!!o.t,near:!!o.n,dist20:o.d20,disp20:100+o.d20,disp60:o.d60,disp200:o.d200,rsi:o.rsi,
-  high52_pct:o.h52,vol_ratio:o.vr,elliott:o.ell,elliott_note:o.note,ret3m:o.r3,ret6m:o.r6,rs:o.rs,rs_rank:o.rank,
-  bars:b,ma20s:MA(b,20),ma60s:MA(b,60),ma200s:MA(b,90)};}
+  high52_pct:o.h52,low52_pct:o.l52||30,vol_ratio:o.vr,elliott:o.ell,elliott_note:o.note,ret3m:o.r3,ret6m:o.r6,rs:o.rs,rs_rank:o.rank,
+  trend_state:o.ts||"추세유지",trend_reasons:o.tr||["120·60·20일선 위 · 스윙 저점 유지"],
+  bars:b,ma20s:MA(b,20),ma60s:MA(b,60),ma120s:MA(b,45),ma200s:MA(b,90)};}
 if(!DATA){
   const mk=(arr)=>{const s={};arr.forEach(r=>s[r.id]=r);return s;};
   const US=[
@@ -149,13 +156,13 @@ if(!DATA){
     stk({market:"US",code:"CCC",name:"가상클라우드",sector:"Information Technology",rank:3,d20:5.1,d60:113,d200:130,rsi:64,h52:-1.0,vr:0.9,ell:"3파 상승 추정",note:"상승 진행(추정)",r3:25,r6:44,rs:38,seed:11,start:55}),
     stk({market:"US",code:"DDD",name:"가상에너지",sector:"Energy",rank:4,t:1,d20:-0.2,d60:104,d200:115,rsi:47,h52:-7.0,vr:1.9,ell:"2파 조정 추정",note:"되돌림 진행(추정)",r3:14,r6:28,rs:24,seed:5,start:50}),
     stk({market:"US",code:"EEE",name:"가상방산",sector:"Industrials",rank:5,d20:3.4,d60:109,d200:124,rsi:61,h52:-3.3,vr:1.1,ell:"3파 상승 추정",note:"상승 진행(추정)",r3:17,r6:31,rs:27,seed:9,start:48}),
-    stk({market:"US",code:"FFF",name:"가상금융",sector:"Financials",rank:6,n:1,d20:0.9,d60:106,d200:118,rsi:55,h52:-5.1,vr:1.0,ell:"4파 조정 추정",note:"되돌림 진행(추정)",r3:13,r6:24,rs:22,seed:13,start:46}),
+    stk({market:"US",code:"FFF",name:"가상금융",sector:"Financials",rank:6,n:1,d20:0.9,d60:106,d200:118,rsi:43,h52:-5.1,vr:1.0,ell:"4파 조정 추정",note:"되돌림 진행(추정)",r3:13,r6:24,rs:22,seed:13,start:46,ts:"주의",tr:["60일선 이탈","RSI 약세(43)"]}),
   ];
   const KR=[
-    stk({market:"KR",code:"005930",name:"가상전자",sector:"반도체",rank:1,t:1,d20:-0.4,d60:106,d200:118,rsi:48,h52:-6.5,vr:2.1,ell:"2파 조정 추정",note:"저점 이후 1개 스윙·되돌림 진행(추정)",r3:12,r6:25,rs:23,seed:4,start:50}),
+    stk({market:"KR",code:"005930",name:"가상전자",sector:"반도체",rank:1,t:1,d20:-0.4,d60:106,d200:118,rsi:42,h52:-6.5,vr:2.1,ell:"2파 조정 추정",note:"저점 이후 1개 스윙·되돌림 진행(추정)",r3:12,r6:25,rs:23,seed:4,start:50,ts:"하락추세",tr:["120일선 이탈(하락 진행)","저점 낮아짐","60일선 이탈"]}),
     stk({market:"KR",code:"000660",name:"가상하이닉스",sector:"반도체",rank:2,d20:6.2,d60:115,d200:140,rsi:67,h52:-0.5,vr:1.0,ell:"조정(A·B·C) 추정",note:"임펄스 5파 이후 조정 국면(추정)",r3:30,r6:62,rs:40,seed:8,start:40}),
     stk({market:"KR",code:"373220",name:"가상2차전지",sector:"2차전지",rank:3,t:1,d20:0.2,d60:107,d200:122,rsi:50,h52:-8.1,vr:1.7,ell:"3파 상승 추정",note:"상승 진행(추정)",r3:16,r6:33,rs:28,seed:6,start:45}),
-    stk({market:"KR",code:"207940",name:"가상바이오",sector:"바이오",rank:4,n:1,d20:0.7,d60:110,d200:126,rsi:57,h52:-2.9,vr:1.3,ell:"3파 상승 추정",note:"상승 진행(추정)",r3:19,r6:37,rs:31,seed:10,start:42}),
+    stk({market:"KR",code:"207940",name:"가상바이오",sector:"바이오",rank:4,n:1,d20:0.7,d60:110,d200:126,rsi:46,h52:-2.9,vr:1.3,ell:"4파 조정 추정",note:"되돌림 진행(추정)",r3:19,r6:37,rs:31,seed:10,start:42,ts:"하락전환",tr:["직전 스윙 저점 이탈(저점 낮아짐)","60일선 이탈"]}),
     stk({market:"KR",code:"012450",name:"가상항공우주",sector:"우주항공",rank:5,d20:4.0,d60:112,d200:133,rsi:63,h52:-1.8,vr:1.1,ell:"5파 마무리 추정",note:"되돌림 진행(추정)",r3:24,r6:48,rs:35,seed:12,start:38}),
   ];
   const CMD=[
@@ -205,6 +212,8 @@ let market="US", selected=null;
 const fmt=(v,d=2)=>v==null?"–":Number(v).toLocaleString("ko-KR",{maximumFractionDigits:d});
 const sg=v=>v==null?"":(v>0?"pos":"neg");
 const pbBadge=r=>r.touched?'<span class="bdg t">터치</span>':r.near?'<span class="bdg n">근접</span>':'<span class="bdg x">—</span>';
+const TSC={"추세유지":["up","var(--up)"],"주의":["cau","var(--near)"],"하락전환":["flip","#ff8a50"],"하락추세":["dn","var(--down)"]};
+const tsBadge=s=>{const m=TSC[s];return m?`<span class="bdg ${m[0]}">${s}</span>`:'';};
 
 $("mkSeg").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
   market=b.dataset.m;$("mkSeg").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));render();}));
@@ -235,7 +244,7 @@ function render(){
   $("sectors").innerHTML=(mk.sectors||[]).map(s=>{
     const ld=s.leader_ids.map(id=>{const r=S[id];if(!r)return"";
       return `<div class="ldr ${selected===id?'sel':''}" data-id="${id}">
-        <span class="nm">${r.name} ${pbBadge(r)}</span>
+        <span class="nm">${r.name} ${pbBadge(r)} ${tsBadge(r.trend_state)}</span>
         <span class="rk">RS#${r.rs_rank||'-'} · ${(r.dist20>0?'+':'')+r.dist20}%</span></div>`;}).join("")
       || '<div class="rk" style="color:var(--muted);font-size:11.5px;padding:4px">구성종목 RS 데이터 없음</div>';
     const kind=s.kind==='theme'?'테마':(s.kind==='sector'?'섹터':'섹터');
@@ -260,10 +269,11 @@ function render(){
       <td class="l">${deep?'★ ':''}<b>${r.name}</b> <span style="color:var(--muted)">${r.code}</span><br>
         <span style="color:var(--muted);font-size:11px">${r.sector}</span></td>
       <td class="num">${r.rs_rank}</td><td class="num">${fmt(r.close)}</td><td>${pbBadge(r)}</td>
+      <td>${tsBadge(r.trend_state)}</td>
       <td class="num ${sg(r.dist20)}">${r.dist20==null?'–':(r.dist20>0?'+':'')+r.dist20}</td>
       <td class="num">${r.rsi}</td><td class="num ${sg(r.high52_pct)}">${r.high52_pct==null?'–':r.high52_pct}</td>
       <td class="l" style="font-size:11px">${r.elliott}</td></tr>`;}).join("")
-    || '<tr><td colspan="8" class="empty">데이터 없음</td></tr>';
+    || '<tr><td colspan="9" class="empty">데이터 없음</td></tr>';
 
   document.querySelectorAll("[data-id]").forEach(el=>el.addEventListener("click",()=>{
     selected=el.dataset.id;render();showDetail(S[selected]);}));
@@ -272,7 +282,7 @@ function render(){
 function chartSVG(r){
   const W=560,H=240,padL=44,padR=10,padT=10,padB=18,bars=r.bars,n=bars.length,iw=(W-padL-padR)/n;
   let lo=Math.min(...bars.map(b=>b.l)),hi=Math.max(...bars.map(b=>b.h));
-  [r.ma200s,r.ma60s,r.ma20s].forEach(s=>s&&s.forEach(v=>{if(v!=null){lo=Math.min(lo,v);hi=Math.max(hi,v);}}));
+  [r.ma200s,r.ma120s,r.ma60s,r.ma20s].forEach(s=>s&&s.forEach(v=>{if(v!=null){lo=Math.min(lo,v);hi=Math.max(hi,v);}}));
   const pd=(hi-lo)*0.05;lo-=pd;hi+=pd;
   const Y=v=>padT+(H-padT-padB)*(1-(v-lo)/(hi-lo)),X=i=>padL+iw*(i+0.5);let s="";
   for(let g=0;g<=4;g++){const v=lo+(hi-lo)*g/4,y=Y(v);
@@ -283,7 +293,7 @@ function chartSVG(r){
        `<rect x="${cx-bw/2}" y="${Y(Math.max(b.o,b.c))}" width="${bw}" height="${Math.max(1,Math.abs(Y(b.o)-Y(b.c)))}" fill="${col}"/>`;});
   const lp=(arr,col)=>{if(!arr)return"";let d="",st=false;arr.forEach((v,i)=>{if(v==null)return;
     d+=(st?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)+" ";st=true;});return d?`<path d="${d}" fill="none" stroke="${col}" stroke-width="1.5"/>`:"";};
-  s+=lp(r.ma200s,"#ff7a85")+lp(r.ma60s,"#5b8cff")+lp(r.ma20s,"#ffce5a");
+  s+=lp(r.ma200s,"#ff7a85")+lp(r.ma120s,"#b08cff")+lp(r.ma60s,"#5b8cff")+lp(r.ma20s,"#ffce5a");
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${s}</svg>`;
 }
 
@@ -293,10 +303,10 @@ function showDetail(r){
   $("detail").innerHTML=`
     <div class="dhead"><div><h2>${r.market==="US"?"🟢":"🔵"} ${r.name} <span style="color:var(--muted);font-size:14px">${r.code}</span></h2>
       <div class="meta">${r.sector} · RS#${r.rs_rank||'-'} · 종가 ${fmt(r.close)}</div></div>
-      <div>${r.touched?'<span class="bdg t">눌림목 터치</span>':r.near?'<span class="bdg n">근접</span>':'<span class="bdg x">관망</span>'}</div></div>
+      <div style="text-align:right">${r.touched?'<span class="bdg t">눌림목 터치</span>':r.near?'<span class="bdg n">근접</span>':'<span class="bdg x">관망</span>'} ${tsBadge(r.trend_state)}</div></div>
     <div class="chartbox">${chartSVG(r)}</div>
     <div class="legend"><span><i style="background:#ffce5a"></i>20MA</span><span><i style="background:#5b8cff"></i>60MA</span>
-      <span><i style="background:#ff7a85"></i>200MA</span><span>🟢/🔴 일봉</span></div>
+      <span><i style="background:#b08cff"></i>120MA(수급선)</span><span><i style="background:#ff7a85"></i>200MA</span><span>🟢/🔴 일봉</span></div>
     <div class="stats">
       ${st("20MA 이격(거리)",(r.dist20>0?'+':'')+(r.dist20??'–')+'%',sg(r.dist20))}
       ${st("20일 이격도",r.disp20??'–')}${st("60일 이격도",r.disp60??'–')}${st("200일 이격도",r.disp200??'–')}
@@ -304,7 +314,10 @@ function showDetail(r){
       ${st("52주 고점대비",(r.high52_pct??'–')+'%',sg(r.high52_pct))}
       ${st("3개월 수익률",(r.ret3m>0?'+':'')+(r.ret3m??'–')+'%',sg(r.ret3m))}
       ${st("6개월 수익률",(r.ret6m>0?'+':'')+(r.ret6m??'–')+'%',sg(r.ret6m))}
+      ${st("120일선(하락전환선)",r.ma120==null?'–':(r.close>=r.ma120?'위 ✓':'이탈 ✕'),r.close>=(r.ma120||0)?'pos':'neg')}
       ${st("거래량비(20일평균)",(r.vol_ratio??'–')+'x')}</div>
+    <div class="treasons">📐 추세 상태: <b style="color:${(TSC[r.trend_state]||['','var(--muted)'])[1]}">${r.trend_state||'-'}</b> — ${(r.trend_reasons||[]).join(' · ')||'—'}
+      <div style="color:#6a7180;margin-top:3px">하락전환 = 직전 스윙 저점 이탈(저점 낮아짐, 아직 120선 위) · 하락추세 = 120선 이탈(하락 진행)</div></div>
     <div class="ellbox">🌀 <b>엘리어트 파동(추정): ${r.elliott}</b><br>${r.elliott_note||''}
       <div class="caveat">※ 엘리어트는 분석자마다 카운팅이 달라지는 주관적 기법입니다. 위 라벨은 지그재그 스윙(±${(DATA.config&&DATA.config.zigzag_pct)||7}%) 기반 <b>알고리즘 추정</b>이며, 차트로 직접 카운팅해 확인하세요.</div></div>`;
 }

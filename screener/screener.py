@@ -291,6 +291,47 @@ def elliott_estimate(closes, pct):
     return f"{label} 추정", f"저점 이후 {legs}개 스윙 · {'상승' if cur_up else '되돌림'} 진행(추정)"
 
 
+def trend_state(last, v20, v60, v120, ma200_up, rsi_last, piv):
+    """종목 추세 상태 (단계 분리):
+      추세유지 → 주의 → 하락전환 → 하락추세
+      - 하락전환: 직전 스윙 저점 이탈(저점 낮아짐). 아직 120선 위 — 전환이 '일어나는' 시점.
+      - 하락추세: 120일선(수급선) 종가 이탈. 전환은 이미 끝, 하락이 '진행' 중(확정).
+      - '20MA 닿고 반등'=눌림목(추세유지) / '닿고 직전 저점까지 깸'=하락전환."""
+    lows = [p[1] for p in piv if p[2] == 'L']
+    highs = [p[1] for p in piv if p[2] == 'H']
+    broke_low = bool(lows and last < lows[-1])           # 직전 스윙 저점 이탈(저점 낮아짐)
+    lower_high = bool(len(highs) >= 2 and highs[-1] < highs[-2])
+    below120 = v120 is not None and last < v120
+    below60 = v60 is not None and last < v60
+    below20 = v20 is not None and last < v20
+
+    # 하락추세(확정): 120선 이탈 — 전환은 그 전에 이미 끝남
+    if below120:
+        reasons = ["120일선 이탈(하락 진행)"]
+        if broke_low: reasons.append("저점 낮아짐")
+        if below60: reasons.append("60일선 이탈")
+        return "하락추세", reasons
+
+    # 하락전환(신호): 직전 스윙 저점 이탈, 아직 120선 위
+    if broke_low:
+        reasons = ["직전 스윙 저점 이탈(저점 낮아짐)"]
+        if below60: reasons.append("60일선 이탈")
+        if lower_high: reasons.append("고점도 낮아짐")
+        return "하락전환", reasons
+
+    # 주의: 저점은 지켰지만 약화 신호
+    reasons = []
+    if below60: reasons.append("60일선 이탈")
+    if lower_high: reasons.append("고점 낮아짐")
+    if not ma200_up: reasons.append("200일선 하락")
+    if rsi_last is not None and rsi_last < 45: reasons.append(f"RSI 약세({rsi_last:.0f})")
+    if below20 and not below60: reasons.append("20일선 종가 이탈(단기 약화)")
+
+    if reasons:
+        return "주의", reasons
+    return "추세유지", ["120·60·20일선 위 · 스윙 저점 유지"]
+
+
 def metrics(meta, df):
     """종목 1개의 지표 dict(또는 None)."""
     if df is None or len(df) < 60:
@@ -306,8 +347,9 @@ def metrics(meta, df):
 
     ma20 = close.rolling(CONFIG["ma_pullback"]).mean()
     ma60 = close.rolling(60).mean()
+    ma120 = close.rolling(min(120, len(close))).mean()
     ma200 = close.rolling(min(CONFIG["ma_trend"], len(close))).mean()
-    v20, v60, v200 = ma20.iloc[-1], ma60.iloc[-1], ma200.iloc[-1]
+    v20, v60, v120, v200 = ma20.iloc[-1], ma60.iloc[-1], ma120.iloc[-1], ma200.iloc[-1]
     hi, lo = float(df["High"].iloc[-1]), float(df["Low"].iloc[-1])
     touched = bool(pd.notna(v20) and lo <= v20 <= hi)
     dist20 = (last - v20) / v20 * 100 if pd.notna(v20) else None
@@ -317,7 +359,14 @@ def metrics(meta, df):
     vr = None
     if vol is not None and len(vol) >= 20 and vol.tail(20).mean() > 0:
         vr = float(vol.iloc[-1] / vol.tail(20).mean())
-    ell, note = elliott_estimate(close.tolist()[-260:], CONFIG["zigzag_pct"])
+    closes_tail = close.tolist()[-260:]
+    piv = zigzag(closes_tail, CONFIG["zigzag_pct"])
+    ell, note = elliott_estimate(closes_tail, CONFIG["zigzag_pct"])
+    ma200_up = bool(pd.notna(v200) and len(ma200.dropna()) > 21 and v200 > ma200.iloc[-21])
+    rsi_last = float(rsi(close).iloc[-1])
+    tstate, treasons = trend_state(
+        last, float(v20) if pd.notna(v20) else None, float(v60) if pd.notna(v60) else None,
+        float(v120) if pd.notna(v120) else None, ma200_up, rsi_last, piv)
 
     cb = CONFIG["chart_bars"]
     tail = df.tail(cb)
@@ -333,20 +382,23 @@ def metrics(meta, df):
         "close": round(last, 2), "rs": round(rs * 100, 1), "_rs_raw": rs,
         "ma20": round(float(v20), 2) if pd.notna(v20) else None,
         "ma60": round(float(v60), 2) if pd.notna(v60) else None,
+        "ma120": round(float(v120), 2) if pd.notna(v120) else None,
         "ma200": round(float(v200), 2) if pd.notna(v200) else None,
         "touched": touched, "dist20": round(dist20, 2) if dist20 is not None else None,
         "near": bool(dist20 is not None and abs(dist20) <= CONFIG["proximity_pct"] and not touched),
         "disp20": round(last / float(v20) * 100, 1) if pd.notna(v20) else None,
         "disp60": round(last / float(v60) * 100, 1) if pd.notna(v60) else None,
         "disp200": round(last / float(v200) * 100, 1) if pd.notna(v200) else None,
-        "rsi": round(float(rsi(close).iloc[-1]), 1),
+        "rsi": round(rsi_last, 1),
+        "trend_state": tstate, "trend_reasons": treasons, "ma200_up": ma200_up,
         "high52_pct": round((last / high52 - 1) * 100, 1) if high52 > 0 else None,
         "low52_pct": round((last / low52 - 1) * 100, 1) if low52 > 0 else None,
         "vol_ratio": round(vr, 2) if vr else None,
         "elliott": ell, "elliott_note": note,
         "ret3m": round(m3 * 100, 1), "ret6m": round(m6 * 100, 1),
         "trend_ok": bool(pd.notna(v200) and last > float(v200)),
-        "bars": bars, "ma20s": arr(ma20), "ma60s": arr(ma60), "ma200s": arr(ma200),
+        "bars": bars, "ma20s": arr(ma20), "ma60s": arr(ma60),
+        "ma120s": arr(ma120), "ma200s": arr(ma200),
     }
 
 
@@ -547,6 +599,13 @@ def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None):
         deep = [stocks[i] for i in mk.get("deep_ids", [])]
         if deep:
             lines.append("· 심층 Top3: " + ", ".join(f"{r['name']}·{r['elliott']}" for r in deep))
+        watch_ids = set(mk.get("top_ids", [])) | {i for s in mk.get("sectors", []) for i in s["leader_ids"]}
+        flip = [stocks[i]["name"] for i in watch_ids if stocks[i].get("trend_state") == "하락전환"]
+        down = [stocks[i]["name"] for i in watch_ids if stocks[i].get("trend_state") == "하락추세"]
+        if flip:
+            lines.append("🟠 하락전환(저점 이탈): " + ", ".join(flip))
+        if down:
+            lines.append("🔴 하락추세(120선 이탈): " + ", ".join(down))
     if commodity_ids:
         cm = [stocks[i] for i in commodity_ids[:5]]
         lines.append("\n🟡 <b>원자재(RS 상위)</b>: " +
