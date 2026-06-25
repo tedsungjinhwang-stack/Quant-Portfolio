@@ -111,8 +111,8 @@
         <div class="ttl"><span class="tk">트랙②</span> 개별 RS Top 10 <small>★ = 최상위 심층</small></div>
         <div class="tbl-scroll">
           <table><thead><tr>
-            <th class="l">종목</th><th>RS#</th><th>종가</th><th>눌림목</th><th>추세</th>
-            <th>20이격%</th><th>RSI</th><th>52H%</th><th class="l">엘리어트(추정)</th>
+            <th class="l">종목</th><th>RS</th><th>종가</th><th>1D%</th><th>1M%</th><th>눌림목</th><th>추세</th>
+            <th>20MA%</th><th>RSI</th><th class="l">엘리어트</th>
           </tr></thead><tbody id="top10"></tbody></table>
         </div>
       </div>
@@ -149,7 +149,8 @@ function MA(b,w){return b.map((_,i)=>i<w-1?null:+(b.slice(i-w+1,i+1).reduce((a,x
 function stk(o){const b=makeBars(o.seed,130,o.start);return{id:o.market+":"+o.code,market:o.market,code:o.code,
   name:o.name,sector:o.sector,close:b.at(-1).c,ma20:MA(b,20).at(-1),ma60:MA(b,60).at(-1),ma120:MA(b,45).at(-1),ma200:MA(b,90).at(-1),
   touched:!!o.t,near:!!o.n,dist20:o.d20,disp20:100+o.d20,disp60:o.d60,disp200:o.d200,rsi:o.rsi,
-  high52_pct:o.h52,low52_pct:o.l52||30,vol_ratio:o.vr,elliott:o.ell,elliott_note:o.note,ret3m:o.r3,ret6m:o.r6,rs:o.rs,rs_rank:o.rank,
+  high52_pct:o.h52,low52_pct:o.l52||30,vol_ratio:o.vr,elliott:o.ell,elliott_note:o.note,
+  ret1d:(o.r1d??1.1),ret1w:(o.r1w??3.2),ret1m:(o.r1m??8.5),ret3m:o.r3,ret6m:o.r6,rs:o.rs,rs_rank:o.rank,
   trend_state:o.ts||"추세유지",trend_reasons:o.tr||["120·60·20일선 위 · 스윙 저점 유지"],
   wyckoff:o.wy||"상승 추세 (Markup)",wyckoff_note:o.wn||"주요 이벤트 미감지",
   growth_score:o.gs,rev_growth:o.rg,earn_growth:o.eg,is_new:o.new,days:o.days,
@@ -296,12 +297,14 @@ function render(){
     return `<tr data-id="${id}" class="${selected===id?'sel':''} ${deep?'deep':''}">
       <td class="l">${deep?'★ ':''}<b>${r.name}</b> <span style="color:var(--muted)">${r.code}</span><br>
         <span style="color:var(--muted);font-size:11px">${r.sector}</span></td>
-      <td class="num">${r.rs_rank}</td><td class="num">${fmt(r.close)}</td><td>${pbBadge(r)}</td>
-      <td>${tsBadge(r.trend_state)}</td>
+      <td class="num">${r.rs_rank}</td><td class="num">${fmt(r.close)}</td>
+      <td class="num ${sg(r.ret1d)}">${r.ret1d==null?'–':(r.ret1d>0?'+':'')+r.ret1d}</td>
+      <td class="num ${sg(r.ret1m)}">${r.ret1m==null?'–':(r.ret1m>0?'+':'')+r.ret1m}</td>
+      <td>${pbBadge(r)}</td><td>${tsBadge(r.trend_state)}</td>
       <td class="num ${sg(r.dist20)}">${r.dist20==null?'–':(r.dist20>0?'+':'')+r.dist20}</td>
-      <td class="num">${r.rsi}</td><td class="num ${sg(r.high52_pct)}">${r.high52_pct==null?'–':r.high52_pct}</td>
+      <td class="num">${r.rsi}</td>
       <td class="l" style="font-size:11px">${r.elliott}</td></tr>`;}).join("")
-    || '<tr><td colspan="9" class="empty">데이터 없음</td></tr>';
+    || '<tr><td colspan="10" class="empty">데이터 없음</td></tr>';
 
   document.querySelectorAll("[data-id]").forEach(el=>el.addEventListener("click",()=>{
     selected=el.dataset.id;render();showDetail(S[selected]);}));
@@ -340,8 +343,10 @@ function showDetail(r){
       ${st("20일 이격도",r.disp20??'–')}${st("60일 이격도",r.disp60??'–')}${st("200일 이격도",r.disp200??'–')}
       ${st("RSI(14)",r.rsi,r.rsi>=70?'neg':r.rsi<=30?'pos':'')}
       ${st("52주 고점대비",(r.high52_pct??'–')+'%',sg(r.high52_pct))}
-      ${st("3개월 수익률",(r.ret3m>0?'+':'')+(r.ret3m??'–')+'%',sg(r.ret3m))}
-      ${st("6개월 수익률",(r.ret6m>0?'+':'')+(r.ret6m??'–')+'%',sg(r.ret6m))}
+      ${st("1D 수익률",r.ret1d==null?'–':(r.ret1d>0?'+':'')+r.ret1d+'%',sg(r.ret1d))}
+      ${st("7D 수익률",r.ret1w==null?'–':(r.ret1w>0?'+':'')+r.ret1w+'%',sg(r.ret1w))}
+      ${st("1M 수익률",r.ret1m==null?'–':(r.ret1m>0?'+':'')+r.ret1m+'%',sg(r.ret1m))}
+      ${st("3M 수익률",r.ret3m==null?'–':(r.ret3m>0?'+':'')+r.ret3m+'%',sg(r.ret3m))}
       ${st("120일선(하락전환선)",r.ma120==null?'–':(r.close>=r.ma120?'위 ✓':'이탈 ✕'),r.close>=(r.ma120||0)?'pos':'neg')}
       ${st("거래량비(20일평균)",(r.vol_ratio??'–')+'x')}</div>
     <div class="treasons">📐 추세 상태: <b style="color:${(TSC[r.trend_state]||['','var(--muted)'])[1]}">${r.trend_state||'-'}</b> — ${(r.trend_reasons||[]).join(' · ')||'—'}

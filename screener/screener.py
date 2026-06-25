@@ -416,6 +416,7 @@ def metrics(meta, df, relaxed=False, bench=0.0):
     dist20 = (last - v20) / v20 * 100 if pd.notna(v20) else None
     high52 = float(close.tail(252).max())
     low52 = float(close.tail(252).min())
+    r1d, r1w, r1m = pct_return(close, 1), pct_return(close, 5), pct_return(close, 21)
     vol = df.get("Volume")
     vr = None
     if vol is not None and len(vol) >= 20 and vol.tail(20).mean() > 0:
@@ -459,6 +460,9 @@ def metrics(meta, df, relaxed=False, bench=0.0):
         "vol_ratio": round(vr, 2) if vr else None,
         "elliott": ell, "elliott_note": note,
         "wyckoff": wyck, "wyckoff_note": wyck_note,
+        "ret1d": round(r1d * 100, 2) if r1d is not None else None,
+        "ret1w": round(r1w * 100, 1) if r1w is not None else None,
+        "ret1m": round(r1m * 100, 1) if r1m is not None else None,
         "ret3m": round(m3 * 100, 1), "ret6m": round(m6 * 100, 1),
         "trend_ok": bool(pd.notna(v200) and last > float(v200)),
         "bars": bars, "ma20s": arr(ma20), "ma60s": arr(ma60),
@@ -728,7 +732,7 @@ def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, grow
         deep = [stocks[i] for i in mk.get("deep_ids", [])]
         if deep:
             lines.append("· 심층 Top3: " + ", ".join(
-                f"{r['name']}({r.get('wyckoff','').split('(')[0].strip()}·{r['elliott']})" for r in deep))
+                f"{r['name']}(1M{r.get('ret1m',0):+.0f}%·{r.get('wyckoff','').split('(')[0].strip()})" for r in deep))
         watch_ids = set(mk.get("top_ids", [])) | {i for s in mk.get("sectors", []) for i in s["leader_ids"]}
         flip = [stocks[i]["name"] for i in watch_ids if stocks[i].get("trend_state") == "하락전환"]
         down = [stocks[i]["name"] for i in watch_ids if stocks[i].get("trend_state") == "하락추세"]
@@ -784,14 +788,18 @@ def write_outputs(payload):
             names = ", ".join(f"{payload['stocks'][i]['name']}({payload['stocks'][i]['code']})"
                               + ("🟢터치" if payload['stocks'][i]['touched'] else "") for i in s["leader_ids"])
             md.append(f"- **{s['sector']}** [{s['etf']} RS {s['etf_rs']}]: {names or '해당 없음'}")
-        md.append("\n### 트랙② 개별 RS Top10")
-        md.append("| RS# | 종목 | 코드 | 섹터 | 종가 | 20이격% | RSI | 눌림목 | 엘리어트 | 심층 |")
-        md.append("|---|---|---|---|---|---|---|---|---|---|")
+        fr = lambda v: "–" if v is None else f"{v:+.1f}"
+        fr2 = lambda v: "–" if v is None else f"{v:+.2f}"
+        md.append("\n### 트랙② 개별 RS Top10 (RS=지수 대비)")
+        md.append("| RS# | 종목 | 종가 | 1D% | 7D% | 1M% | 3M% | RS | 20MA% | RSI | 눌림목 | 추세 | 엘리어트 |")
+        md.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
         for i in mk.get("top_ids", []):
             r = payload["stocks"][i]
-            md.append(f"| {r['rs_rank']} | {r['name']} | {r['code']} | {r['sector']} | {r['close']:,} | "
-                      f"{r['dist20']:+.1f} | {r['rsi']} | {'터치' if r['touched'] else ('근접' if r['near'] else '–')} | "
-                      f"{r['elliott']} | {'★' if i in mk.get('deep_ids',[]) else ''} |")
+            pb = "터치" if r["touched"] else ("근접" if r["near"] else "–")
+            star = " ★" if i in mk.get("deep_ids", []) else ""
+            md.append(f"| {r['rs_rank']} | {r['name']}({r['code']}) | {r['close']:,} | "
+                      f"{fr2(r.get('ret1d'))} | {fr(r.get('ret1w'))} | {fr(r.get('ret1m'))} | {fr(r.get('ret3m'))} | "
+                      f"{r['rs']} | {r['dist20']:+.1f} | {r['rsi']} | {pb} | {r.get('trend_state','')} | {r['elliott']}{star} |")
         md.append("")
     text = "\n".join(md)
     with open(os.path.join(REPORT_DIR, f"momentum-2track-{payload['bar_date']}.md"), "w") as f:
