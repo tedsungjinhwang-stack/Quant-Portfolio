@@ -69,7 +69,28 @@ THEME_ETFS_US = {
             "MP", "ATI", "CMC"]},
     "XOP": {"label": "석유 E&P(XOP)", "members": ["COP", "EOG", "DVN", "FANG", "OXY", "HES", "APA",
             "CTRA", "MRO", "MTDR", "OVV"]},
+    "CIBR": {"label": "사이버보안(CIBR)", "members": ["CRWD", "PANW", "FTNT", "ZS", "NET", "OKTA",
+            "CYBR", "S", "GEN", "QLYS", "RPD", "TENB"]},
+    "ARKK": {"label": "혁신성장(ARKK)", "members": ["COIN", "ROKU", "RBLX", "HOOD", "PLTR", "DKNG",
+            "RKLB", "U", "TWLO", "PATH", "TTD", "SHOP"]},
+    "PAVE": {"label": "인프라(PAVE)", "members": ["PWR", "ETN", "URI", "VMC", "MLM", "FAST", "PH",
+            "AME", "EMR", "NUE"]},
+    "IYT": {"label": "운송(IYT)", "members": ["UPS", "FDX", "UBER", "CSX", "NSC", "ODFL", "DAL",
+            "UAL", "JBHT", "EXPD"]},
 }
+
+# 나스닥100 핵심 구성종목(유니버스 확장용). S&P500과 겹치면 자동 중복 제거.
+NASDAQ100 = [
+    "AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "GOOG", "AVGO", "TSLA", "COST",
+    "NFLX", "AMD", "PEP", "ADBE", "LIN", "CSCO", "TMUS", "INTU", "QCOM", "AMAT",
+    "TXN", "ISRG", "AMGN", "HON", "BKNG", "VRTX", "ADP", "REGN", "MU", "PANW",
+    "LRCX", "ADI", "KLAC", "SBUX", "MELI", "GILD", "SNPS", "CDNS", "PYPL", "MAR",
+    "CRWD", "CSX", "ORLY", "MRVL", "ASML", "ABNB", "FTNT", "DASH", "ADSK", "PCAR",
+    "ROP", "MNST", "CPRT", "WDAY", "NXPI", "TTD", "PAYX", "KDP", "ROST", "AEP",
+    "FAST", "ODFL", "CHTR", "DDOG", "EA", "VRSK", "CTAS", "EXC", "KHC", "GEHC",
+    "CCEP", "LULU", "BKR", "IDXX", "XEL", "CSGP", "ON", "TEAM", "ANSS", "DXCM",
+    "ZS", "CDW", "MCHP", "TTWO", "GFS", "BIIB", "ARM", "MDB", "WBD", "ILMN",
+]
 
 # 미국 원자재 ETF(주식 아님 → '대장주' 없음, ETF 자체를 RS·눌림목으로 추적)
 COMMODITY_ETFS = {
@@ -102,6 +123,19 @@ KR_SECTOR_ETFS = {
     "091180": {"label": "자동차", "members": ["005380", "000270", "012330", "011210", "204320"]},
     "117700": {"label": "건설", "members": ["000720", "028050", "047040", "006360", "375500"]},
     "140710": {"label": "운송", "members": ["086280", "011200", "003490", "000120"]},
+    "102960": {"label": "기계장비", "members": ["034020", "267260", "298040", "010120", "241560"]},
+    "117460": {"label": "에너지화학", "members": ["051910", "011170", "011780", "009830", "010950", "006650"]},
+    "140700": {"label": "보험", "members": ["032830", "000810", "005830", "001450", "000370"]},
+}
+
+# 신규 테마(KODEX ETF 코드가 영숫자라 yfinance 불안정 → 구성종목 RS 중앙값으로 섹터 강도 산출)
+KR_THEME_MEMBERS = {
+    "방산": ["012450", "047810", "079550", "064350", "272210", "042660"],
+    "조선": ["009540", "329180", "010140", "042660", "010620"],
+    "원자력": ["034020", "052690", "051600", "105840", "083650"],
+    "로봇·AI": ["277810", "454910", "108490", "056190"],
+    "게임": ["259960", "036570", "251270", "263750", "095660"],
+    "엔터·미디어": ["352820", "041510", "035900", "122870"],
 }
 
 REPORT_DIR = "reports"
@@ -772,6 +806,11 @@ def main():
         sys.exit(0)
     # 미국 테마 ETF 구성종목을 유니버스에 편입(S&P500에 없으면 추가)
     us_codes = {r["code"] for r in rows if r["market"] == "US"}
+    for sym in NASDAQ100:                       # 나스닥100 편입(S&P500과 겹치면 스킵)
+        if sym not in us_codes:
+            us_codes.add(sym)
+            rows.append({"market": "US", "code": sym, "yahoo": sym.replace(".", "-"),
+                         "name": sym, "sector": "Nasdaq100"})
     for info in THEME_ETFS_US.values():
         for sym in info["members"]:
             if sym not in us_codes:
@@ -780,13 +819,15 @@ def main():
                              "name": sym, "sector": info["label"]})
     # 한국 KODEX 섹터 ETF 구성종목 편입(suffix는 전체 상장목록에서 해석)
     kr_codes = {r["code"] for r in rows if r["market"] == "KR"}
-    for info in KR_SECTOR_ETFS.values():
-        for code in info["members"]:
+    kr_member_groups = ([(info["label"], info["members"]) for info in KR_SECTOR_ETFS.values()]
+                        + list(KR_THEME_MEMBERS.items()))
+    for label, members in kr_member_groups:
+        for code in members:
             if code not in kr_codes:
                 kr_codes.add(code)
                 lk = kr_lookup.get(code, {"suffix": ".KS", "name": code})
                 rows.append({"market": "KR", "code": code, "yahoo": f"{code}{lk['suffix']}",
-                             "name": lk["name"], "sector": info["label"]})
+                             "name": lk["name"], "sector": label})
 
     # 신규상장·성장주 워치리스트 (market, code, yahoo, name)
     watch = []
@@ -823,9 +864,18 @@ def main():
     us_units += [{"etf": etf, "label": info["label"], "kind": "theme",
                   "members": info["members"], "rs": etf_rs(etf)}
                  for etf, info in THEME_ETFS_US.items()]
-    kr_units = [{"etf": code, "label": info["label"], "kind": "theme",
-                 "members": info["members"], "rs": etf_rs(f"{code}.KS")}
+    rs_by_code = {r["code"]: r["_rs_raw"] for r in allrecs}
+    def member_median_rs(members):
+        vals = [rs_by_code[c] for c in members if c in rs_by_code]
+        return statistics.median(vals) if vals else None
+    # KODEX 섹터 ETF: ETF RS, 실패 시 구성종목 RS중앙값으로 폴백
+    kr_units = [{"etf": code, "label": info["label"], "kind": "theme", "members": info["members"],
+                 "rs": etf_rs(f"{code}.KS") if etf_rs(f"{code}.KS") is not None else member_median_rs(info["members"])}
                 for code, info in KR_SECTOR_ETFS.items()]
+    # 신규 테마: 구성종목 RS중앙값
+    kr_units += [{"etf": "(구성종목)", "label": label, "kind": "theme", "members": members,
+                  "rs": member_median_rs(members)}
+                 for label, members in KR_THEME_MEMBERS.items()]
     units_by_market = {"US": us_units, "KR": kr_units}
 
     # 원자재 ETF(주식 아님 → ETF 자체를 rec로)
