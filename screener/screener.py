@@ -83,20 +83,19 @@ INDEXES = {
     "KR": [("^KS11", "코스피"), ("^KQ11", "코스닥")],
 }
 
-# 한국: KODEX 섹터/테마 ETF를 FDR 목록에서 자동 수집할 때 쓰는 키워드
-KR_SECTOR_KEYWORDS = (
-    "반도체", "2차전지", "바이오", "헬스케어", "제약", "은행", "증권", "보험", "자동차",
-    "철강", "화학", "에너지", "건설", "운송", "조선", "기계", "미디어", "게임", "엔터",
-    "인터넷", "소프트웨어", "방산", "우주항공", "로봇", "원자력", "화장품", "음식료",
-    "유통", "항공", "K-", "콘텐츠", "전력",
-)
-# 섹터가 아닌 ETF(레버리지·채권·해외·팩터 등)를 걸러내는 블랙리스트
-KR_ETF_BLACK = (
-    "레버리지", "인버스", "채권", "국고", "단기", "금리", "통안", "달러", "엔", "미국", "차이나",
-    "중국", "일본", "유럽", "글로벌", "선진", "신흥", "인디아", "베트남", "리츠", "고배당", "배당",
-    "ESG", "TR", "선물", "원유", "골드", "은선물", "구리", "2X", "합성", "MSCI", "코스피200",
-    "코스닥150", "TOP", "밸류", "모멘텀", "퀄리티", "로우볼", "액티브", "혼합", "단기채",
-)
+# 한국 KODEX 섹터 ETF(코드는 yfinance .KS) + 대표 구성종목(대장주 후보).
+# KRX/pykrx 로그인 없이 동작하도록, ETF는 RS 랭킹용·구성종목은 직접 정의.
+KR_SECTOR_ETFS = {
+    "091160": {"label": "반도체", "members": ["005930", "000660", "042700", "240810", "357780", "058470", "095340"]},
+    "305720": {"label": "2차전지", "members": ["373220", "006400", "003670", "247540", "086520", "066970", "020150"]},
+    "244580": {"label": "바이오", "members": ["207940", "068270", "196170", "328130", "145020", "302440"]},
+    "091170": {"label": "은행", "members": ["105560", "055550", "086790", "316140", "138040", "024110"]},
+    "102970": {"label": "증권", "members": ["005940", "016360", "006800", "039490", "071050"]},
+    "117680": {"label": "철강", "members": ["005490", "004020", "103140", "014820"]},
+    "091180": {"label": "자동차", "members": ["005380", "000270", "012330", "011210", "204320"]},
+    "117700": {"label": "건설", "members": ["000720", "028050", "047040", "006360", "375500"]},
+    "140710": {"label": "운송", "members": ["086280", "011200", "003490", "000120"]},
+}
 
 REPORT_DIR = "reports"
 TEMPLATE = os.path.join(os.path.dirname(__file__), "dashboard_template.html")
@@ -124,6 +123,7 @@ def get_universe():
     except Exception as e:
         print(f"[universe] US 실패: {e}")
 
+    kr_lookup = {}   # 전체 상장 KR: code -> {suffix, name} (구성종목 suffix 해석용)
     try:
         frames = []
         for mkt, suffix in (("KOSPI", ".KS"), ("KOSDAQ", ".KQ")):
@@ -134,7 +134,10 @@ def get_universe():
         code_col = next((c for c in ("Code", "Symbol") if c in kr.columns), kr.columns[0])
         name_col = "Name" if "Name" in kr.columns else code_col
         cap_col = next((c for c in ("Marcap", "MarketCap", "Amount") if c in kr.columns), None)
-        sec_col = next((c for c in ("Sector", "Industry", "SectorName") if c in kr.columns), None)
+        for _, r in kr.iterrows():
+            code = str(r[code_col]).strip().zfill(6)
+            if code.isdigit():
+                kr_lookup[code] = {"suffix": r["_suffix"], "name": str(r.get(name_col, code))}
         if cap_col:
             kr = kr.sort_values(cap_col, ascending=False)
         kr = kr.head(CONFIG["kr_top_n"])
@@ -143,75 +146,11 @@ def get_universe():
             if not code.isdigit():
                 continue
             rows.append({"market": "KR", "code": code, "yahoo": f"{code}{r['_suffix']}",
-                         "name": str(r.get(name_col, code)),
-                         "sector": str(r[sec_col]) if sec_col else "N/A"})
+                         "name": str(r.get(name_col, code)), "sector": "N/A"})
         print(f"[universe] KR top{CONFIG['kr_top_n']}: {sum(1 for x in rows if x['market']=='KR')}")
     except Exception as e:
         print(f"[universe] KR 실패: {e}")
-    return rows
-
-
-# ----------------------------------------------------------------------
-# 한국 KODEX 섹터 ETF (자동 수집) + 구성종목
-# ----------------------------------------------------------------------
-def get_kr_sector_etfs():
-    """FDR ETF 목록에서 KODEX 섹터/테마 ETF만 골라 반환."""
-    import FinanceDataReader as fdr
-    try:
-        etf = fdr.StockListing("ETF/KR")
-    except Exception as e:
-        print(f"[kr-etf] 목록 실패: {e}")
-        return []
-    code_col = next((c for c in ("Symbol", "Code") if c in etf.columns), etf.columns[0])
-    name_col = "Name" if "Name" in etf.columns else etf.columns[1]
-    out, seen = [], set()
-    for _, r in etf.iterrows():
-        name = str(r[name_col]).strip()
-        code = str(r[code_col]).strip().zfill(6)
-        if not code.isdigit() or code in seen:
-            continue
-        if not name.upper().startswith("KODEX"):
-            continue
-        if not any(k in name for k in KR_SECTOR_KEYWORDS):
-            continue
-        if any(b in name for b in KR_ETF_BLACK):
-            continue
-        seen.add(code)
-        label = name.replace("KODEX", "").strip()
-        out.append({"code": code, "yahoo": f"{code}.KS", "name": name, "label": label})
-    print(f"[kr-etf] KODEX 섹터 ETF {len(out)}개 수집")
-    return out
-
-
-def kr_etf_holdings(code, top=12):
-    """pykrx로 ETF 구성종목 코드 목록(비중순). 실패 시 빈 리스트."""
-    try:
-        from pykrx import stock
-    except Exception as e:
-        print(f"[holdings] pykrx 없음: {e}")
-        return []
-    try:
-        d = stock.get_nearest_business_day_in_a_week()
-    except Exception:
-        d = dt.date.today().strftime("%Y%m%d")
-    pdf = None
-    for call in (lambda: stock.get_etf_portfolio_deposit_file(code),
-                 lambda: stock.get_etf_portfolio_deposit_file(d, code)):
-        try:
-            pdf = call()
-            if pdf is not None and len(pdf):
-                break
-        except Exception:
-            pdf = None
-    if pdf is None or not len(pdf):
-        return []
-    try:
-        wcol = next((c for c in ("비중", "weight", "Weight") if c in pdf.columns), None)
-        if wcol:
-            pdf = pdf.sort_values(wcol, ascending=False)
-        return [str(x).zfill(6) for x in pdf.index.tolist()[:top]]
-    except Exception:
-        return [str(x).zfill(6) for x in pdf.index.tolist()[:top]]
+    return rows, kr_lookup
 
 
 # ----------------------------------------------------------------------
@@ -338,7 +277,7 @@ def metrics(meta, df):
         return None
     close = df["Close"].astype(float)
     last = float(close.iloc[-1])
-    floor = CONFIG["min_price_usd"] if meta["market"] == "US" else CONFIG["min_price_krw"]
+    floor = CONFIG["min_price_krw"] if meta["market"] == "KR" else CONFIG["min_price_usd"]
     if last < floor:
         return None
     rs, m3, m6, m12 = rs_value(close)
@@ -481,63 +420,32 @@ def build_regime(allrecs, idx_map):
     return out
 
 
-def build_tracks(allrecs, us_units, kr_etfs, kr_etf_rs, holdings_fn):
+def build_tracks(allrecs, units_by_market):
+    """units_by_market = {'US':[unit...], 'KR':[unit...]}; unit={etf,label,kind,rs,members?}.
+       kind 'sector' = GICS 섹터태그로 대장주 매칭(미국 SPDR), 'theme' = 구성종목 리스트."""
     markets = {}
     for mkt in ("US", "KR"):
         recs = [r for r in allrecs if r["market"] == mkt and r["trend_ok"]]
         recs.sort(key=lambda r: r["_rs_raw"], reverse=True)
-        by_code = {r["code"]: r for r in recs}
 
-        # 트랙② 개별 Top N + 심층
         top = recs[: CONFIG["individual_top"]]
         for i, r in enumerate(top, 1):
             r["rs_rank"] = i
         deep_ids = [r["id"] for r in top[: CONFIG["deep_top"]]]
 
-        # 트랙① 강한 섹터/테마 → 대장주
         sectors = []
-        if mkt == "US":
-            ranked = sorted([u for u in us_units if u.get("rs") is not None],
-                            key=lambda u: u["rs"], reverse=True)
-            for u in ranked[: CONFIG["top_sectors"]]:
-                if u["kind"] == "sector":
-                    leaders = [r for r in recs if r["sector"] == u["label"]]
-                else:  # theme: 구성종목 리스트
-                    ms = set(u["members"])
-                    leaders = [r for r in recs if r["code"] in ms]
-                leaders = leaders[: CONFIG["leaders_per_sector"]]
-                sectors.append({"sector": u["label"], "etf": u["etf"], "kind": u["kind"],
-                                "etf_rs": round(u["rs"] * 100, 1),
-                                "leader_ids": [r["id"] for r in leaders]})
-
-        elif kr_etfs:
-            # KODEX 섹터 ETF를 RS로 랭킹 → 강한 섹터 → 구성종목 중 RS 상위 대장주
-            ranked = sorted([e for e in kr_etfs if kr_etf_rs.get(e["yahoo"]) is not None],
-                            key=lambda e: kr_etf_rs[e["yahoo"]], reverse=True)
-            for e in ranked[: CONFIG["top_sectors"]]:
-                holds = holdings_fn(e["code"])
-                leaders = [by_code[c] for c in holds if c in by_code]
-                if not leaders:  # 폴백: ETF 이름 키워드로 섹터태그 매칭
-                    kw = next((k for k in KR_SECTOR_KEYWORDS if k in e["name"]), None)
-                    if kw:
-                        leaders = [r for r in recs if kw in (r["sector"] or "") or kw in r["name"]]
-                leaders = leaders[: CONFIG["leaders_per_sector"]]
-                sectors.append({"sector": e["label"], "etf": e["code"],
-                                "etf_rs": round(kr_etf_rs[e["yahoo"]] * 100, 1),
-                                "leader_ids": [r["id"] for r in leaders]})
-        else:
-            # 최종 폴백: 섹터태그 RS 중앙값 집계
-            groups = {}
-            for r in recs:
-                if r["sector"] and r["sector"] != "N/A":
-                    groups.setdefault(r["sector"], []).append(r)
-            scored = [(sec, statistics.median([x["_rs_raw"] for x in g]))
-                      for sec, g in groups.items() if len(g) >= CONFIG["kr_sector_min"]]
-            scored.sort(key=lambda x: x[1], reverse=True)
-            for sec, score in scored[: CONFIG["top_sectors"]]:
-                leaders = groups[sec][: CONFIG["leaders_per_sector"]]
-                sectors.append({"sector": sec, "etf": "(섹터태그 집계)", "etf_rs": round(score * 100, 1),
-                                "leader_ids": [r["id"] for r in leaders]})
+        ranked = sorted([u for u in units_by_market.get(mkt, []) if u.get("rs") is not None],
+                        key=lambda u: u["rs"], reverse=True)
+        for u in ranked[: CONFIG["top_sectors"]]:
+            if u["kind"] == "sector":
+                leaders = [r for r in recs if r["sector"] == u["label"]]
+            else:  # 구성종목 리스트(미국 테마 / 한국 KODEX 섹터)
+                ms = set(u.get("members", []))
+                leaders = [r for r in recs if r["code"] in ms]
+            leaders = leaders[: CONFIG["leaders_per_sector"]]
+            sectors.append({"sector": u["label"], "etf": u["etf"], "kind": u["kind"],
+                            "etf_rs": round(u["rs"] * 100, 1),
+                            "leader_ids": [r["id"] for r in leaders]})
 
         markets[mkt] = {"sectors": sectors, "top_ids": [r["id"] for r in top], "deep_ids": deep_ids}
     return markets
@@ -669,11 +577,11 @@ def write_outputs(payload):
 
 
 def main():
-    rows = get_universe()
+    rows, kr_lookup = get_universe()
     if not rows:
         send_telegram("⚠️ 스크리너: 유니버스 수집 실패.")
         sys.exit(0)
-    # 테마 ETF 구성종목을 미국 유니버스에 자동 편입(S&P500에 없으면 추가)
+    # 미국 테마 ETF 구성종목을 유니버스에 편입(S&P500에 없으면 추가)
     us_codes = {r["code"] for r in rows if r["market"] == "US"}
     for info in THEME_ETFS_US.values():
         for sym in info["members"]:
@@ -681,12 +589,21 @@ def main():
                 us_codes.add(sym)
                 rows.append({"market": "US", "code": sym, "yahoo": sym.replace(".", "-"),
                              "name": sym, "sector": info["label"]})
+    # 한국 KODEX 섹터 ETF 구성종목 편입(suffix는 전체 상장목록에서 해석)
+    kr_codes = {r["code"] for r in rows if r["market"] == "KR"}
+    for info in KR_SECTOR_ETFS.values():
+        for code in info["members"]:
+            if code not in kr_codes:
+                kr_codes.add(code)
+                lk = kr_lookup.get(code, {"suffix": ".KS", "name": code})
+                rows.append({"market": "KR", "code": code, "yahoo": f"{code}{lk['suffix']}",
+                             "name": lk["name"], "sector": info["label"]})
 
-    kr_etfs = get_kr_sector_etfs()
     index_tickers = {t for lst in INDEXES.values() for t, _ in lst}
+    kr_etf_yahoos = {f"{c}.KS" for c in KR_SECTOR_ETFS}
     symbols = ({r["yahoo"] for r in rows} | set(SECTOR_ETFS_US.keys())
                | set(THEME_ETFS_US.keys()) | set(COMMODITY_ETFS.keys())
-               | index_tickers | {e["yahoo"] for e in kr_etfs})
+               | index_tickers | kr_etf_yahoos)
     data = download_prices(symbols)
     bar_date = latest_bar_date(data)
 
@@ -703,15 +620,16 @@ def main():
         v, *_ = rs_value(df["Close"].astype(float))
         return v
 
-    # 미국 섹터/테마 유닛(한 풀에서 RS 랭킹)
-    us_units = []
-    for etf, sec in SECTOR_ETFS_US.items():
-        us_units.append({"etf": etf, "label": sec, "kind": "sector", "rs": etf_rs(etf)})
-    for etf, info in THEME_ETFS_US.items():
-        us_units.append({"etf": etf, "label": info["label"], "kind": "theme",
-                         "members": info["members"], "rs": etf_rs(etf)})
-
-    kr_etf_rs = {e["yahoo"]: etf_rs(e["yahoo"]) for e in kr_etfs}
+    # 섹터/테마 유닛(시장별 한 풀에서 RS 랭킹)
+    us_units = [{"etf": etf, "label": sec, "kind": "sector", "rs": etf_rs(etf)}
+                for etf, sec in SECTOR_ETFS_US.items()]
+    us_units += [{"etf": etf, "label": info["label"], "kind": "theme",
+                  "members": info["members"], "rs": etf_rs(etf)}
+                 for etf, info in THEME_ETFS_US.items()]
+    kr_units = [{"etf": code, "label": info["label"], "kind": "theme",
+                 "members": info["members"], "rs": etf_rs(f"{code}.KS")}
+                for code, info in KR_SECTOR_ETFS.items()]
+    units_by_market = {"US": us_units, "KR": kr_units}
 
     # 원자재 ETF(주식 아님 → ETF 자체를 rec로)
     commodities = []
@@ -722,7 +640,7 @@ def main():
             commodities.append(rec)
     commodities.sort(key=lambda r: r["_rs_raw"], reverse=True)
     print(f"[result] 종목 {len(allrecs)} · US유닛 {sum(1 for u in us_units if u['rs'] is not None)} "
-          f"· KR섹터ETF {sum(1 for v in kr_etf_rs.values() if v is not None)} · 원자재 {len(commodities)}")
+          f"· KR유닛 {sum(1 for u in kr_units if u['rs'] is not None)} · 원자재 {len(commodities)}")
 
     idx_map = {}
     for mkt, lst in INDEXES.items():
@@ -733,7 +651,7 @@ def main():
     regime = build_regime(allrecs, idx_map)
     print(f"[regime] US={regime['US']['label']} KR={regime['KR']['label']}")
 
-    markets = build_tracks(allrecs, us_units, kr_etfs, kr_etf_rs, kr_etf_holdings)
+    markets = build_tracks(allrecs, units_by_market)
     stocks = collect_selected(markets, allrecs)
     for rec in commodities:  # 원자재를 stocks에 추가(상세 차트용)
         c = dict(rec); c.pop("_rs_raw", None); c.setdefault("rs_rank", 0)
