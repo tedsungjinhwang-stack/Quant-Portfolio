@@ -36,7 +36,7 @@ CONFIG = {
     "deep_top": 3,               # 트랙② 심층 분석 수
     "hot_top_n": 8,              # 핫한 종목(거래량 급증+단기 모멘텀) 상위 N
     "kr_sector_min": 3,          # KR 섹터 집계 최소 종목 수
-    "proximity_pct": 1.0,
+    "proximity_pct": 2.0,
     "kr_top_n": 250,
     "min_price_usd": 5.0,
     "min_price_krw": 2000,
