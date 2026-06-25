@@ -33,6 +33,7 @@ CONFIG = {
     "leaders_per_sector": 2,     # 트랙① 섹터별 대장주 수
     "individual_top": 10,        # 트랙② 개별 Top N
     "deep_top": 3,               # 트랙② 심층 분석 수
+    "hot_top_n": 8,              # 핫한 종목(거래량 급증+단기 모멘텀) 상위 N
     "kr_sector_min": 3,          # KR 섹터 집계 최소 종목 수
     "proximity_pct": 1.0,
     "kr_top_n": 250,
@@ -104,12 +105,8 @@ INDEXES = {
     "KR": [("^KS11", "코스피"), ("^KQ11", "코스닥")],
 }
 
-# 신규상장·성장주 워치리스트 (직접 추가/삭제). RS·240일선이 없어도 완화 지표로 추적.
-# US: 야후 티커 그대로 / KR: 6자리 코드(.KS/.KQ 자동). ※ 아래는 예시 — 본인 관심종목으로 교체.
-WATCHLIST = {
-    "US": ["SPCX", "PLTR", "RDDT", "ARM", "APP", "HOOD", "SMCI", "ASTS", "CRWV"],
-    "KR": [],
-}
+# 핫한 종목은 수동 리스트 없이 유니버스 전체에서 자동 발굴(거래량 급증 + 단기 모멘텀).
+# → hot_score() 참고. 별도 워치리스트 불필요.
 
 # 한국 KODEX 섹터 ETF(코드는 yfinance .KS) + 대표 구성종목(대장주 후보).
 # KRX/pykrx 로그인 없이 동작하도록, ETF는 RS 랭킹용·구성종목은 직접 정의.
@@ -638,37 +635,25 @@ def build_seasonality(monthly, month):
 
 
 # ----------------------------------------------------------------------
-# 신규상장 · 성장주
+# 핫한 종목(거래량 급증 + 단기 모멘텀)
 # ----------------------------------------------------------------------
-def fundamentals(sym):
-    """yfinance에서 매출·이익 성장률(분수). 실패 시 (None, None)."""
-    try:
-        import yfinance as yf
-        info = yf.Ticker(sym).get_info()
-        rg = info.get("revenueGrowth")
-        eg = info.get("earningsGrowth") or info.get("earningsQuarterlyGrowth")
-        return (float(rg) if rg is not None else None,
-                float(eg) if eg is not None else None)
-    except Exception:
-        return (None, None)
-
-
-def growth_score(rec, rev_g, earn_g):
-    """가격 모멘텀 + 신고가 + 거래량 + (선택)펀더멘털 → 0~100 성장 점수."""
-    s = 50.0
-    if rec.get("ret3m") is not None:
-        s += max(-20, min(30, rec["ret3m"] * 0.4))          # 3개월 모멘텀
-    if rec.get("high52_pct") is not None and rec["high52_pct"] >= -3:
-        s += 8                                              # 신고가 근접/갱신
-    if rec.get("vol_ratio") and rec["vol_ratio"] >= 1.5:
-        s += 6                                              # 거래량 급증
-    if rev_g is not None:
-        s += max(-10, min(20, rev_g * 100 * 0.4))           # 매출 성장률
-    if earn_g is not None:
-        s += max(-6, min(12, earn_g * 100 * 0.15))          # 이익 성장률
+def hot_score(rec):
+    """지금 '뜨거운' 정도 → 0~100. 거래량 급증 + 단기 모멘텀(1주·1개월) + 신고가 근접 결합.
+    유니버스 전체 종목에 대해 계산하고 상위 N개를 핫한 종목으로 노출(수동 리스트 없음)."""
+    s = 0.0
+    vr = rec.get("vol_ratio")
+    if vr:
+        s += max(0.0, min(35.0, (vr - 1.0) * 30.0))      # 거래량 20일평균比(2배=+30, 2.17배=+35)
+    if rec.get("ret1w") is not None:
+        s += max(-10.0, min(30.0, rec["ret1w"] * 2.0))   # 1주 모멘텀(+15%=+30)
+    if rec.get("ret1m") is not None:
+        s += max(-8.0, min(20.0, rec["ret1m"] * 0.6))    # 1개월 모멘텀(+33%=+20)
+    h = rec.get("high52_pct")
+    if h is not None:
+        s += max(0.0, min(15.0, (h + 10.0) * 1.5))       # 신고가 근접(0%=+15, -10%↓=0)
     if rec.get("trend_state") in ("하락전환", "하락추세"):
-        s -= 12
-    return round(max(0, min(100, s)), 1)
+        s -= 15.0                                        # 추세 꺾인 급등은 감점
+    return round(max(0.0, min(100.0, s)), 1)
 
 
 def build_tracks(allrecs, units_by_market):
@@ -728,7 +713,7 @@ def latest_bar_date(data):
         return dt.date.today().isoformat()
 
 
-def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, growth_ids=(), seasonality=None):
+def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, hot_ids=(), seasonality=None):
     regime = regime or {}
     seasonality = seasonality or {}
     flag = lambda m: "🟢" if m == "US" else "🔵"
@@ -783,10 +768,10 @@ def build_message(markets, stocks, bar_date, commodity_ids=(), regime=None, grow
         lines.append("\n🟡 <b>원자재(RS 상위)</b>: " +
                      ", ".join(f"{stocks[i]['name'].split('(')[0]}{'🟢풀백' if stocks[i]['touched'] else ''}"
                                for i in commodity_ids[:5]))
-    if growth_ids:
-        lines.append("\n🚀 <b>성장주/신규 워치</b>: " +
-                     ", ".join(f"{stocks[i]['name']}(점수{stocks[i].get('growth_score','-')}"
-                               f"{'·신규' if stocks[i].get('is_new') else ''})" for i in growth_ids[:6]))
+    if hot_ids:
+        lines.append("\n🔥 <b>핫한 종목(거래량·단기급등)</b>: " +
+                     ", ".join(f"{stocks[i]['name']}(점수{stocks[i].get('hot_score','-')}"
+                               f"{'·신규상장' if stocks[i].get('is_new') else ''})" for i in hot_ids[:6]))
     lines.append(f"\n<i>📊 전체 차트·기술적 분석 → {DASHBOARD_URL}\n무료 지연 종가 · RS=지수 대비 상대강도</i>")
     return "\n".join(lines)
 
@@ -882,19 +867,11 @@ def main():
                 rows.append({"market": "KR", "code": code, "yahoo": f"{code}{lk['suffix']}",
                              "name": lk["name"], "sector": label})
 
-    # 신규상장·성장주 워치리스트 (market, code, yahoo, name)
-    watch = []
-    for code in WATCHLIST.get("US", []):
-        watch.append(("US", code, code.replace(".", "-"), code))
-    for code in WATCHLIST.get("KR", []):
-        lk = kr_lookup.get(code, {"suffix": ".KS", "name": code})
-        watch.append(("KR", code, f"{code}{lk['suffix']}", lk["name"]))
-
     index_tickers = {t for lst in INDEXES.values() for t, _ in lst}
     kr_etf_yahoos = {f"{c}.KS" for c in KR_SECTOR_ETFS}
     symbols = ({r["yahoo"] for r in rows} | set(SECTOR_ETFS_US.keys())
                | set(THEME_ETFS_US.keys()) | set(COMMODITY_ETFS.keys())
-               | index_tickers | kr_etf_yahoos | {y for _, _, y, _ in watch})
+               | index_tickers | kr_etf_yahoos)
     data = download_prices(symbols)
     bar_date = latest_bar_date(data)
 
@@ -949,23 +926,16 @@ def main():
             commodities.append(rec)
     commodities.sort(key=lambda r: r["_rs_raw"], reverse=True)
 
-    # 성장주/신규상장 워치(완화 지표 + 펀더멘털)
-    growth = []
-    for mkt, code, yahoo, name in watch:
-        rec = metrics({"market": mkt, "code": code, "name": name, "sector": "성장주/신규"},
-                      ohlc_for(data, yahoo), relaxed=True, bench=bench_rs.get(mkt, 0.0))
-        if not rec:
-            continue
-        rev_g, earn_g = fundamentals(yahoo)
-        rec["rev_growth"] = round(rev_g * 100, 1) if rev_g is not None else None
-        rec["earn_growth"] = round(earn_g * 100, 1) if earn_g is not None else None
-        rec["growth_score"] = growth_score(rec, rev_g, earn_g)
-        rec.pop("_rs_raw", None)
-        rec["rs_rank"] = 0
-        growth.append(rec)
-    growth.sort(key=lambda r: r["growth_score"], reverse=True)
+    # 핫한 종목: 유니버스 전체에서 거래량 급증 + 단기 모멘텀 점수화 → 상위 N(시장별)
+    for rec in allrecs:
+        rec["hot_score"] = hot_score(rec)
+    hot = []
+    for mkt in ("US", "KR"):
+        cand = sorted((r for r in allrecs if r["market"] == mkt),
+                      key=lambda r: r["hot_score"], reverse=True)
+        hot += cand[: CONFIG["hot_top_n"]]
     print(f"[result] 종목 {len(allrecs)} · US유닛 {sum(1 for u in us_units if u['rs'] is not None)} "
-          f"· KR유닛 {sum(1 for u in kr_units if u['rs'] is not None)} · 원자재 {len(commodities)} · 성장주 {len(growth)}")
+          f"· KR유닛 {sum(1 for u in kr_units if u['rs'] is not None)} · 원자재 {len(commodities)} · 핫 {len(hot)}")
 
     idx_map = {}
     for mkt, lst in INDEXES.items():
@@ -993,12 +963,12 @@ def main():
     for rec in commodities:  # 원자재를 stocks에 추가(상세 차트용)
         c = dict(rec); c.pop("_rs_raw", None); c.setdefault("rs_rank", 0)
         stocks[c["id"]] = c
-    for rec in growth:       # 성장주/신규를 stocks에 추가(이미 대장주면 성장 필드만 병합)
+    for rec in hot:          # 핫한 종목을 stocks에 추가(이미 선택됐으면 hot_score만 병합)
         if rec["id"] in stocks:
-            stocks[rec["id"]].update({k: rec[k] for k in
-                ("growth_score", "rev_growth", "earn_growth", "is_new", "days")})
+            stocks[rec["id"]].update({k: rec[k] for k in ("hot_score", "is_new", "days")})
         else:
-            stocks[rec["id"]] = rec
+            c = dict(rec); c.pop("_rs_raw", None); c.setdefault("rs_rank", 0)
+            stocks[rec["id"]] = c
     payload = {
         "bar_date": bar_date,
         "generated_at": dt.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
@@ -1008,14 +978,14 @@ def main():
         "regime": regime, "seasonality": seasonality,
         "markets": markets, "stocks": stocks,
         "commodities": [c["id"] for c in commodities],
-        "growth": [g["id"] for g in growth],
+        "hot": [h["id"] for h in hot],
         "counts": {"stocks": len(stocks),
                    "touched": sum(1 for r in stocks.values() if r["touched"]),
                    "near": sum(1 for r in stocks.values() if r["near"])},
     }
     write_outputs(payload)
     send_telegram(build_message(markets, stocks, bar_date, payload["commodities"], regime,
-                                payload["growth"], seasonality))
+                                payload["hot"], seasonality))
     print("[done]")
 
 

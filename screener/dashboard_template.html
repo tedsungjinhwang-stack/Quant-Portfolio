@@ -155,9 +155,9 @@
           </tr></thead><tbody id="top10"></tbody></table>
         </div>
       </div>
-      <div class="panel" id="growthPanel" style="margin-top:14px;display:none">
-        <div class="ttl"><span class="tk" style="background:#1f3a2c;color:#3ddc97">성장주</span> 성장주/신규상장 워치 <small>완화 지표 + 펀더멘털(매출/이익 성장)</small></div>
-        <div class="secrow" id="growth"></div>
+      <div class="panel" id="hotPanel" style="margin-top:14px;display:none">
+        <div class="ttl"><span class="tk" style="background:#3a2420;color:#ff7a59">핫</span> 핫한 종목 <small>유니버스 전체 자동 발굴 · 거래량 급증 + 단기 급등(1주·1개월) + 신고가 근접</small></div>
+        <div class="secrow" id="hot"></div>
       </div>
       <div class="panel" id="cmdPanel" style="margin-top:14px;display:none">
         <div class="ttl"><span class="tk" style="background:#3a3320;color:#ffce5a">원자재</span> 강한 원자재 <small>ETF 자체 RS·20MA 눌림목 (대장주 없음)</small></div>
@@ -192,7 +192,7 @@ function stk(o){const b=makeBars(o.seed,130,o.start);return{id:o.market+":"+o.co
   ret1d:(o.r1d??1.1),ret1w:(o.r1w??3.2),ret1m:(o.r1m??8.5),ret3m:o.r3,ret6m:o.r6,ret1y:(o.r1y??52),ret_ytd:(o.rytd??24),rs:o.rs,rs_rank:o.rank,
   trend_state:o.ts||"추세유지",trend_reasons:o.tr||["120·60·20일선 위 · 스윙 저점 유지"],
   wyckoff:o.wy||"상승 추세 (Markup)",wyckoff_note:o.wn||"주요 이벤트 미감지",
-  growth_score:o.gs,rev_growth:o.rg,earn_growth:o.eg,is_new:o.new,days:o.days,
+  hot_score:o.hs,is_new:o.new,days:o.days,
   bars:b,ma20s:MA(b,20),ma60s:MA(b,60),ma120s:MA(b,45),ma200s:MA(b,90)};}
 if(!DATA){
   const mk=(arr)=>{const s={};arr.forEach(r=>s[r.id]=r);return s;};
@@ -216,13 +216,13 @@ if(!DATA){
     stk({market:"CMD",code:"CPER",name:"구리(CPER)",sector:"원자재",rank:0,t:1,d20:0.1,d60:103,d200:109,rsi:51,h52:-4.0,vr:1.3,ell:"2파 조정 추정",note:"되돌림 진행(추정)",r3:7,r6:14,rs:12,seed:15,start:28}),
     stk({market:"CMD",code:"URA",name:"우라늄(URA)",sector:"원자재",rank:0,d20:5.5,d60:112,d200:131,rsi:66,h52:-0.8,vr:1.0,ell:"3파 상승 추정",note:"상승 진행(추정)",r3:21,r6:39,rs:33,seed:16,start:25}),
   ];
-  const GR=[
-    stk({market:"US",code:"ARMX",name:"가상ARM",sector:"성장주/신규",rank:0,d20:2.1,d60:118,d200:145,rsi:61,h52:-8,vr:1.8,ell:"3파 상승 추정",note:"상승 진행(추정)",r3:88,r6:140,rs:60,seed:21,start:30,gs:92.0,rg:24.5,eg:51.0,new:false,days:330,ts:"주의",tr:["고점 낮아짐"]}),
-    stk({market:"US",code:"NEWIPO",name:"가상신규IPO",sector:"성장주/신규",rank:0,t:1,d20:0.4,d60:112,d200:112,rsi:55,h52:-5,vr:2.6,ell:"1파 형성 추정",note:"막 반등 시작(추정)",r3:35,r6:35,rs:35,seed:22,start:20,gs:81.0,rg:62.0,eg:null,new:true,days:38,ts:"추세유지"}),
+  const HOT=[
+    stk({market:"US",code:"HOTA",name:"가상급등주",sector:"Information Technology",rank:0,d20:2.1,d60:118,d200:145,rsi:68,h52:-1.0,vr:3.2,ell:"3파 상승 추정",note:"상승 진행(추정)",r1w:14.2,r1m:31,r3:88,r6:140,rs:60,seed:21,start:30,hs:94.0,new:false,days:330}),
+    stk({market:"US",code:"HOTB",name:"가상신규IPO",sector:"Communication Services",rank:0,t:1,d20:0.4,d60:112,d200:112,rsi:62,h52:-3,vr:2.6,ell:"1파 진행 추정",note:"막 반등 시작(추정)",r1w:9.5,r1m:22,r3:35,r6:35,rs:35,seed:22,start:20,hs:82.0,new:true,days:38}),
   ];
-  const stocks=mk([...US,...KR,...CMD,...GR]);
+  const stocks=mk([...US,...KR,...CMD,...HOT]);
   DATA={demo:true,bar_date:"예시",generated_at:"예시 데이터",config:{zigzag_pct:7},
-    commodities:CMD.map(r=>r.id), growth:GR.map(r=>r.id),
+    commodities:CMD.map(r=>r.id), hot:HOT.map(r=>r.id),
     regime:{
       US:{label:"추세유지",color:"green",premise:"상승 추세 견조 — 다수 종목이 240일선 위, 신고가 우위. 눌림목 매수 우호.",
         exposure:{stance:"적극 투자",equity:"80~100%",cash:"0~20%"},
@@ -314,18 +314,18 @@ function render(){
       <div class="er">${s.etf} · RS <b>${s.etf_rs}</b></div>${ld}</div>`;}).join("")
     || '<div class="empty">섹터 데이터 없음</div>';
 
-  // 성장주/신규상장 워치(현재 시장)
-  const grs=(DATA.growth||[]).map(id=>S[id]).filter(Boolean).filter(r=>r.market===market);
-  const gp=$("growthPanel");
-  if(grs.length){
-    gp.style.display="";
-    $("growth").innerHTML=grs.map(r=>`
+  // 핫한 종목(현재 시장) — 거래량 급증 + 단기 급등 자동 발굴
+  const hts=(DATA.hot||[]).map(id=>S[id]).filter(Boolean).filter(r=>r.market===market);
+  const hp=$("hotPanel");
+  if(hts.length){
+    hp.style.display="";
+    $("hot").innerHTML=hts.map(r=>`
       <div class="seccard" style="padding:10px"><div class="ldr ${selected===r.id?'sel':''}" data-id="${r.id}" style="padding:2px">
-        <span class="nm"><b>${r.name}</b> ${r.is_new?'<span class="bdg cau">신규</span>':''} ${tsBadge(r.trend_state)}</span>
-        <span class="rk">점수 ${r.growth_score??'-'}</span></div>
-        <div class="er" style="margin-top:5px">매출성장 ${r.rev_growth==null?'–':r.rev_growth+'%'} · 신고가 ${r.high52_pct==null?'–':r.high52_pct+'%'} · 3M ${r.ret3m==null?'–':(r.ret3m>0?'+':'')+r.ret3m+'%'}</div>
+        <span class="nm"><b>${r.name}</b> ${r.is_new?'<span class="bdg cau">신규상장</span>':''} ${tsBadge(r.trend_state)}</span>
+        <span class="rk">🔥 ${r.hot_score??'-'}</span></div>
+        <div class="er" style="margin-top:5px">거래량 ${r.vol_ratio==null?'–':'x'+r.vol_ratio} · 1주 ${r.ret1w==null?'–':(r.ret1w>0?'+':'')+r.ret1w+'%'} · 신고가 ${r.high52_pct==null?'–':r.high52_pct+'%'}</div>
       </div>`).join("");
-  } else { gp.style.display="none"; }
+  } else { hp.style.display="none"; }
 
   // 원자재(미국 보기에서만)
   const cmds=(DATA.commodities||[]).map(id=>S[id]).filter(Boolean);
@@ -401,7 +401,7 @@ function showDetail(r){
       ${st("거래량비(20일평균)",(r.vol_ratio??'–')+'x')}</div>
     <div class="treasons">📐 추세 상태: <b style="color:${(TSC[r.trend_state]||['','var(--muted)'])[1]}">${r.trend_state||'-'}</b> — ${(r.trend_reasons||[]).join(' · ')||'—'}
       <div style="color:#6a7180;margin-top:3px">하락전환 = 20MA 이탈 + 직전 스윙 저점 이탈(둘 다) · 하락추세 = 120선 이탈 · 20MA 위 지지 중이면 정상 눌림목/주의</div></div>
-    ${r.growth_score!=null?`<div class="treasons" style="border-left:3px solid var(--up)">🚀 성장 점수 <b style="color:var(--up)">${r.growth_score}</b> · 매출성장 ${r.rev_growth==null?'–':r.rev_growth+'%'} · 이익성장 ${r.earn_growth==null?'–':r.earn_growth+'%'} · 상장후 ${r.days??'?'}거래일${r.is_new?' · <b style="color:var(--near)">신규상장(데이터 짧음)</b>':''}</div>`:''}
+    ${r.hot_score!=null?`<div class="treasons" style="border-left:3px solid #ff7a59">🔥 핫 점수 <b style="color:#ff7a59">${r.hot_score}</b> · 거래량 ${r.vol_ratio==null?'–':'20일평균 x'+r.vol_ratio} · 1주 ${r.ret1w==null?'–':(r.ret1w>0?'+':'')+r.ret1w+'%'} · 1개월 ${r.ret1m==null?'–':(r.ret1m>0?'+':'')+r.ret1m+'%'} · 신고가 ${r.high52_pct==null?'–':r.high52_pct+'%'}${r.is_new?' · <b style="color:var(--near)">신규상장(상장후 '+(r.days??'?')+'거래일)</b>':''}</div>`:''}
     <div class="ellbox">🌀 <b>엘리어트 파동(추정): ${r.elliott}</b><br>${r.elliott_note||''}
       <div class="caveat">※ 엘리어트는 분석자마다 카운팅이 달라지는 주관적 기법입니다. 위 라벨은 지그재그 스윙(±${(DATA.config&&DATA.config.zigzag_pct)||7}%) 기반 <b>알고리즘 추정</b>이며, 차트로 직접 카운팅해 확인하세요.</div></div>
     ${r.wyckoff?`<div class="ellbox" style="border-left-color:#b08cff">🔍 <b>와이코프 국면(추정): ${r.wyckoff}</b><br>${r.wyckoff_note||''}
