@@ -18,6 +18,7 @@
 
 import os
 import sys
+import re
 import json
 import statistics
 import datetime as dt
@@ -738,6 +739,68 @@ def attach_consensus(stocks):
     return got
 
 
+# 네이버 리포트 투자의견(한/영 혼재) → 한글 6단계
+OPINION_NORM = {
+    "적극매수": "적극매수", "강력매수": "적극매수", "strongbuy": "적극매수",
+    "매수": "매수", "buy": "매수",
+    "비중확대": "비중확대", "outperform": "비중확대", "overweight": "비중확대",
+    "중립": "중립", "hold": "중립", "neutral": "중립", "marketperform": "중립",
+    "비중축소": "비중축소", "underperform": "비중축소", "underweight": "비중축소", "reduce": "비중축소",
+    "매도": "매도", "sell": "매도",
+}
+
+
+def _opinion_norm(op):
+    if not op:
+        return None
+    k = op.replace(" ", "").lower()
+    return OPINION_NORM.get(k) or (None if op in ("없음", "-", "N/A") else op)
+
+
+def consensus_detail(code, cap=25):
+    """한국 종목의 증권사별 컨센서스(목표가·투자의견 시계열). 네이버 리서치 + 리포트 상세 파싱.
+    반환: {reports:[{broker,date,target,opinion,title}], count, with_target,
+           mean, median, high, low, high_broker, low_broker, dist:{의견:건수}} 또는 None."""
+    import requests, statistics
+    mh = {"User-Agent": "Mozilla/5.0 (iPhone)", "Referer": "https://m.stock.naver.com/"}
+    ph = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "Referer": "https://finance.naver.com/research/"}
+    try:
+        lst = requests.get(f"https://m.stock.naver.com/api/research/stock/{code}?pageSize={cap}&page=1",
+                           headers=mh, timeout=10).json()
+    except Exception:
+        return None
+    reports = []
+    for it in lst:
+        rep = {"broker": it.get("brokerName"), "date": it.get("writeDate"), "title": it.get("title")}
+        try:
+            html = requests.get(f"https://finance.naver.com/research/company_read.naver?nid={it['researchId']}",
+                                headers=ph, timeout=10).content.decode("euc-kr", "replace")
+            mt = re.search(r'class="money"><strong>([\d,]+)', html)
+            mo = re.search(r'class="coment">\s*([^<]+?)\s*<', html)
+            if mt:
+                rep["target"] = int(mt.group(1).replace(",", ""))
+            op = _opinion_norm(mo.group(1).strip() if mo else None)
+            if op:
+                rep["opinion"] = op
+        except Exception:
+            pass
+        reports.append(rep)
+    tg = [r["target"] for r in reports if r.get("target")]
+    if not tg:
+        return None
+    hi = max(reports, key=lambda r: r.get("target", -1))
+    lo = min((r for r in reports if r.get("target")), key=lambda r: r["target"])
+    dist = {}
+    for r in reports:
+        if r.get("opinion"):
+            dist[r["opinion"]] = dist.get(r["opinion"], 0) + 1
+    return {"reports": reports, "count": len(reports), "with_target": len(tg),
+            "mean": round(statistics.mean(tg)), "median": round(statistics.median(tg)),
+            "high": max(tg), "low": min(tg),
+            "high_broker": hi.get("broker"), "low_broker": lo.get("broker"), "dist": dist}
+
+
 def build_tracks(allrecs, units_by_market):
     """units_by_market = {'US':[unit...], 'KR':[unit...]}; unit={etf,label,kind,rs,members?}.
        kind 'sector' = GICS 섹터태그로 대장주 매칭(미국 SPDR), 'theme' = 구성종목 리스트."""
@@ -1061,6 +1124,17 @@ def main():
     consensus_ids = attach_consensus(stocks)
     print(f"[consensus] {len(consensus_ids)}종목 목표가 부착(상승여력 내림차순)")
 
+    # 핵심 한국 딥 Top3만 증권사별 풀 컨센서스(시계열·의견분포) 수집
+    cons_detail = {}
+    for sid in markets.get("KR", {}).get("deep_ids", []):
+        code = stocks.get(sid, {}).get("code")
+        if not code:
+            continue
+        d = consensus_detail(code)
+        if d:
+            cons_detail[sid] = d
+    print(f"[consensus] 한국 딥 {len(cons_detail)}종목 증권사별 시계열 수집")
+
     payload = {
         "bar_date": bar_date,
         "generated_at": dt.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
@@ -1072,6 +1146,7 @@ def main():
         "commodities": [c["id"] for c in commodities],
         "hot": [h["id"] for h in hot],
         "consensus": consensus_ids,
+        "consensus_detail": cons_detail,
         "counts": {"stocks": len(stocks),
                    "touched": sum(1 for r in stocks.values() if r["touched"]),
                    "near": sum(1 for r in stocks.values() if r["near"])},

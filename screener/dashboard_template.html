@@ -136,6 +136,45 @@
     .ridx{grid-template-columns:1fr}
     h1{font-size:17.5px}
   }
+  /* ===== 상단 뷰 전환 탭 ===== */
+  .topnav{display:inline-flex;gap:4px;background:#11161f;border:1px solid var(--line);border-radius:999px;padding:4px;margin:2px 0 14px}
+  .topnav button{border:none;background:transparent;color:var(--muted);font:inherit;font-size:14px;font-weight:600;
+    padding:7px 18px;border-radius:999px;cursor:pointer;letter-spacing:-.01em}
+  .topnav button.on{background:#97FCE4;color:#06201d;box-shadow:0 0 14px rgba(151,252,228,.3)}
+  /* ===== 컨센서스 뷰(teal) ===== */
+  #viewCons{--ct:#97FCE4;--ct2:#50D2C1;--cam:#FCD597;--cro:#FCA5A5;--cpu:#C5A6FF;--cbg:#0B2A2C;--cbg2:#0F3537;
+    --csurf:rgba(15,53,55,.55);--cdim:#7FA8A4;--cmut:#4F7773;--ctx:#E8FFFA}
+  #viewCons .cons-tabs{display:flex;gap:6px;padding:5px;background:rgba(11,42,44,.6);border:1px solid rgba(151,252,228,.12);
+    border-radius:14px;margin-bottom:16px;flex-wrap:wrap}
+  #viewCons .cons-tabs button{flex:1;min-width:120px;padding:11px 14px;border-radius:10px;font:inherit;font-size:14px;font-weight:700;
+    color:var(--cdim);background:transparent;border:none;cursor:pointer;letter-spacing:-.01em}
+  #viewCons .cons-tabs button .sym{font-size:11px;opacity:.6;margin-left:6px;font-weight:500}
+  #viewCons .cons-tabs button.on{color:#06201d;background:var(--ct);box-shadow:0 0 14px rgba(151,252,228,.3)}
+  #viewCons .cpanel{background:var(--csurf);border:1px solid rgba(151,252,228,.1);border-radius:16px;padding:16px 18px;
+    backdrop-filter:blur(10px);box-shadow:0 4px 30px rgba(0,0,0,.3)}
+  #viewCons .cttl{font-size:15px;font-weight:700;color:var(--ctx);margin-bottom:12px;display:flex;align-items:center;gap:6px 8px;flex-wrap:wrap}
+  #viewCons .cttl small{color:var(--cdim);font-weight:500;font-size:12px}
+  #viewCons .cstats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+  @media(max-width:760px){#viewCons .cstats{grid-template-columns:repeat(2,1fr)}}
+  #viewCons .cstat{background:var(--csurf);border:1px solid rgba(151,252,228,.1);border-radius:14px;padding:13px 15px;position:relative;overflow:hidden}
+  #viewCons .cstat::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--ct),transparent);opacity:.35}
+  #viewCons .cstat .lab{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--cmut);font-weight:700}
+  #viewCons .cstat .val{font-size:20px;font-weight:800;margin-top:5px;font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--ctx)}
+  #viewCons .cstat .val.teal{color:var(--ct)}#viewCons .cstat .val.amber{color:var(--cam)}#viewCons .cstat .val.rose{color:var(--cro)}
+  #viewCons .cstat .sub{font-size:11px;color:var(--cdim);margin-top:3px}
+  #viewCons .cgrid{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}
+  @media(max-width:760px){#viewCons .cgrid{grid-template-columns:1fr}}
+  #viewCons .cleg{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11.5px;color:var(--cdim);margin-top:8px}
+  #viewCons .cleg i{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:0}
+  #viewCons .ctbl{width:100%;border-collapse:collapse;font-size:13.5px}
+  #viewCons .ctbl th,#viewCons .ctbl td{padding:9px 8px;border-bottom:1px solid rgba(151,252,228,.08);text-align:right;white-space:nowrap;color:var(--ctx)}
+  #viewCons .ctbl th{color:var(--cmut);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+  #viewCons .ctbl th:first-child,#viewCons .ctbl td:first-child{text-align:left}
+  #viewCons .obadge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(151,252,228,.14);color:var(--ct2)}
+  #viewCons .pos{color:var(--ct)}#viewCons .neg{color:var(--cro)}
+  #viewCons .cnote{color:var(--cmut);font-size:11.5px;margin-top:14px;line-height:1.6}
+  #viewCons .cempty{color:var(--cdim);text-align:center;padding:40px 12px}
+  @media(max-width:640px){#viewCons .cons-tabs button{min-width:90px;font-size:13px;padding:10px}}
 </style>
 </head>
 <body>
@@ -143,6 +182,11 @@
   <div id="badge" class="badge">⚠️ 예시(가짜 데이터)</div>
   <h1>증시 추세추종 · 기술적 분석 대시보드</h1>
   <p class="sub"><b>트랙①</b> 섹터 ETF→대장주 · <b>트랙②</b> 개별 RS Top10(최상위 3 심층). 종목을 누르면 차트·이격도·RSI·엘리어트(추정)가 열립니다.</p>
+  <div class="topnav" id="topnav">
+    <button data-v="dash" class="on">📊 대시보드</button>
+    <button data-v="cons">🎯 컨센서스</button>
+  </div>
+  <div id="viewDash">
   <div id="chips" class="chips"></div>
   <div class="seg" id="mkSeg"><button data-m="US" class="on">🟢 미국</button><button data-m="KR">🔵 한국</button></div>
   <div id="regime"></div>
@@ -185,6 +229,19 @@
         <div class="empty">왼쪽에서 종목을 누르면<br>차트·기술적 지표·엘리어트 추정이 여기에 표시됩니다.</div>
       </div>
     </div>
+  </div>
+  </div><!-- /viewDash -->
+
+  <div id="viewCons" style="display:none">
+    <div class="cons-tabs" id="consTabs"></div>
+    <div id="consDetail"></div>
+    <div class="cpanel" id="consAggWrap" style="margin-top:16px;display:none">
+      <div class="cttl">🗂️ 기타 종목 컨센서스 <small>집계 평균 목표가 · 상승여력 순 (한국=네이버 · 미국=야후)</small></div>
+      <div class="tbl-scroll"><table class="ctbl"><thead><tr>
+        <th class="l">종목</th><th>현재가</th><th>목표가</th><th>상승여력</th><th class="mhide">의견</th><th class="mhide">시장</th>
+      </tr></thead><tbody id="consAgg"></tbody></table></div>
+    </div>
+    <p class="cnote">한국 핵심 딥 종목만 증권사별 목표가 시계열·투자의견 분포를 수집(매일 갱신). 그 외 종목은 집계 평균 목표가만 표시 · 목표가는 애널리스트 추정치로 참고용입니다.</p>
   </div>
 
   <p class="foot">무료 지연 종가 · RS=지수 대비 상대강도(1·3·6개월 가중, 양수=지수 이김) · 눌림목=당일 저가≤20MA≤고가 · 엘리어트는 주관적이라 알고리즘 '추정'(참고용) · US 섹터=SPDR ETF / KR 섹터=KODEX ETF 구성종목 · 투자 판단은 원본 차트 확인 후</p>
@@ -241,7 +298,25 @@ if(!DATA){
     stk({market:"US",code:"HOTB",name:"가상신규IPO",sector:"Communication Services",rank:0,t:1,d20:0.4,d60:112,d200:112,rsi:62,h52:-3,vr:2.6,ell:"1파 진행 추정",note:"막 반등 시작(추정)",r1w:9.5,r1m:22,r3:35,r6:35,rs:35,seed:22,start:20,hs:82.0,new:true,days:38}),
   ];
   const stocks=mk([...US,...KR,...CMD,...HOT]);
+  // 데모 컨센서스 상세(증권사별) — 한국 딥 2종목
+  const _brk=["미래에셋증권","하나증권","DS투자증권","한화투자증권","키움증권","신한투자증권","삼성증권","NH투자증권"];
+  const _op=["매수","매수","매수","적극매수","중립","매수","비중확대","매수"];
+  const _mkDetail=(base,n)=>{const reps=[];const now=Date.now();
+    for(let i=0;i<n;i++){reps.push({broker:_brk[i%_brk.length],
+      date:new Date(now-i*8*86400000).toISOString().slice(0,10),
+      target:Math.round(base*(1+(0.20-i*0.014)+((i%3)-1)*0.025)),
+      opinion:_op[i%_op.length],title:"실적·업황 코멘트 예시"});}
+    const tg=reps.map(r=>r.target).sort((a,b)=>a-b);
+    const hi=reps.reduce((m,r)=>r.target>m.target?r:m),lo=reps.reduce((m,r)=>r.target<m.target?r:m);
+    const dist={};reps.forEach(r=>dist[r.opinion]=(dist[r.opinion]||0)+1);
+    return {reports:reps,count:reps.length,with_target:tg.length,
+      mean:Math.round(tg.reduce((a,b)=>a+b,0)/tg.length),median:tg[Math.floor(tg.length/2)],
+      high:tg[tg.length-1],low:tg[0],high_broker:hi.broker,low_broker:lo.broker,dist};};
+  const _cd={};
+  _cd[stocks["KR:005930"].id]=_mkDetail(stocks["KR:005930"].close,16);
+  _cd[stocks["KR:000660"].id]=_mkDetail(stocks["KR:000660"].close,14);
   DATA={demo:true,bar_date:"예시",generated_at:"예시 데이터",config:{zigzag_pct:7},
+    consensus_detail:_cd,
     commodities:CMD.map(r=>r.id), hot:HOT.map(r=>r.id),
     consensus:[...US,...KR].filter(r=>r.t_mean!=null).sort((a,b)=>(b.t_upside??-999)-(a.t_upside??-999)).map(r=>r.id),
     regime:{
@@ -449,6 +524,104 @@ function showDetail(r){
     ${r.wyckoff?`<div class="ellbox" style="border-left-color:#b08cff">🔍 <b>와이코프 국면(추정): ${r.wyckoff}</b><br>${r.wyckoff_note||''}
       <div class="caveat">※ 가격+거래량 기반 알고리즘 추정 — 매집(Accumulation)/상승(Markup)/분산(Distribution)/하락(Markdown) + 스프링·업스러스트·거래량 이벤트. 차트로 확인하세요.</div></div>`:''}`;
 }
+
+// ===== 컨센서스 뷰 =====
+const CCOL=["#97FCE4","#FCD597","#FCA5A5","#C5A6FF","#50D2C1","#8FB8FF","#FF9EC4","#B8E986","#FFB37A","#7FD8FF","#D6A6FF","#9EF0D0"];
+const OPC={"적극매수":"#50D2C1","매수":"#97FCE4","비중확대":"#B8E986","중립":"#FCD597","비중축소":"#FCA5A5","매도":"#FC7A7A"};
+let consSel=null;
+const CDM=()=>DATA.consensus_detail||{};
+const cnum=(v,d=0)=>v==null?"–":Number(v).toLocaleString("ko-KR",{maximumFractionDigits:d});
+
+function consTimeChart(reports){
+  const pts=(reports||[]).filter(r=>r.target&&r.date).map(r=>({...r,t:Date.parse(r.date)})).sort((a,b)=>a.t-b.t);
+  if(!pts.length) return '<div class="cempty">목표가 데이터 없음</div>';
+  const W=560,H=260,P=46;
+  const xs=pts.map(p=>p.t),ys=pts.map(p=>p.target);
+  let x0=Math.min(...xs),x1=Math.max(...xs); if(x1===x0)x1=x0+86400000;
+  let y0=Math.min(...ys),y1=Math.max(...ys); const pad=(y1-y0)*0.14||y1*0.05; y0-=pad;y1+=pad;
+  const X=t=>P+(t-x0)/(x1-x0)*(W-P-14), Y=v=>H-26-(v-y0)/(y1-y0)*(H-26-14);
+  const brokers=[...new Set(pts.map(p=>p.broker))], cm={}; brokers.forEach((b,i)=>cm[b]=CCOL[i%CCOL.length]);
+  let svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet">`;
+  for(let i=0;i<=3;i++){const v=y0+(y1-y0)*i/3,y=Y(v);
+    svg+=`<line x1="${P}" y1="${y}" x2="${W-14}" y2="${y}" stroke="rgba(151,252,228,.08)"/>`;
+    svg+=`<text x="${P-6}" y="${y+3}" font-size="9" fill="#4F7773" text-anchor="end">${cnum(Math.round(v))}</text>`;}
+  const mean=ys.reduce((a,b)=>a+b,0)/ys.length, my=Y(mean);
+  svg+=`<line x1="${P}" y1="${my}" x2="${W-14}" y2="${my}" stroke="#97FCE4" stroke-dasharray="5 4" opacity=".7"/>`;
+  svg+=`<text x="${W-16}" y="${my-4}" font-size="9" fill="#97FCE4" text-anchor="end">평균 ${cnum(Math.round(mean))}</text>`;
+  brokers.forEach(b=>{const bp=pts.filter(p=>p.broker===b);
+    if(bp.length>1){const d=bp.map((p,i)=>`${i?'L':'M'}${X(p.t).toFixed(1)} ${Y(p.target).toFixed(1)}`).join(" ");
+      svg+=`<path d="${d}" fill="none" stroke="${cm[b]}" stroke-width="1.4" opacity=".5"/>`;}});
+  pts.forEach(p=>{svg+=`<circle cx="${X(p.t).toFixed(1)}" cy="${Y(p.target).toFixed(1)}" r="3.6" fill="${cm[p.broker]}"/>`;});
+  const dl=t=>{const d=new Date(t);return `${d.getFullYear()%100}.${String(d.getMonth()+1).padStart(2,'0')}`;};
+  svg+=`<text x="${P}" y="${H-8}" font-size="9" fill="#4F7773">${dl(x0)}</text>`;
+  svg+=`<text x="${W-14}" y="${H-8}" font-size="9" fill="#4F7773" text-anchor="end">${dl(x1)}</text></svg>`;
+  return svg+`<div class="cleg">${brokers.map(b=>`<span><i style="background:${cm[b]}"></i>${b}</span>`).join("")}</div>`;
+}
+function consDonut(dist){
+  const ent=Object.entries(dist||{}), tot=ent.reduce((a,[,v])=>a+v,0);
+  if(!tot) return '<div class="cempty">투자의견 데이터 없음</div>';
+  const R=58,r=36,cx=70,cy=70; let a=-Math.PI/2,svg=`<svg viewBox="0 0 140 140" width="140" height="140">`;
+  ent.forEach(([k,v])=>{const f=v/tot,a2=a+f*2*Math.PI,L=f>.5?1:0;
+    const x1=cx+R*Math.cos(a),y1=cy+R*Math.sin(a),x2=cx+R*Math.cos(a2),y2=cy+R*Math.sin(a2);
+    const xi2=cx+r*Math.cos(a2),yi2=cy+r*Math.sin(a2),xi1=cx+r*Math.cos(a),yi1=cy+r*Math.sin(a);
+    svg+=`<path d="M${x1} ${y1} A${R} ${R} 0 ${L} 1 ${x2} ${y2} L${xi2} ${yi2} A${r} ${r} 0 ${L} 0 ${xi1} ${yi1} Z" fill="${OPC[k]||'#97FCE4'}"/>`;a=a2;});
+  svg+=`<text x="70" y="66" font-size="13" fill="#E8FFFA" text-anchor="middle" font-weight="700">${tot}건</text>`;
+  svg+=`<text x="70" y="82" font-size="9" fill="#4F7773" text-anchor="middle">리포트</text></svg>`;
+  const leg=ent.sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<span><i style="background:${OPC[k]||'#97FCE4'}"></i>${k} ${v}</span>`).join("");
+  return `<div style="display:flex;flex-direction:column;align-items:center;gap:8px">${svg}<div class="cleg" style="justify-content:center">${leg}</div></div>`;
+}
+function renderConsTabs(){
+  const dm=CDM(),ids=Object.keys(dm),tabs=$("consTabs");
+  if(!ids.length){tabs.innerHTML="";return;}
+  if(!consSel||!dm[consSel]) consSel=ids[0];
+  tabs.innerHTML=ids.map(id=>{const s=S[id]||{};return `<button data-cid="${id}" class="${consSel===id?'on':''}">${s.name||id}<span class="sym">${s.code||''}</span></button>`;}).join("");
+  tabs.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{consSel=b.dataset.cid;renderConsTabs();renderConsDetail();}));
+}
+function renderConsDetail(){
+  const dm=CDM(),host=$("consDetail");
+  if(!consSel||!dm[consSel]){host.innerHTML="";return;}
+  const d=dm[consSel],s=S[consSel]||{};
+  const up=s.t_upside!=null?s.t_upside:(d.mean&&s.close?+((d.mean/s.close-1)*100).toFixed(1):null);
+  const reps=(d.reports||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  host.innerHTML=`
+    <div class="cstats">
+      <div class="cstat"><div class="lab">평균 목표가</div><div class="val teal">${cnum(d.mean)}원</div><div class="sub">범위 ${cnum(d.low)}~${cnum(d.high)}</div></div>
+      <div class="cstat"><div class="lab">상승여력</div><div class="val ${up>0?'teal':'rose'}">${up==null?'–':(up>0?'+':'')+up+'%'}</div><div class="sub">현재가 ${cnum(s.close)}</div></div>
+      <div class="cstat"><div class="lab">중앙값</div><div class="val">${cnum(d.median)}원</div><div class="sub">목표가 ${d.with_target}건</div></div>
+      <div class="cstat"><div class="lab">최고가</div><div class="val amber">${cnum(d.high)}원</div><div class="sub">${d.high_broker||''}</div></div>
+      <div class="cstat"><div class="lab">최저가</div><div class="val rose">${cnum(d.low)}원</div><div class="sub">${d.low_broker||''}</div></div>
+    </div>
+    <div class="cgrid">
+      <div class="cpanel"><div class="cttl">📈 목표주가 시계열 <small>점=리포트 1건 · 증권사별 색</small></div>${consTimeChart(d.reports)}</div>
+      <div class="cpanel"><div class="cttl">🍩 투자의견 분포</div>${consDonut(d.dist)}</div>
+    </div>
+    <div class="cpanel" style="margin-top:14px"><div class="cttl">🏦 증권사별 최신 컨센서스 <small>${d.count}건 수집</small></div>
+      <div class="tbl-scroll"><table class="ctbl"><thead><tr><th class="l">증권사</th><th class="l mhide">제목</th><th>투자의견</th><th>목표가</th><th>작성일</th></tr></thead><tbody>
+      ${reps.map(r=>`<tr><td class="l"><b>${r.broker||'-'}</b></td><td class="l mhide" style="color:#7FA8A4;max-width:280px;overflow:hidden;text-overflow:ellipsis">${r.title||''}</td>
+        <td>${r.opinion?`<span class="obadge">${r.opinion}</span>`:'–'}</td><td><b style="color:#97FCE4">${r.target?cnum(r.target):'–'}</b></td><td style="color:#7FA8A4">${r.date||''}</td></tr>`).join("")}
+      </tbody></table></div></div>`;
+}
+function renderConsAgg(){
+  const dm=CDM(),ids=(DATA.consensus||[]).filter(id=>!dm[id]&&S[id]&&S[id].t_mean!=null),wrap=$("consAggWrap");
+  if(!ids.length){wrap.style.display="none";return;}
+  wrap.style.display="";
+  $("consAgg").innerHTML=ids.map(id=>{const r=S[id],d=r.market==="US"?2:0,up=r.t_upside;
+    return `<tr><td class="l"><b>${r.name}</b> <span style="color:#4F7773">${r.code}</span></td>
+      <td>${cnum(r.close,d)}</td><td style="color:#97FCE4">${cnum(r.t_mean,d)}</td>
+      <td class="${up>0?'pos':'neg'}"><b>${up==null?'–':(up>0?'+':'')+up+'%'}</b></td>
+      <td class="mhide">${r.t_rec||'-'}</td><td class="mhide">${r.market==="US"?'🟢미국':'🔵한국'}</td></tr>`;}).join("");
+}
+function renderConsensus(){
+  renderConsTabs();renderConsDetail();renderConsAgg();
+  if(!Object.keys(CDM()).length && !(DATA.consensus||[]).length)
+    $("consDetail").innerHTML='<div class="cpanel"><div class="cempty">컨센서스 데이터가 없습니다 — 스크리너 실행 후 채워집니다.</div></div>';
+}
+$("topnav").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+  const v=b.dataset.v;$("topnav").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+  $("viewDash").style.display=v==="dash"?"":"none";
+  $("viewCons").style.display=v==="cons"?"":"none";
+  if(v==="cons") renderConsensus();
+}));
 
 render();
 </script>
