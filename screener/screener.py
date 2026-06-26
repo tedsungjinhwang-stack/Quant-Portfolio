@@ -783,7 +783,7 @@ def macro_assessment(macro):
     if risk["net"] <= -3 or flags:
         stance += " · 방어 강화"
     elif risk["net"] >= 3 and phase in ("회복", "확장·과열"):
-        stance += " · 리스크온"
+        stance += " · 위험자산 우호"
     cycle = {"phase": phase, "desc": desc, "stance": stance, "prefer": prefer,
              "growth": growth, "inflation": infl, "flags": flags}
     # 종합 한줄평 — 환경(위험선호)+국면+함의 한 문장
