@@ -122,6 +122,20 @@
   .macro .mi b{font-variant-numeric:tabular-nums;margin-left:3px}
   .macro .mi-d{font-size:10.5px;font-weight:700;margin-left:3px}
   .macro .mi-d.pos{color:var(--up)}.macro .mi-d.neg{color:var(--down)}
+  .macro .mz{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:1px}
+  .mz-good{background:var(--up)}.mz-ok{background:#6a7180}.mz-warn{background:var(--warn)}.mz-bad{background:var(--down)}
+  .mg-btn{margin-left:auto;background:rgba(91,140,255,.12);border:1px solid var(--line);color:var(--accent);
+    font:inherit;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;cursor:pointer}
+  .macro-guide{display:none;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)}
+  .macro.open .macro-guide{display:block}
+  .mg-row{display:grid;grid-template-columns:72px 64px 40px 1fr;gap:8px;align-items:baseline;padding:4px 0;font-size:11.5px;border-top:1px solid rgba(255,255,255,.03)}
+  .mg-row:first-child{border-top:0}
+  .mg-l{color:var(--muted);font-weight:600}.mg-v{font-variant-numeric:tabular-nums}
+  .mg-n{color:var(--muted);line-height:1.4}
+  .zchip{font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;text-align:center;white-space:nowrap}
+  .z-good{background:rgba(61,220,151,.16);color:var(--up)}.z-ok{background:rgba(150,160,180,.16);color:#aeb8c9}
+  .z-warn{background:rgba(255,176,32,.16);color:var(--warn)}.z-bad{background:rgba(255,107,107,.16);color:var(--down)}
+  @media(max-width:560px){.mg-row{grid-template-columns:1fr auto auto;gap:4px 8px}.mg-n{grid-column:1/-1;margin-top:-1px}}
   /* 계절성 패널 */
   .season{margin-bottom:14px}
   .season .sgrid{display:grid;gap:10px 20px}
@@ -421,22 +435,22 @@ if(!DATA){
         top_ids:KR.map(r=>r.id),deep_ids:["KR:005930","KR:000660","KR:373220"]}
     },
     macro:[
-      {cat:"금리",label:"기준금리",unit:"%",up_good:false,value:3.63,delta:0,sub:"2026-06-23"},
-      {cat:"금리",label:"10년물",unit:"%",up_good:false,value:4.50,delta:-0.01,sub:"2026-06-23"},
-      {cat:"금리",label:"장단기차",unit:"%p",up_good:true,value:0.30,delta:-0.04,sub:"2026-06-24"},
-      {cat:"물가",label:"CPI",unit:"%",up_good:false,value:2.8,delta:-0.2,sub:"2026-05"},
-      {cat:"물가",label:"근원CPI",unit:"%",up_good:false,value:3.0,delta:0,sub:"2026-05"},
-      {cat:"물가",label:"기대인플레",unit:"%",up_good:false,value:2.18,delta:-0.03,sub:"2026-06-24"},
-      {cat:"고용",label:"실업률",unit:"%",up_good:false,value:4.3,delta:0.1,sub:"2026-05"},
-      {cat:"고용",label:"비농업고용",unit:"K",up_good:true,value:172,delta:172,sub:"2026-05"},
-      {cat:"고용",label:"신규실업수당",unit:"K",up_good:false,value:215,delta:-12,sub:"2026-06-20"},
-      {cat:"유동성",label:"M2 통화량",unit:"%",up_good:true,value:5.6,delta:0.9,sub:"2026-05"},
-      {cat:"유동성",label:"연준 자산",unit:"조$",up_good:true,value:6.74,delta:0.01,sub:"2026-06-17"},
-      {cat:"시클리컬",label:"달러지수",unit:"",up_good:false,value:104.3,delta:-0.2,sub:"1M +1.4%"},
-      {cat:"시클리컬",label:"VIX 변동성",unit:"",up_good:false,value:16.8,delta:3.5,sub:"1M -8%"},
-      {cat:"시클리컬",label:"구리(Dr.)",unit:"$",up_good:true,value:4.52,delta:1.1,sub:"1M +5.2%"},
-      {cat:"시클리컬",label:"WTI 유가",unit:"$",up_good:true,value:71.4,delta:-0.8,sub:"1M -3.4%"},
-      {cat:"시클리컬",label:"금",unit:"$",up_good:true,value:2680,delta:0.4,sub:"1M +6.1%"}],
+      {cat:"금리",label:"기준금리",unit:"%",up_good:false,value:3.63,delta:0,sub:"2026-06-23",zone:"ok",note:"정책금리 — 높을수록 긴축(위험자산 부담), 인하 사이클이면 우호"},
+      {cat:"금리",label:"10년물",unit:"%",up_good:false,value:4.50,delta:-0.01,sub:"2026-06-23",zone:"warn",note:"장기금리 — 4.5%↑ 밸류에이션 부담, 3.5%↓ 완화적"},
+      {cat:"금리",label:"장단기차",unit:"%p",up_good:true,value:0.30,delta:-0.04,sub:"2026-06-24",zone:"good",note:"10Y−2Y — 음수=금리 역전(침체 선행), 양수=정상"},
+      {cat:"물가",label:"CPI",unit:"%",up_good:false,value:2.8,delta:-0.2,sub:"2026-05",zone:"warn",note:"물가 YoY — 연준 목표 2%. 3%대↑면 긴축 압력"},
+      {cat:"물가",label:"근원CPI",unit:"%",up_good:false,value:3.0,delta:0,sub:"2026-05",zone:"warn",note:"물가 YoY — 연준 목표 2%. 3%대↑면 긴축 압력"},
+      {cat:"물가",label:"기대인플레",unit:"%",up_good:false,value:2.18,delta:-0.03,sub:"2026-06-24",zone:"ok",note:"시장 기대 인플레(10Y) — 2% 부근이 안정"},
+      {cat:"고용",label:"실업률",unit:"%",up_good:false,value:4.3,delta:0.1,sub:"2026-05",zone:"good",note:"3.5~4.5%=완전고용권(양호), 5%대↑ 급등=침체 신호"},
+      {cat:"고용",label:"비농업고용",unit:"K",up_good:true,value:172,delta:172,sub:"2026-05",zone:"good",note:"월간 신규고용(천명) — 150K↑ 견조, 0 이하 위축"},
+      {cat:"고용",label:"신규실업수당",unit:"K",up_good:false,value:215,delta:-12,sub:"2026-06-20",zone:"good",note:"주간 실업청구(천건) — 낮을수록 고용 견조, 350K↑ 경계"},
+      {cat:"유동성",label:"M2 통화량",unit:"%",up_good:true,value:5.6,delta:0.9,sub:"2026-05",zone:"ok",note:"통화량 YoY — 마이너스=긴축(유동성 위축), 높을수록 완화"},
+      {cat:"유동성",label:"연준 자산",unit:"조$",up_good:true,value:6.74,delta:0.01,sub:"2026-06-17",zone:"ok",note:"연준 대차대조표(조$) — 증가=완화(QE), 감소=긴축(QT)"},
+      {cat:"시클리컬",label:"달러지수",unit:"",up_good:false,value:104.3,delta:-0.2,sub:"1M +1.4%",zone:"ok",note:"강달러(105↑)=신흥국·위험자산 부담, 약달러=우호"},
+      {cat:"시클리컬",label:"VIX 변동성",unit:"",up_good:false,value:16.8,delta:3.5,sub:"1M -8%",zone:"ok",note:"변동성/공포 — 15↓ 안정, 20~30 불안, 30↑ 공포"},
+      {cat:"시클리컬",label:"구리(Dr.)",unit:"$",up_good:true,value:4.52,delta:1.1,sub:"1M +5.2%",zone:"ok",note:"Dr.코퍼 — 경기 바로미터, 상승=경기 확장 신호"},
+      {cat:"시클리컬",label:"WTI 유가",unit:"$",up_good:true,value:71.4,delta:-0.8,sub:"1M -3.4%",zone:"ok",note:"유가 — 급등=인플레 압력, 급락=수요 둔화 신호"},
+      {cat:"시클리컬",label:"금",unit:"$",up_good:true,value:2680,delta:0.4,sub:"1M +6.1%",zone:"ok",note:"안전자산/실질금리 역행 — 급등=불안·완화 기대"}],
     seasonality:{
       US:{month:6,window:"약세 구간 (5~10월 · Sell in May)",index:{name:"S&P500",avg:0.8,hit:60},
         strong:[{label:"Health Care",etf:"XLV",avg:1.5,hit:73,n:15},{label:"Info Tech",etf:"XLK",avg:1.4,hit:53,n:15},{label:"Consumer Disc.",etf:"XLY",avg:1.3,hit:73,n:15}],
@@ -504,6 +518,7 @@ function renderRegime(){
       <div class="rmacro">${macroBlockHTML()}</div></div></div>`;
 }
 
+const ZL={good:"양호",ok:"보통",warn:"주의",bad:"경계"};
 function macroBlockHTML(){
   const ms=DATA.macro||[];
   if(!ms.length) return "";
@@ -511,9 +526,11 @@ function macroBlockHTML(){
   ms.forEach(m=>{if(!byc[m.cat]){byc[m.cat]=[];cats.push(m.cat);}byc[m.cat].push(m);});
   const item=m=>{const d=m.delta,good=d==0?null:(d>0)===m.up_good,ar=d>0?'▲':(d<0?'▼':'');
     const dc=(d==null||d==0)?'':`<span class="mi-d ${good?'pos':'neg'}">${ar}${Math.abs(d)}</span>`;
-    return `<span class="mi"><span class="mi-l">${m.label}</span> <b>${cnum(m.value,2)}${m.unit}</b>${dc}</span>`;};
-  return `<div class="macro"><div class="mttl">🌐 글로벌 매크로 <small>FRED + 시클리컬 · 색=위험자산 관점</small></div>
-    ${cats.map(c=>`<div class="mline"><span class="mline-l">${c}</span><span class="mline-v">${byc[c].map(item).join("")}</span></div>`).join("")}</div>`;
+    return `<span class="mi" title="${(m.note||'').replace(/"/g,'')}"><i class="mz mz-${m.zone||'ok'}"></i><span class="mi-l">${m.label}</span> <b>${cnum(m.value,2)}${m.unit}</b>${dc}</span>`;};
+  const guide=ms.map(m=>`<div class="mg-row"><span class="mg-l">${m.label}</span><b class="mg-v">${cnum(m.value,2)}${m.unit}</b><span class="zchip z-${m.zone||'ok'}">${ZL[m.zone||'ok']}</span><span class="mg-n">${m.note||''}</span></div>`).join("");
+  return `<div class="macro"><div class="mttl">🌐 글로벌 매크로 <small>FRED + 시클리컬 · 색점=현재 수준</small><button class="mg-btn" onclick="this.closest('.macro').classList.toggle('open')">📖 해석</button></div>
+    <div>${cats.map(c=>`<div class="mline"><span class="mline-l">${c}</span><span class="mline-v">${byc[c].map(item).join("")}</span></div>`).join("")}</div>
+    <div class="macro-guide">${guide}</div></div>`;
 }
 function renderSeason(){
   const el=$("season"),se=(DATA.seasonality||{})[market];

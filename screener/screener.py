@@ -665,6 +665,46 @@ def build_seasonality(monthly, month):
     return out
 
 
+def macro_read(label, v):
+    """지표 현재 '수준' 해석 → {zone: good/ok/warn/bad, note: 한 줄 의미}. (변화가 아닌 레벨 기준)"""
+    g = lambda z, n: {"zone": z, "note": n}
+    if v is None:
+        return g("ok", "")
+    if label == "기준금리":
+        return g("warn" if v >= 4.5 else "ok" if v >= 2 else "good", "정책금리 — 높을수록 긴축(위험자산 부담), 인하 사이클이면 우호")
+    if label == "10년물":
+        return g("warn" if v >= 4.5 else "ok" if v >= 3.5 else "good", "장기금리 — 4.5%↑ 밸류에이션 부담, 3.5%↓ 완화적")
+    if label == "장단기차":
+        return g("bad" if v < 0 else "warn" if v < 0.3 else "good", "10Y−2Y — 음수=금리 역전(침체 선행), 양수=정상")
+    if label in ("CPI", "근원CPI"):
+        return g("bad" if v >= 3.5 else "warn" if v >= 2.5 else "good", "물가 YoY — 연준 목표 2%. 3%대↑면 긴축 압력")
+    if label == "기대인플레":
+        return g("warn" if v >= 2.7 else "ok" if v >= 2 else "good", "시장 기대 인플레(10Y) — 2% 부근이 안정")
+    if label == "실업률":
+        return g("good" if 3.5 <= v <= 4.5 else "warn" if v <= 5.5 else "bad", "3.5~4.5%=완전고용권(양호), 5%대↑ 급등=침체 신호")
+    if label == "비농업고용":
+        return g("good" if v >= 150 else "warn" if v >= 50 else "bad", "월간 신규고용(천명) — 150K↑ 견조, 0 이하 위축")
+    if label == "신규실업수당":
+        return g("good" if v < 250 else "ok" if v < 300 else "warn" if v < 350 else "bad", "주간 실업청구(천건) — 낮을수록 고용 견조, 350K↑ 경계")
+    if label == "M2 통화량":
+        return g("bad" if v < 0 else "warn" if v < 3 else "ok" if v < 7 else "good", "통화량 YoY — 마이너스=긴축(유동성 위축), 높을수록 완화")
+    if label == "연준 자산":
+        return g("ok", "연준 대차대조표(조$) — 증가=완화(QE), 감소=긴축(QT)")
+    if label == "VIX 변동성":
+        return g("good" if v < 15 else "ok" if v < 20 else "warn" if v < 30 else "bad", "변동성/공포 — 15↓ 안정, 20~30 불안, 30↑ 공포")
+    if label == "달러지수":
+        return g("warn" if v >= 105 else "ok" if v >= 100 else "good", "강달러(105↑)=신흥국·위험자산 부담, 약달러=우호")
+    if label == "원/달러":
+        return g("bad" if v >= 1450 else "warn" if v >= 1400 else "ok" if v >= 1250 else "good", "원화 약세(1400↑)=외국인 이탈 압력, 강세=우호")
+    if label == "구리(Dr.)":
+        return g("ok", "Dr.코퍼 — 경기 바로미터, 상승=경기 확장 신호")
+    if label == "WTI 유가":
+        return g("ok", "유가 — 급등=인플레 압력, 급락=수요 둔화 신호")
+    if label == "금":
+        return g("ok", "안전자산/실질금리 역행 — 급등=불안·완화 기대")
+    return g("ok", "")
+
+
 def build_macro(data):
     """시클리컬/심리 지표(yfinance) — 현재값 + 전일 변화율. cat='시클리컬'."""
     out = []
@@ -678,7 +718,8 @@ def build_macro(data):
         r20 = round((last / float(c.iloc[-21]) - 1) * 100, 1) if len(c) >= 21 else None
         out.append({"cat": "시클리컬", "label": info["label"], "unit": info["unit"],
                     "up_good": info["up_good"], "value": round(last, 2),
-                    "delta": r1, "sub": (f"1M {'+' if (r20 or 0) >= 0 else ''}{r20}%" if r20 is not None else "")})
+                    "delta": r1, "sub": (f"1M {'+' if (r20 or 0) >= 0 else ''}{r20}%" if r20 is not None else ""),
+                    **macro_read(info["label"], round(last, 2))})
     return out
 
 
@@ -790,7 +831,8 @@ def build_global_macro():
             else:
                 continue
             out.append({"cat": cat, "label": label, "value": val, "unit": unit,
-                        "delta": delta, "up_good": up_good, "sub": asof})
+                        "delta": delta, "up_good": up_good, "sub": asof,
+                        **macro_read(label, val)})
         except Exception:
             continue
     return out
