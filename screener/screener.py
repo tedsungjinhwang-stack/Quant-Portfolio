@@ -416,7 +416,7 @@ def wyckoff_estimate(df, piv=None):
     prior_hi = float(h.iloc[max(0, n - look):max(1, n - 10)].max())
     if base_v > 0:
         if float(vol.tail(10).mean()) < base_v * 0.8:
-            events.append("거래량 마름(매집 성숙)")
+            events.append("거래량 마름 → 매집 후반·상승 임박")
         # 최근 구간 최대 거래량일의 위치·방향으로 셀링/바잉 클라이맥스 구분
         vt = vol.tail(look)
         imax = int(vt.values.argmax())
@@ -425,21 +425,21 @@ def wyckoff_estimate(df, piv=None):
             dpos = (float(c.iloc[gi]) - long_lo) / (long_hi - long_lo) if long_hi > long_lo else 0.5
             down = gi > 0 and float(c.iloc[gi]) < float(c.iloc[gi - 1])
             if down and dpos <= 0.45:
-                events.append("셀링 클라이맥스(SC·바닥권 투매)")
+                events.append("셀링클라이맥스(SC) → 매집 초입·바닥권(강세 전환)")
             elif (not down) and dpos >= 0.55:
-                events.append("바잉 클라이맥스(BC·고점권 과열)")
+                events.append("바잉클라이맥스(BC) → 분산 초입·천장권(약세 전환)")
             else:
-                events.append("거래량 클라이맥스")
+                events.append("거래량 클라이맥스 → 변곡 가능")
         # 거래량 동반 박스 돌파/이탈 → 강세신호(SOS)/약세신호(SOW)
         vol_strong = float(vol.tail(5).mean()) > base_v * 1.2
         if vol_strong and last > prior_hi:
-            events.append("강세 돌파(SOS·박스 상단)")
+            events.append("강세돌파(SOS) → 매집 종료·상승 시작(강세)")
         if vol_strong and last < prior_lo:
-            events.append("약세 이탈(SOW·박스 하단)")
+            events.append("약세이탈(SOW) → 분산 종료·하락 시작(약세)")
     if float(l.tail(10).min()) < prior_lo and last > prior_lo:
-        events.append("스프링(하단 가짜 이탈 후 복귀)")
+        events.append("스프링 → 매집 막바지·상승 직전(강세)")
     if float(h.tail(10).max()) > prior_hi and last < prior_hi:
-        events.append("업스러스트(상단 가짜 돌파 후 실패)")
+        events.append("업스러스트 → 분산 막바지·하락 직전(약세)")
 
     # 국면: 추세 vs 박스권 → 박스권이면 '장기 위치'로 매집(저점)/분산(고점) 구분
     if rangebound:
