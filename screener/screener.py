@@ -786,7 +786,15 @@ def macro_assessment(macro):
         stance += " · 리스크온"
     cycle = {"phase": phase, "desc": desc, "stance": stance, "prefer": prefer,
              "growth": growth, "inflation": infl, "flags": flags}
-    return {"risk": risk, "cycle": cycle}
+    # 종합 한줄평 — 환경(위험선호)+국면+함의 한 문장
+    risk_word = {"green": "완화적", "yellow": "중립적", "red": "긴축적"}[risk["tone"]]
+    if phase in ("회복", "확장·과열"):
+        lean = "위험자산 우호" if risk["net"] >= 0 else "위험자산 선별"
+    else:
+        lean = "위험자산 비우호(방어)"
+    cau = (" · ⚠ " + ", ".join(f.split("(")[0] for f in flags)) if flags else ""
+    summary = f"{risk_word} 환경 · {phase} 국면 → {lean}{cau}"
+    return {"risk": risk, "cycle": cycle, "summary": summary}
 
 
 def _fred_series(series_id):

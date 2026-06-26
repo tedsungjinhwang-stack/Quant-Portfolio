@@ -110,6 +110,10 @@
   /* 글로벌 매크로 — 레짐 배너 우측 빈공간에 배치(카테고리별 한 줄 압축) */
   .rmacro{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
   .rmacro .macro{margin-bottom:0}
+  .msum{font-size:12.5px;font-weight:800;margin:2px 0 8px;padding:6px 10px;border-radius:8px;background:rgba(150,160,180,.08)}
+  .msum.sig-green{color:var(--up);background:rgba(61,220,151,.1)}
+  .msum.sig-yellow{color:var(--warn);background:rgba(255,176,32,.1)}
+  .msum.sig-red{color:var(--down);background:rgba(255,107,107,.1)}
   .macro{margin-bottom:14px}
   .macro .mttl{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--txt);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .macro .mttl small{color:var(--muted);font-weight:500;font-size:11px}
@@ -415,12 +419,12 @@ if(!DATA){
         exposure:{stance:"적극 투자",equity:"80~100%",cash:"0~20%"},
         reasons:["S&P500 240일선 위(+6.2%, 정배열)","240일선 이탈 32% · 20일선 이탈 41% (낮을수록 강세)","52주 신고가 16% · 신저가 4% (순증 +12)"],
         breadth:{below20:41,below200:32,above200:68,new_high:16,near_high:24,new_low:4,net_new_high:12,n:480},
-        indexes:[{name:"S&P500",close:5600,above200:true,golden:true,rsi:58,ret1d:0.4,ret1m:3.1,ret_ytd:12.5,ret1y:21.0,wyckoff:"상승 추세 (Markup)"},{name:"나스닥",close:18200,above200:true,golden:true,rsi:60,ret1d:0.6,ret1m:4.2,ret_ytd:15.0,ret1y:28.0,wyckoff:"상승 추세 (Markup)"}],macro:{risk:{score:62,net:3,on:["CPI","기대인플레","M2 통화량","구리(Dr.)","신규실업수당"],off:["기준금리","VIX 변동성"],label:"위험선호(완화적)",tone:"green"},cycle:{phase:"회복",desc:"성장↑·물가↓ — 디스인플레 회복",stance:"주식 비중확대 · 방어 강화",prefer:"성장주·반도체·경기민감 ↑ / 현금·장기채 ↓",growth:2,inflation:-2,flags:["장단기 금리 역전(침체 선행)"]}}},
+        indexes:[{name:"S&P500",close:5600,above200:true,golden:true,rsi:58,ret1d:0.4,ret1m:3.1,ret_ytd:12.5,ret1y:21.0,wyckoff:"상승 추세 (Markup)"},{name:"나스닥",close:18200,above200:true,golden:true,rsi:60,ret1d:0.6,ret1m:4.2,ret_ytd:15.0,ret1y:28.0,wyckoff:"상승 추세 (Markup)"}],macro:{risk:{score:62,net:3,on:["CPI","기대인플레","M2 통화량","구리(Dr.)","신규실업수당"],off:["기준금리","VIX 변동성"],label:"위험선호(완화적)",tone:"green"},cycle:{phase:"회복",desc:"성장↑·물가↓ — 디스인플레 회복",stance:"주식 비중확대 · 방어 강화",prefer:"성장주·반도체·경기민감 ↑ / 현금·장기채 ↓",growth:2,inflation:-2,flags:["장단기 금리 역전(침체 선행)"]},summary:"완화적 환경 · 회복 국면 → 위험자산 우호 · ⚠ 장단기 금리 역전"}},
       KR:{label:"상승 둔화",color:"yellow",premise:"지수는 위지만 신고가 줄고 이탈 증가 — 주도 섹터·대장주만 선별 대응.",
         exposure:{stance:"중립·선별",equity:"50~70%",cash:"30~50%"},
         reasons:["코스피 240일선 위(+1.1%, 정배열)","240일선 이탈 52% · 20일선 이탈 63% (낮을수록 강세)","52주 신고가 7% · 신저가 9% (순증 -2)"],
         breadth:{below20:63,below200:52,above200:48,new_high:7,near_high:13,new_low:9,net_new_high:-2,n:240},
-        indexes:[{name:"코스피",close:2700,above200:true,golden:true,rsi:51,ret1d:-0.3,ret1m:1.2,ret_ytd:4.0,ret1y:6.5,wyckoff:"분산 추정 (Distribution)"},{name:"코스닥",close:850,above200:false,golden:false,rsi:45,ret1d:-0.8,ret1m:-3.5,ret_ytd:-6.0,ret1y:-9.0,wyckoff:"하락 추세 (Markdown)"}],macro:{risk:{score:62,net:3,on:["CPI","기대인플레","M2 통화량","구리(Dr.)","신규실업수당"],off:["기준금리","VIX 변동성"],label:"위험선호(완화적)",tone:"green"},cycle:{phase:"회복",desc:"성장↑·물가↓ — 디스인플레 회복",stance:"주식 비중확대 · 방어 강화",prefer:"성장주·반도체·경기민감 ↑ / 현금·장기채 ↓",growth:2,inflation:-2,flags:["장단기 금리 역전(침체 선행)"]}}}},
+        indexes:[{name:"코스피",close:2700,above200:true,golden:true,rsi:51,ret1d:-0.3,ret1m:1.2,ret_ytd:4.0,ret1y:6.5,wyckoff:"분산 추정 (Distribution)"},{name:"코스닥",close:850,above200:false,golden:false,rsi:45,ret1d:-0.8,ret1m:-3.5,ret_ytd:-6.0,ret1y:-9.0,wyckoff:"하락 추세 (Markdown)"}],macro:{risk:{score:62,net:3,on:["CPI","기대인플레","M2 통화량","구리(Dr.)","신규실업수당"],off:["기준금리","VIX 변동성"],label:"위험선호(완화적)",tone:"green"},cycle:{phase:"회복",desc:"성장↑·물가↓ — 디스인플레 회복",stance:"주식 비중확대 · 방어 강화",prefer:"성장주·반도체·경기민감 ↑ / 현금·장기채 ↓",growth:2,inflation:-2,flags:["장단기 금리 역전(침체 선행)"]},summary:"완화적 환경 · 회복 국면 → 위험자산 우호 · ⚠ 장단기 금리 역전"}}},
     counts:{stocks:US.length+KR.length,touched:3,near:3},stocks,
     markets:{
       US:{sectors:[
@@ -515,13 +519,14 @@ function renderRegime(){
         ${bar(50+(b.net_new_high||0)*2,b.net_new_high>=0?'#3ddc97':'#ff6b6b')}
         <div style="font-size:11px;color:var(--muted)">신고가 근접 ${b.near_high??'–'}% · 표본 ${b.n}종목</div>
       </div>
-      <div class="rmacro">${macroBlockHTML()}</div></div></div>`;
+      <div class="rmacro">${macroBlockHTML(mac)}</div></div></div>`;
 }
 
 const ZL={good:"양호",ok:"보통",warn:"주의",bad:"경계"};
-function macroBlockHTML(){
+function macroBlockHTML(mac){
   const ms=DATA.macro||[];
   if(!ms.length) return "";
+  const head=(mac&&mac.summary)?`<div class="msum sig-${mac.risk?mac.risk.tone:'yellow'}">📊 종합 ${mac.summary}</div>`:"";
   const cats=[],byc={};
   ms.forEach(m=>{if(!byc[m.cat]){byc[m.cat]=[];cats.push(m.cat);}byc[m.cat].push(m);});
   const item=m=>{const d=m.delta,good=d==0?null:(d>0)===m.up_good,ar=d>0?'▲':(d<0?'▼':'');
@@ -529,6 +534,7 @@ function macroBlockHTML(){
     return `<span class="mi" title="${(m.note||'').replace(/"/g,'')}"><i class="mz mz-${m.zone||'ok'}"></i><span class="mi-l">${m.label}</span> <b>${cnum(m.value,2)}${m.unit}</b>${dc}</span>`;};
   const guide=ms.map(m=>`<div class="mg-row"><span class="mg-l">${m.label}</span><b class="mg-v">${cnum(m.value,2)}${m.unit}</b><span class="zchip z-${m.zone||'ok'}">${ZL[m.zone||'ok']}</span><span class="mg-n">${m.note||''}</span></div>`).join("");
   return `<div class="macro"><div class="mttl">🌐 글로벌 매크로 <small>FRED + 시클리컬 · 색점=현재 수준</small><button class="mg-btn" onclick="this.closest('.macro').classList.toggle('open')">📖 해석</button></div>
+    ${head}
     <div>${cats.map(c=>`<div class="mline"><span class="mline-l">${c}</span><span class="mline-v">${byc[c].map(item).join("")}</span></div>`).join("")}</div>
     <div class="macro-guide">${guide}</div></div>`;
 }
