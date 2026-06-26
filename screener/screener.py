@@ -411,14 +411,31 @@ def wyckoff_estimate(df, piv=None):
 
     events = []
     vol = df.get("Volume")
-    if vol is not None and len(vol) >= 60 and float(vol.tail(60).mean()) > 0:
-        base_v = float(vol.tail(60).mean())
-        if float(vol.tail(10).mean()) < base_v * 0.8:
-            events.append("거래량 마름(매집 성숙)")
-        if float(vol.tail(5).max()) > base_v * 2.5:
-            events.append("거래량 클라이맥스")
+    base_v = float(vol.tail(60).mean()) if (vol is not None and len(vol) >= 60) else 0.0
     prior_lo = float(l.iloc[max(0, n - look):max(1, n - 10)].min())
     prior_hi = float(h.iloc[max(0, n - look):max(1, n - 10)].max())
+    if base_v > 0:
+        if float(vol.tail(10).mean()) < base_v * 0.8:
+            events.append("거래량 마름(매집 성숙)")
+        # 최근 구간 최대 거래량일의 위치·방향으로 셀링/바잉 클라이맥스 구분
+        vt = vol.tail(look)
+        imax = int(vt.values.argmax())
+        if float(vt.iloc[imax]) > base_v * 2.5:
+            gi = n - len(vt) + imax
+            dpos = (float(c.iloc[gi]) - long_lo) / (long_hi - long_lo) if long_hi > long_lo else 0.5
+            down = gi > 0 and float(c.iloc[gi]) < float(c.iloc[gi - 1])
+            if down and dpos <= 0.45:
+                events.append("셀링 클라이맥스(SC·바닥권 투매)")
+            elif (not down) and dpos >= 0.55:
+                events.append("바잉 클라이맥스(BC·고점권 과열)")
+            else:
+                events.append("거래량 클라이맥스")
+        # 거래량 동반 박스 돌파/이탈 → 강세신호(SOS)/약세신호(SOW)
+        vol_strong = float(vol.tail(5).mean()) > base_v * 1.2
+        if vol_strong and last > prior_hi:
+            events.append("강세 돌파(SOS·박스 상단)")
+        if vol_strong and last < prior_lo:
+            events.append("약세 이탈(SOW·박스 하단)")
     if float(l.tail(10).min()) < prior_lo and last > prior_lo:
         events.append("스프링(하단 가짜 이탈 후 복귀)")
     if float(h.tail(10).max()) > prior_hi and last < prior_hi:
