@@ -698,9 +698,14 @@ function showDetail(r){
     ${r.hot_score!=null?`<div class="treasons" style="border-left:3px solid #ff7a59">🔥 핫 점수 <b style="color:#ff7a59">${r.hot_score}</b> · 거래량 ${r.vol_ratio==null?'–':'20일평균 x'+r.vol_ratio} · 1주 ${r.ret1w==null?'–':(r.ret1w>0?'+':'')+r.ret1w+'%'} · 1개월 ${r.ret1m==null?'–':(r.ret1m>0?'+':'')+r.ret1m+'%'} · 신고가 ${r.high52_pct==null?'–':r.high52_pct+'%'}${r.is_new?' · <b style="color:var(--near)">신규상장(상장후 '+(r.days??'?')+'거래일)</b>':''}</div>`:''}
     ${r.t_mean!=null?(()=>{const d=r.market==="US"?2:0;return `<div class="treasons" style="border-left:3px solid #5b8cff">🎯 컨센서스 목표가 <b style="color:#5b8cff">${fmt(r.t_mean,d)}</b> · 상승여력 <b style="color:${r.t_upside>0?'var(--up)':'var(--down)'}">${r.t_upside==null?'–':(r.t_upside>0?'+':'')+r.t_upside+'%'}</b> · 의견 <b>${r.t_rec||'-'}</b>${r.t_n!=null?` · 애널 ${r.t_n}명`:''}${(r.t_low!=null&&r.t_high!=null)?` · 범위 ${fmt(r.t_low,d)}~${fmt(r.t_high,d)}`:''}${r.t_date?` · ${r.t_date} 기준`:''}<div style="color:#6a7180;margin-top:3px">${r.market==="US"?'야후 집계(애널리스트 평균)':'네이버 증권사 컨센서스'} · 목표가는 참고용, 추세·타점과 함께 보세요.</div></div>`;})():''}
     <div class="ellbox">🌀 <b>엘리어트 파동(추정): ${r.elliott}</b><br>${r.elliott_note||''}
-      <div class="caveat">※ 엘리어트는 분석자마다 카운팅이 달라지는 주관적 기법입니다. 위 라벨은 지그재그 스윙(±${(DATA.config&&DATA.config.zigzag_pct)||7}%) 기반 <b>알고리즘 추정</b>이며, 차트로 직접 카운팅해 확인하세요.</div></div>
+      <div class="caveat">📖 <b>파동·사이클이란?</b> 1사이클 = 상승 5파(1·3·5↑, 2·4 조정) + 조정 3파(A·B·C) = <b>총 8파</b>. 'N번째 사이클'은 주요 바닥 이후 이 8파 묶음을 몇 번 돌았는지 추정 → <b>1~2=초중반(편안)</b>, <b>4~5↑=후반부(성숙·고점 부담)</b>.<br>※ 분석자마다 카운팅이 다른 주관적 기법 — 지그재그 스윙(±${(DATA.config&&DATA.config.zigzag_pct)||7}%) <b>알고리즘 추정·참고용</b>. 진입은 타점·추세로, 사이클은 '얼마나 성숙했나' 참고로.</div></div>
     ${r.wyckoff?`<div class="ellbox" style="border-left-color:#b08cff">🔍 <b>와이코프 국면(추정): ${r.wyckoff}</b><br>${r.wyckoff_note||''}
-      <div class="caveat">※ 가격+거래량 기반 알고리즘 추정 — 매집(Accumulation)/상승(Markup)/분산(Distribution)/하락(Markdown) + 스프링·업스러스트·거래량 이벤트. 차트로 확인하세요.</div></div>`:''}`;
+      <div class="caveat">📖 <b>와이코프 4단계</b> — 가격+거래량으로 본 수급 순환:<br>
+        • <b>매집(Accumulation)</b> — 바닥권 횡보, 세력이 조용히 매집 → <b>상승 직전</b><br>
+        • <b>상승(Markup)</b> — 매집 끝, 본격 상승 추세 (보유·추격)<br>
+        • <b>분산(Distribution)</b> — 고점권 횡보, 세력이 물량 떠넘김(매도) → <b>하락 직전</b><br>
+        • <b>하락(Markdown)</b> — 분산 끝, 본격 하락 추세 (회피)<br>
+        스프링(매집 막바지 저점 흔들기)·업스러스트(분산 막바지 고점 속임)·거래량 급증으로 단계 추정 — <b>참고용</b>, 차트로 확인.</div></div>`:''}`;
 }
 
 // ===== 컨센서스 뷰 =====
