@@ -949,8 +949,30 @@ def _zscores(vals):
     return {i: ((v - mu) / sd if v is not None else -0.5) for i, v in enumerate(vals)}
 
 
-def build_dividend_market(mkt, data):
-    """한 시장의 배당 스크리너(랭킹) + 모델 포트폴리오 구성."""
+# 섹터 성격(레짐 틸트용)
+DEF_SECTORS = {"필수소비", "통신", "유틸", "헬스케어", "리츠", "인프라", "ETF"}
+CYC_SECTORS = {"경기소비", "소재", "에너지", "기술", "산업재", "금융", "지주"}
+
+
+def _div_tilt(mac):
+    """모멘텀 대시보드의 매크로 레짐 → 배당 포트 성향(성장/중립/방어) + 점수 가중·섹터 보너스."""
+    if not mac:
+        return {"tilt": "중립", "reason": "레짐 정보 없음", "w": (0.40, 0.35, 0.25), "def_bonus": 0.0, "cyc_bonus": 0.0}
+    cyc = mac["cycle"]["phase"]
+    net = mac["risk"]["net"]
+    flags = mac["cycle"].get("flags") or []
+    if cyc in ("회복", "확장·과열") and net >= 0 and not flags:
+        return {"tilt": "성장", "reason": f"{cyc}·위험선호 → 배당성장주·경기민감 비중↑",
+                "w": (0.30, 0.45, 0.25), "def_bonus": 0.0, "cyc_bonus": 0.25}
+    if cyc in ("둔화·스태그", "침체·디플레") or net <= -2 or flags:
+        tail = " · 침체신호" if flags else ""
+        return {"tilt": "방어", "reason": f"{cyc}{tail} → 고배당·방어주 비중↑",
+                "w": (0.45, 0.25, 0.30), "def_bonus": 0.30, "cyc_bonus": -0.20}
+    return {"tilt": "중립", "reason": f"{cyc} → 수익률·성장 균형", "w": (0.40, 0.35, 0.25), "def_bonus": 0.0, "cyc_bonus": 0.0}
+
+
+def build_dividend_market(mkt, data, mac=None):
+    """한 시장의 배당 스크리너(랭킹) + 모델 포트폴리오. mac=매크로 레짐(틸트 반영)."""
     uni = DIV_UNIVERSE.get(mkt, {})
     rows = []
     for code, (name, sector) in uni.items():
@@ -966,13 +988,16 @@ def build_dividend_market(mkt, data):
         rows.append(m)
     if not rows:
         return None
-    # 점수 = 수익률·성장률·연속증가 z-score 블렌드 (과도 고배당=수익률 함정은 감점)
+    # 레짐 틸트: 점수 가중·섹터 보너스를 매크로 국면에 맞춰 조정
+    tilt = _div_tilt(mac)
+    wy, wg, ws = tilt["w"]
     zy = _zscores([r["yield"] for r in rows])
     zg = _zscores([r["cagr"] for r in rows])
     zs = _zscores([r["streak"] for r in rows])
     for i, r in enumerate(rows):
         trap = -0.8 if (r["yield"] or 0) > 12 else 0.0          # 12%↑ 초고배당 경계
-        r["score"] = round(zy[i] * 0.40 + zg[i] * 0.35 + zs[i] * 0.25 + trap, 2)
+        sec_b = tilt["def_bonus"] if r["sector"] in DEF_SECTORS else (tilt["cyc_bonus"] if r["sector"] in CYC_SECTORS else 0.0)
+        r["score"] = round(zy[i] * wy + zg[i] * wg + zs[i] * ws + trap + sec_b, 2)
     rows.sort(key=lambda r: r["score"], reverse=True)
     # 모델 포트폴리오: 섹터 최대 3개 캡, 상위 12종목, 점수 비례·가중 4~14% 캡
     picks, sec_cnt = [], {}
@@ -1006,15 +1031,18 @@ def build_dividend_market(mkt, data):
         sec_w[p["sector"]] = round(sec_w.get(p["sector"], 0) + w, 1)
     holdings = [{**p, "weight": w} for p, w in zip(picks, weights)]
     return {"stocks": rows, "portfolio": {"holdings": holdings, "yield": port_yield, "cagr": port_cagr,
-                                          "monthly": monthly, "sectors": sec_w, "n": len(holdings)}}
+                                          "monthly": monthly, "sectors": sec_w, "n": len(holdings),
+                                          "tilt": tilt["tilt"], "tilt_reason": tilt["reason"],
+                                          "regime": (mac["cycle"]["phase"] if mac else None),
+                                          "regime_signal": (mac["risk"]["label"] if mac else None)}}
 
 
-def build_dividends(data):
-    """미국·한국 배당 스크리너+모델 포트폴리오. data엔 배당(actions) 포함되어 있어야 함."""
+def build_dividends(data, mac=None):
+    """미국·한국 배당 스크리너+모델 포트폴리오. data엔 배당(actions) 포함. mac=레짐 연계."""
     out = {}
     for mkt in ("US", "KR"):
         try:
-            d = build_dividend_market(mkt, data)
+            d = build_dividend_market(mkt, data, mac)
             if d:
                 out[mkt] = d
         except Exception as e:
@@ -1518,10 +1546,10 @@ def main():
         div_syms = ([f"{c}.KS" for c in DIV_UNIVERSE["KR"]] + list(DIV_UNIVERSE["US"]))
         div_data = yf.download(div_syms, period="6y", interval="1d",
                                group_by="ticker", auto_adjust=False, actions=True, threads=True, progress=False)
-        dividends = build_dividends(div_data)
+        dividends = build_dividends(div_data, mac)        # 레짐(매크로) 연계
         for mk, dd in dividends.items():
             p = dd.get("portfolio", {})
-            print(f"[dividend] {mk}: {len(dd.get('stocks', []))}종목 · 모델 {p.get('n')}종목 · 수익률 {p.get('yield')}% · 성장 {p.get('cagr')}%")
+            print(f"[dividend] {mk}: {len(dd.get('stocks', []))}종목 · 모델 {p.get('n')} · 수익률 {p.get('yield')}% · 성장 {p.get('cagr')}% · 틸트 {p.get('tilt')}")
     except Exception as e:
         print(f"[dividend] 실패: {e}")
         dividends = {}
