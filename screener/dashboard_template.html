@@ -265,6 +265,29 @@
   #viewCons .cnote{color:var(--cmut);font-size:11.5px;margin-top:14px;line-height:1.6}
   #viewCons .cempty{color:var(--cdim);text-align:center;padding:40px 12px}
   @media(max-width:640px){#viewCons .cons-tabs button{min-width:90px;font-size:13px;padding:10px}}
+  /* ===== 배당 뷰 ===== */
+  #viewDiv .cpanel{background:#161a21;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:14px}
+  #viewDiv .cttl{font-size:15px;font-weight:700;color:var(--txt);margin-bottom:12px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  #viewDiv .cttl small{color:var(--muted);font-weight:500;font-size:12px}
+  #viewDiv .cstats{display:grid;gap:10px;margin-bottom:14px}
+  #viewDiv .cstat{background:#1d222b;border:1px solid var(--line);border-radius:14px;padding:13px 15px}
+  #viewDiv .cstat .lab{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#6a7180;font-weight:700}
+  #viewDiv .cstat .val{font-size:20px;font-weight:800;margin-top:5px;color:var(--txt);font-variant-numeric:tabular-nums}
+  #viewDiv .cstat .val.teal{color:#5b8cff}#viewDiv .cstat .val.amber{color:var(--warn)}
+  #viewDiv .cstat .sub{font-size:11px;color:var(--muted);margin-top:3px}
+  #viewDiv .ctbl{width:100%;border-collapse:collapse;font-size:13.5px}
+  #viewDiv .ctbl th,#viewDiv .ctbl td{padding:9px 8px;border-bottom:1px solid rgba(91,140,255,.08);text-align:right;white-space:nowrap;color:var(--txt)}
+  #viewDiv .ctbl th{color:#6a7180;font-size:11.5px;font-weight:700}
+  #viewDiv .ctbl th:first-child,#viewDiv .ctbl td:first-child{text-align:left}
+  #viewDiv .pos{color:var(--up)}#viewDiv .neg{color:var(--down)}
+  #viewDiv .cempty{color:var(--muted);text-align:center;padding:40px 12px}
+  #viewDiv .dcal{margin:4px 0 14px}
+  #viewDiv .dcal-t{font-size:12px;color:var(--muted);margin-bottom:7px}
+  #viewDiv .dcal-row{display:flex;gap:4px;align-items:flex-end;height:62px}
+  #viewDiv .dcal-bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px}
+  #viewDiv .dcal-bar i{width:100%;max-width:22px;background:linear-gradient(180deg,#5b8cff,#3a6fe0);border-radius:3px 3px 0 0;min-height:2px}
+  #viewDiv .dcal-bar span{font-size:9px;color:#6a7180}
+  @media(max-width:640px){#viewDiv .ctbl th,#viewDiv .ctbl td{padding:8px 4px;font-size:12.5px}}
 </style>
 </head>
 <body>
@@ -272,8 +295,9 @@
   <div id="badge" class="badge">⚠️ 예시(가짜 데이터)</div>
   <h1>증시 추세추종 · 기술적 분석 대시보드</h1>
   <div class="topnav" id="topnav">
-    <button data-v="dash" class="on">📊 대시보드</button>
+    <button data-v="dash" class="on">📊 모멘텀 대시보드</button>
     <button data-v="cons">🎯 컨센서스</button>
+    <button data-v="div">💸 배당</button>
   </div>
   <div id="viewDash">
   <div id="chips" class="chips"></div>
@@ -333,6 +357,8 @@
       </tr></thead><tbody id="consAgg"></tbody></table></div>
     </div>
   </div>
+
+  <div id="viewDiv" style="display:none"></div>
 
   <p class="foot">무료 지연 종가 · RS=지수 대비 상대강도(1·3·6개월 가중, 양수=지수 이김) · 눌림목=당일 저가≤20MA≤고가 · 엘리어트는 주관적이라 알고리즘 '추정'(참고용) · US 섹터=SPDR ETF / KR 섹터=KODEX ETF 구성종목 · 투자 판단은 원본 차트 확인 후</p>
 </div>
@@ -462,6 +488,43 @@ if(!DATA){
       KR:{month:6,window:"약세 구간 (5~10월 · Sell in May)",index:{name:"코스피",avg:-0.5,hit:47},
         strong:[{label:"반도체",etf:"091160",avg:2.1,hit:67,n:15},{label:"바이오",etf:"244580",avg:1.3,hit:60,n:15},{label:"2차전지",etf:"305720",avg:0.9,hit:53,n:15}],
         weak:[{label:"건설",etf:"117700",avg:-2.0,hit:33,n:15},{label:"증권",etf:"102970",avg:-1.1,hit:40,n:15},{label:"철강",etf:"117680",avg:-0.7,hit:40,n:15}]}
+    },
+    dividends:{
+      KR:{stocks:[
+        {code:"033780",name:"가상KT&G",sector:"필수소비",price:128000,yield:6.1,cagr:5.2,streak:6,freq:4,score:1.42},
+        {code:"105560",name:"가상KB금융",sector:"금융",price:92000,yield:5.4,cagr:8.1,streak:4,freq:4,score:1.31},
+        {code:"017670",name:"가상SK텔레콤",sector:"통신",price:56000,yield:6.8,cagr:1.5,streak:3,freq:4,score:1.10},
+        {code:"088980",name:"가상맥쿼리인프라",sector:"인프라",price:13200,yield:6.5,cagr:3.0,streak:7,freq:2,score:1.05},
+        {code:"005387",name:"가상현대차2우B",sector:"경기소비",price:118000,yield:5.0,cagr:6.0,streak:3,freq:2,score:0.78},
+        {code:"055550",name:"가상신한지주",sector:"금융",price:54000,yield:5.1,cagr:7.0,streak:4,freq:4,score:0.74},
+        {code:"000810",name:"가상삼성화재",sector:"금융",price:380000,yield:4.6,cagr:9.0,streak:5,freq:2,score:0.61}],
+        portfolio:{n:6,yield:5.9,cagr:5.6,
+          sectors:{"필수소비":18,"금융":34,"통신":16,"인프라":18,"경기소비":14},
+          monthly:[0.4,0.9,1.4,0.5,0.4,1.6,0.4,0.9,0.4,0.5,0.4,1.7],
+          holdings:[
+            {code:"033780",name:"가상KT&G",sector:"필수소비",yield:6.1,cagr:5.2,streak:6,weight:18},
+            {code:"105560",name:"가상KB금융",sector:"금융",yield:5.4,cagr:8.1,streak:4,weight:17},
+            {code:"088980",name:"가상맥쿼리인프라",sector:"인프라",yield:6.5,cagr:3.0,streak:7,weight:18},
+            {code:"017670",name:"가상SK텔레콤",sector:"통신",yield:6.8,cagr:1.5,streak:3,weight:16},
+            {code:"000810",name:"가상삼성화재",sector:"금융",yield:4.6,cagr:9.0,streak:5,weight:17},
+            {code:"005387",name:"가상현대차2우B",sector:"경기소비",yield:5.0,cagr:6.0,streak:3,weight:14}]}},
+      US:{stocks:[
+        {code:"SCHD",name:"가상SCHD ETF",sector:"ETF",price:78.4,yield:3.6,cagr:11.0,streak:10,freq:4,score:1.55},
+        {code:"O",name:"가상리얼티인컴",sector:"리츠",price:57.2,yield:5.8,cagr:4.0,streak:12,freq:12,score:1.40},
+        {code:"ABBV",name:"가상애브비",sector:"헬스케어",price:172.5,yield:3.5,cagr:8.0,streak:11,freq:4,score:1.22},
+        {code:"KO",name:"가상코카콜라",sector:"필수소비",price:62.1,yield:3.1,cagr:5.0,streak:12,freq:4,score:0.95},
+        {code:"TXN",name:"가상텍사스인스트",sector:"기술",price:188.0,yield:2.9,cagr:12.0,streak:9,freq:4,score:0.90},
+        {code:"JEPI",name:"가상JEPI",sector:"ETF",price:57.8,yield:7.4,cagr:0,streak:0,freq:12,score:0.66}],
+        portfolio:{n:6,yield:4.3,cagr:7.4,
+          sectors:{"ETF":31,"리츠":17,"헬스케어":17,"필수소비":18,"기술":17},
+          monthly:[1.1,0.4,1.3,1.1,0.4,1.3,1.1,0.4,1.3,1.1,0.4,1.3],
+          holdings:[
+            {code:"SCHD",name:"가상SCHD ETF",sector:"ETF",yield:3.6,cagr:11.0,streak:10,weight:17},
+            {code:"O",name:"가상리얼티인컴",sector:"리츠",yield:5.8,cagr:4.0,streak:12,weight:17},
+            {code:"ABBV",name:"가상애브비",sector:"헬스케어",yield:3.5,cagr:8.0,streak:11,weight:17},
+            {code:"KO",name:"가상코카콜라",sector:"필수소비",yield:3.1,cagr:5.0,streak:12,weight:18},
+            {code:"TXN",name:"가상텍사스인스트",sector:"기술",yield:2.9,cagr:12.0,streak:9,weight:17},
+            {code:"JEPI",name:"가상JEPI",sector:"ETF",yield:7.4,cagr:0,streak:0,weight:14}]}}
     }};
 }
 
@@ -835,11 +898,53 @@ $("consMktSeg").querySelectorAll("button").forEach(b=>b.addEventListener("click"
   $("consMktSeg").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
   renderConsensus();
 }));
+
+// ===== 배당 뷰 =====
+let divMkt="KR";
+const DMN=["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+function renderDividend(){
+  const host=$("viewDiv"), dv=(DATA.dividends||{}), has=dv[divMkt];
+  let html=`<div class="seg" id="divMktSeg"><button data-dm="KR" class="${divMkt==='KR'?'on':''}">🔵 한국</button><button data-dm="US" class="${divMkt==='US'?'on':''}">🟢 미국</button></div>`;
+  if(!has||!has.portfolio){
+    host.innerHTML=html+`<div class="cpanel"><div class="cempty">${divMkt==='KR'?'한국 배당 데이터가 없습니다(네이버 보조 수집 전이면 비어있을 수 있어요).':'배당 데이터가 없습니다 — 스크리너 실행 후 채워집니다.'}</div></div>`;
+    return wireDivSeg();
+  }
+  const p=has.portfolio, dec=divMkt==='US'?2:0, maxm=Math.max(...p.monthly,0.0001);
+  html+=`<div class="cpanel">
+    <div class="cttl">💼 모델 배당 포트폴리오 <small>매일 자동 구성 · 수익률·성장·안정성 종합 · ${p.n}종목</small></div>
+    <div class="cstats" style="grid-template-columns:repeat(3,1fr)">
+      <div class="cstat"><div class="lab">포트 배당수익률</div><div class="val teal">${p.yield}%</div><div class="sub">가중평균(연)</div></div>
+      <div class="cstat"><div class="lab">배당성장률</div><div class="val">${p.cagr}%</div><div class="sub">연평균 CAGR</div></div>
+      <div class="cstat"><div class="lab">구성</div><div class="val amber">${p.n}종목</div><div class="sub">섹터 분산</div></div>
+    </div>
+    <div class="dcal"><div class="dcal-t">📅 월별 배당 분포(포트 기준)</div>
+      <div class="dcal-row">${p.monthly.map((v,i)=>`<div class="dcal-bar"><i style="height:${Math.round(v/maxm*100)}%"></i><span>${i+1}</span></div>`).join("")}</div></div>
+    <div class="tbl-scroll"><table class="ctbl"><thead><tr><th class="l">종목</th><th>비중</th><th>배당수익률</th><th class="mhide">성장률</th><th class="mhide">연속↑</th><th class="mhide">섹터</th></tr></thead><tbody>
+      ${p.holdings.map(h=>`<tr><td class="l"><b>${h.name}</b> <span class="scode" style="color:#6a7180">${h.code}</span></td>
+        <td style="color:#5b8cff"><b>${h.weight}%</b></td><td class="pos">${h.yield}%</td>
+        <td class="mhide">${h.cagr==null?'–':(h.cagr>0?'+':'')+h.cagr+'%'}</td><td class="mhide">${h.streak==null?'–':h.streak+'년'}</td><td class="mhide">${h.sector}</td></tr>`).join("")}
+    </tbody></table></div></div>`;
+  html+=`<div class="cpanel" style="margin-top:14px"><div class="cttl">🔎 배당주 스크리너 <small>점수=배당수익률·성장률·연속증가 종합 (고배당 함정 감점)</small></div>
+    <div class="tbl-scroll"><table class="ctbl"><thead><tr><th class="l">종목</th><th>현재가</th><th>배당수익률</th><th class="mhide">성장률</th><th class="mhide">연속↑</th><th class="mhide">지급</th><th>점수</th></tr></thead><tbody>
+    ${has.stocks.map(s=>`<tr><td class="l"><b>${s.name}</b> <span class="scode" style="color:#6a7180">${s.code}</span></td>
+      <td>${cnum(s.price,dec)}</td><td class="pos">${s.yield}%</td>
+      <td class="mhide">${s.cagr==null?'–':(s.cagr>0?'+':'')+s.cagr+'%'}</td><td class="mhide">${s.streak==null?'–':s.streak+'년'}</td>
+      <td class="mhide">${s.freq?s.freq+'회/년':'–'}</td><td><b>${s.score}</b></td></tr>`).join("")}
+    </tbody></table></div></div>
+    <p class="cnote" style="color:var(--muted);font-size:11.5px;margin-top:12px">※ 모델 포트폴리오는 매일 자동 산출되는 <b>참고용 가상 배분</b>입니다. 섹터 최대 3종목·종목당 4~14% 캡. 배당 데이터는 야후 기준(한국은 부정확할 수 있음).</p>`;
+  host.innerHTML=html; wireDivSeg();
+}
+function wireDivSeg(){
+  const seg=$("divMktSeg"); if(!seg)return;
+  seg.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{divMkt=b.dataset.dm;renderDividend();}));
+}
 $("topnav").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
   const v=b.dataset.v;$("topnav").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
   $("viewDash").style.display=v==="dash"?"":"none";
   $("viewCons").style.display=v==="cons"?"":"none";
+  $("viewDiv").style.display=v==="div"?"":"none";
   if(v==="cons") renderConsensus();
+  if(v==="div") renderDividend();
 }));
 
 render();

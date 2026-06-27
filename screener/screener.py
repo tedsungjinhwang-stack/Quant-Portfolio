@@ -864,6 +864,165 @@ def build_global_macro():
 
 
 # ----------------------------------------------------------------------
+# 배당 포트폴리오 — 발굴 스크리너 + 매일 자동 모델 포트폴리오
+# ----------------------------------------------------------------------
+# 배당 유니버스 (ticker→(이름, 섹터)). 미국=ETF+배당주, 한국=고배당주.
+DIV_UNIVERSE = {
+    "US": {
+        "SCHD": ("Schwab 미국배당 ETF", "ETF"), "VYM": ("뱅가드 고배당 ETF", "ETF"),
+        "DGRO": ("배당성장 ETF", "ETF"), "VIG": ("배당성장주 ETF", "ETF"),
+        "JEPI": ("JPM 프리미엄인컴", "ETF"), "JEPQ": ("JPM 나스닥인컴", "ETF"),
+        "SPYD": ("S&P 고배당 ETF", "ETF"), "HDV": ("iShares 고배당 ETF", "ETF"),
+        "O": ("리얼티인컴", "리츠"), "MAIN": ("메인스트리트캐피탈", "금융"),
+        "KO": ("코카콜라", "필수소비"), "PEP": ("펩시코", "필수소비"), "PG": ("P&G", "필수소비"),
+        "JNJ": ("존슨앤존슨", "헬스케어"), "ABBV": ("애브비", "헬스케어"), "MRK": ("머크", "헬스케어"),
+        "XOM": ("엑슨모빌", "에너지"), "CVX": ("셰브론", "에너지"),
+        "MO": ("알트리아", "필수소비"), "PM": ("필립모리스", "필수소비"),
+        "MMM": ("3M", "산업재"), "IBM": ("IBM", "기술"), "CSCO": ("시스코", "기술"),
+        "TXN": ("텍사스인스트루먼트", "기술"), "AVGO": ("브로드컴", "기술"),
+        "T": ("AT&T", "통신"), "VZ": ("버라이즌", "통신"),
+        "MCD": ("맥도날드", "경기소비"), "HD": ("홈디포", "경기소비"), "PFE": ("화이자", "헬스케어"),
+    },
+    "KR": {
+        "005935": ("삼성전자우", "기술"), "033780": ("KT&G", "필수소비"),
+        "105560": ("KB금융", "금융"), "055550": ("신한지주", "금융"), "086790": ("하나금융", "금융"),
+        "316140": ("우리금융", "금융"), "024110": ("기업은행", "금융"), "138040": ("메리츠금융", "금융"),
+        "017670": ("SK텔레콤", "통신"), "030200": ("KT", "통신"),
+        "000810": ("삼성화재", "금융"), "032830": ("삼성생명", "금융"), "005830": ("DB손해보험", "금융"),
+        "088980": ("맥쿼리인프라", "인프라"), "005387": ("현대차2우B", "경기소비"),
+        "000270": ("기아", "경기소비"), "005490": ("POSCO홀딩스", "소재"), "034730": ("SK", "지주"),
+    },
+}
+
+
+def _div_metrics(close, divs):
+    """가격·배당 시계열로 배당 지표 산출 → dict 또는 None."""
+    import pandas as pd
+    if close is None or len(close) == 0:
+        return None
+    close = close.dropna()
+    price = float(close.iloc[-1]) if len(close) else None
+    if not price:
+        return None
+    d = divs.dropna() if divs is not None else None
+    d = d[d > 0] if d is not None else None
+    if d is None or len(d) == 0:
+        return None
+    idx = pd.to_datetime(d.index)
+    last_dt = idx.max()
+    ttm = float(d[idx >= (last_dt - pd.Timedelta(days=365))].sum())
+    dy = round(ttm / price * 100, 2) if price else None
+    # 연도별 배당 합계
+    by_year = {}
+    for dt_, v in zip(idx, d.values):
+        by_year[dt_.year] = by_year.get(dt_.year, 0.0) + float(v)
+    years = sorted(by_year)
+    full = years[:-1] if years else []           # 마지막 해는 미완성일 수 있어 제외
+    cagr = streak = None
+    if len(full) >= 2:
+        a, b = by_year[full[0]], by_year[full[-1]]
+        span = full[-1] - full[0]
+        if a > 0 and span > 0:
+            cagr = round(((b / a) ** (1 / span) - 1) * 100, 1)
+        s = 0
+        for i in range(len(full) - 1, 0, -1):
+            if by_year[full[i]] >= by_year[full[i - 1]] * 0.999:
+                s += 1
+            else:
+                break
+        streak = s
+    # 최근 12개월 지급 횟수·지급월
+    recent = [(dt_, v) for dt_, v in zip(idx, d.values) if dt_ >= (last_dt - pd.Timedelta(days=365))]
+    freq = len(recent)
+    months = sorted({dt_.month for dt_, _ in recent})
+    return {"price": round(price, 2), "yield": dy, "cagr": cagr, "streak": streak,
+            "freq": freq, "months": months, "ex_date": last_dt.strftime("%Y-%m-%d"), "ttm_div": round(ttm, 4)}
+
+
+def _zscores(vals):
+    xs = [v for v in vals if v is not None]
+    if len(xs) < 2:
+        return {i: 0.0 for i in range(len(vals))}
+    import statistics
+    mu = statistics.mean(xs)
+    sd = statistics.pstdev(xs) or 1.0
+    return {i: ((v - mu) / sd if v is not None else -0.5) for i, v in enumerate(vals)}
+
+
+def build_dividend_market(mkt, data):
+    """한 시장의 배당 스크리너(랭킹) + 모델 포트폴리오 구성."""
+    uni = DIV_UNIVERSE.get(mkt, {})
+    rows = []
+    for code, (name, sector) in uni.items():
+        sym = f"{code}.KS" if mkt == "KR" else code
+        df = ohlc_for(data, sym)
+        if df is None:
+            continue
+        divs = df["Dividends"] if "Dividends" in df.columns else None
+        m = _div_metrics(df["Close"], divs)
+        if not m or not m.get("yield"):
+            continue
+        m.update({"code": code, "name": name, "sector": sector, "market": mkt})
+        rows.append(m)
+    if not rows:
+        return None
+    # 점수 = 수익률·성장률·연속증가 z-score 블렌드 (과도 고배당=수익률 함정은 감점)
+    zy = _zscores([r["yield"] for r in rows])
+    zg = _zscores([r["cagr"] for r in rows])
+    zs = _zscores([r["streak"] for r in rows])
+    for i, r in enumerate(rows):
+        trap = -0.8 if (r["yield"] or 0) > 12 else 0.0          # 12%↑ 초고배당 경계
+        r["score"] = round(zy[i] * 0.40 + zg[i] * 0.35 + zs[i] * 0.25 + trap, 2)
+    rows.sort(key=lambda r: r["score"], reverse=True)
+    # 모델 포트폴리오: 섹터 최대 3개 캡, 상위 12종목, 점수 비례·가중 4~14% 캡
+    picks, sec_cnt = [], {}
+    for r in rows:
+        if len(picks) >= 12:
+            break
+        if sec_cnt.get(r["sector"], 0) >= 3:
+            continue
+        picks.append(r)
+        sec_cnt[r["sector"]] = sec_cnt.get(r["sector"], 0) + 1
+    base = [max(0.1, p["score"] - min(p_["score"] for p_ in picks) + 0.5) for p in picks]
+    tot = sum(base) or 1.0
+    weights = []
+    for w in base:
+        weights.append(min(0.14, max(0.04, w / tot)))
+    wsum = sum(weights)
+    weights = [round(w / wsum * 100, 1) for w in weights]       # 정규화 %
+    port_yield = round(sum(w / 100 * (p["yield"] or 0) for w, p in zip(weights, picks)), 2)
+    port_cagr = round(sum(w / 100 * (p["cagr"] or 0) for w, p in zip(weights, picks)), 1)
+    # 월별 배당 분포(각 종목 연배당을 지급월에 균등 배분)
+    monthly = [0.0] * 12
+    for w, p in zip(weights, picks):
+        ann = w / 100 * (p["yield"] or 0)
+        ms = p["months"] or list(range(1, 13))
+        for mo in ms:
+            monthly[mo - 1] += ann / len(ms)
+    monthly = [round(x, 3) for x in monthly]
+    # 섹터 비중
+    sec_w = {}
+    for w, p in zip(weights, picks):
+        sec_w[p["sector"]] = round(sec_w.get(p["sector"], 0) + w, 1)
+    holdings = [{**p, "weight": w} for p, w in zip(picks, weights)]
+    return {"stocks": rows, "portfolio": {"holdings": holdings, "yield": port_yield, "cagr": port_cagr,
+                                          "monthly": monthly, "sectors": sec_w, "n": len(holdings)}}
+
+
+def build_dividends(data):
+    """미국·한국 배당 스크리너+모델 포트폴리오. data엔 배당(actions) 포함되어 있어야 함."""
+    out = {}
+    for mkt in ("US", "KR"):
+        try:
+            d = build_dividend_market(mkt, data)
+            if d:
+                out[mkt] = d
+        except Exception as e:
+            print(f"[dividend] {mkt} 실패: {e}")
+    return out
+
+
+# ----------------------------------------------------------------------
 # 핫한 종목(거래량 급증 + 단기 모멘텀)
 # ----------------------------------------------------------------------
 def hot_score(rec):
@@ -1353,6 +1512,20 @@ def main():
         print(f"[season] 실패: {e}")
         seasonality = {}
 
+    # 배당: 유니버스 배당이력(actions) 별도 다운로드 → 스크리너+모델 포트폴리오
+    try:
+        import yfinance as yf
+        div_syms = ([f"{c}.KS" for c in DIV_UNIVERSE["KR"]] + list(DIV_UNIVERSE["US"]))
+        div_data = yf.download(div_syms, period="6y", interval="1d",
+                               group_by="ticker", auto_adjust=False, actions=True, threads=True, progress=False)
+        dividends = build_dividends(div_data)
+        for mk, dd in dividends.items():
+            p = dd.get("portfolio", {})
+            print(f"[dividend] {mk}: {len(dd.get('stocks', []))}종목 · 모델 {p.get('n')}종목 · 수익률 {p.get('yield')}% · 성장 {p.get('cagr')}%")
+    except Exception as e:
+        print(f"[dividend] 실패: {e}")
+        dividends = {}
+
     markets = build_tracks(allrecs, units_by_market)
     stocks = collect_selected(markets, allrecs)
     for rec in commodities:  # 원자재를 stocks에 추가(상세 차트용)
@@ -1392,7 +1565,7 @@ def main():
         "config": {k: CONFIG[k] for k in ("ma_pullback", "ma_trend", "top_sectors",
                                           "leaders_per_sector", "individual_top", "deep_top",
                                           "proximity_pct", "rs_weights", "zigzag_pct")},
-        "regime": regime, "seasonality": seasonality, "macro": macro,
+        "regime": regime, "seasonality": seasonality, "macro": macro, "dividends": dividends,
         "markets": markets, "stocks": stocks,
         "commodities": [c["id"] for c in commodities],
         "hot": [h["id"] for h in hot],
