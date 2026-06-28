@@ -1050,8 +1050,72 @@ def build_dividend_market(mkt, data, mac=None):
                                           "regime_signal": (mac["risk"]["label"] if mac else None)}}
 
 
+def _assemble_portfolio(picks, tilt, mac=None):
+    """선정 종목 리스트 → 가중치·포트수익률·월별분포·섹터/시장 비중."""
+    lo = min(x["score"] for x in picks)
+    base = [max(0.1, p["score"] - lo + 0.5) for p in picks]
+    tot = sum(base) or 1.0
+    weights = [min(0.14, max(0.04, w / tot)) for w in base]
+    wsum = sum(weights) or 1.0
+    weights = [round(w / wsum * 100, 1) for w in weights]
+    pyld = round(sum(w / 100 * (p["yield"] or 0) for w, p in zip(weights, picks)), 2)
+    pcagr = round(sum(w / 100 * (p["cagr"] or 0) for w, p in zip(weights, picks)), 1)
+    monthly = [0.0] * 12
+    for w, p in zip(weights, picks):
+        ann = w / 100 * (p["yield"] or 0)
+        ms = p["months"] or list(range(1, 13))
+        for mo in ms:
+            monthly[mo - 1] += ann / len(ms)
+    monthly = [round(x, 3) for x in monthly]
+    sec_w, mk_w = {}, {}
+    for w, p in zip(weights, picks):
+        sec_w[p["sector"]] = round(sec_w.get(p["sector"], 0) + w, 1)
+        mk_w[p["market"]] = round(mk_w.get(p["market"], 0) + w, 1)
+    holdings = [{**p, "weight": w} for p, w in zip(picks, weights)]
+    return {"holdings": holdings, "yield": pyld, "cagr": pcagr, "monthly": monthly,
+            "sectors": sec_w, "markets": mk_w, "n": len(holdings),
+            "tilt": tilt["tilt"], "tilt_reason": tilt["reason"],
+            "regime": (mac["cycle"]["phase"] if mac else None),
+            "regime_signal": (mac["risk"]["label"] if mac else None)}
+
+
+def build_dividend_integrated(per_market, mac=None):
+    """미국+한국 통합 모델 포트폴리오 — 양 시장 후보를 한 풀로 합쳐 공정 비교·구성."""
+    pool = []
+    for mk in ("US", "KR"):
+        if mk in per_market:
+            pool += per_market[mk]["stocks"]
+    if not pool:
+        return None
+    tilt = _div_tilt(mac)
+    wy, wg, ws = tilt["w"]
+    zy = _zscores([r["yield"] for r in pool])
+    zg = _zscores([r["cagr"] for r in pool])
+    zs = _zscores([r["streak"] for r in pool])
+    ranked = []
+    for i, r in enumerate(pool):
+        trap = -0.8 if (r["yield"] or 0) > 12 else 0.0
+        sec_b = tilt["def_bonus"] if r["sector"] in DEF_SECTORS else (tilt["cyc_bonus"] if r["sector"] in CYC_SECTORS else 0.0)
+        rr = dict(r)
+        rr["score"] = round(zy[i] * wy + zg[i] * wg + zs[i] * ws + trap + sec_b, 2)
+        ranked.append(rr)
+    ranked.sort(key=lambda r: r["score"], reverse=True)
+    picks, sec_cnt, mk_cnt = [], {}, {}
+    for r in ranked:                                   # 상위 14 · 섹터 최대3 · 시장 최대9(균형)
+        if len(picks) >= 14:
+            break
+        if sec_cnt.get(r["sector"], 0) >= 3 or mk_cnt.get(r["market"], 0) >= 9:
+            continue
+        picks.append(r)
+        sec_cnt[r["sector"]] = sec_cnt.get(r["sector"], 0) + 1
+        mk_cnt[r["market"]] = mk_cnt.get(r["market"], 0) + 1
+    if not picks:
+        return None
+    return {"stocks": ranked, "portfolio": _assemble_portfolio(picks, tilt, mac)}
+
+
 def build_dividends(data, mac=None):
-    """미국·한국 배당 스크리너+모델 포트폴리오. data엔 배당(actions) 포함. mac=레짐 연계."""
+    """미국·한국 + 통합 배당 스크리너/모델 포트폴리오. data엔 배당(actions) 포함. mac=레짐 연계."""
     out = {}
     for mkt in ("US", "KR"):
         try:
@@ -1060,6 +1124,12 @@ def build_dividends(data, mac=None):
                 out[mkt] = d
         except Exception as e:
             print(f"[dividend] {mkt} 실패: {e}")
+    try:
+        allp = build_dividend_integrated(out, mac)
+        if allp:
+            out["ALL"] = allp
+    except Exception as e:
+        print(f"[dividend] 통합 실패: {e}")
     return out
 
 
