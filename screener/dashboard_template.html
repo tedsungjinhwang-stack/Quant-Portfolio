@@ -300,8 +300,9 @@
   #viewDiv .cempty{color:var(--muted);text-align:center;padding:40px 12px}
   #viewDiv .dcal{margin:4px 0 14px}
   #viewDiv .dcal-t{font-size:12px;color:var(--muted);margin-bottom:7px}
-  #viewDiv .dcal-row{display:flex;gap:4px;align-items:flex-end;height:62px}
-  #viewDiv .dcal-bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px}
+  #viewDiv .dcal-row{display:flex;gap:4px;align-items:flex-end;height:82px}
+  #viewDiv .dcal-bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:2px}
+  #viewDiv .dcal-v{font-family:var(--mono);font-size:8.5px;color:var(--accent);font-weight:700;line-height:1}
   #viewDiv .dcal-bar i{width:100%;max-width:22px;background:linear-gradient(180deg,#ffb000,#c98a10);border-radius:3px 3px 0 0;min-height:2px}
   #viewDiv .dcal-bar span{font-size:9px;color:#8d897f}
   #viewDiv .dtilt{font-size:13px;font-weight:700;padding:9px 13px;border-radius:10px;margin-bottom:14px;background:rgba(141,137,127,.1);line-height:1.5}
@@ -523,7 +524,7 @@ if(!DATA){
         {code:"005387",name:"가상현대차2우B",sector:"경기소비",price:118000,yield:5.0,cagr:6.0,streak:3,freq:2,score:0.78},
         {code:"055550",name:"가상신한지주",sector:"금융",price:54000,yield:5.1,cagr:7.0,streak:4,freq:4,score:0.74},
         {code:"000810",name:"가상삼성화재",sector:"금융",price:380000,yield:4.6,cagr:9.0,streak:5,freq:2,score:0.61}],
-        portfolio:{n:6,yield:5.9,cagr:5.6,tilt:"방어",tilt_reason:"둔화·스태그 → 고배당·방어주 비중↑",regime:"둔화·스태그",
+        portfolio:{n:6,yield:5.9,cagr:5.6,yield_eq:6.4,cash:25,invested:75,cash_why:"방어 · 약세 계절(5~10월)",tilt:"방어",tilt_reason:"둔화·스태그 → 고배당·방어주 비중↑",regime:"둔화·스태그",
           sectors:{"필수소비":18,"금융":34,"통신":16,"인프라":18,"경기소비":14},
           monthly:[0.4,0.9,1.4,0.5,0.4,1.6,0.4,0.9,0.4,0.5,0.4,1.7],
           holdings:[
@@ -541,7 +542,7 @@ if(!DATA){
         {code:"KO",name:"가상코카콜라",sector:"필수소비",price:62.1,yield:3.1,cagr:5.0,streak:12,freq:4,score:0.95},
         {code:"TXN",name:"가상텍사스인스트",sector:"기술",price:188.0,yield:2.9,cagr:12.0,streak:9,freq:4,score:0.90},
         {code:"JEPI",name:"가상JEPI",sector:"ETF",price:57.8,yield:7.4,cagr:0,streak:0,freq:12,score:0.66}],
-        portfolio:{n:6,yield:4.3,cagr:7.4,tilt:"성장",tilt_reason:"회복·위험선호 → 배당성장주·경기민감 비중↑",regime:"회복",
+        portfolio:{n:6,yield:4.3,cagr:7.4,yield_eq:4.5,cash:4,invested:96,cash_why:"성장 · 강세 계절",tilt:"성장",tilt_reason:"회복·위험선호 → 배당성장주·경기민감 비중↑",regime:"회복",
           sectors:{"ETF":31,"리츠":17,"헬스케어":17,"필수소비":18,"기술":17},
           monthly:[1.1,0.4,1.3,1.1,0.4,1.3,1.1,0.4,1.3,1.1,0.4,1.3],
           holdings:[
@@ -560,7 +561,7 @@ if(!DATA){
         {code:"ABBV",name:"가상애브비",sector:"헬스케어",market:"US",price:172.5,yield:3.5,cagr:8.0,streak:11,freq:4,score:1.18},
         {code:"088980",name:"가상맥쿼리인프라",sector:"인프라",market:"KR",price:13200,yield:6.5,cagr:3.0,streak:7,freq:2,score:1.05},
         {code:"TXN",name:"가상텍사스인스트",sector:"기술",market:"US",price:188,yield:2.9,cagr:12.0,streak:9,freq:4,score:0.92}],
-        portfolio:{n:8,yield:4.7,cagr:7.6,tilt:"중립",tilt_reason:"확장·과열 → 수익률·성장 균형",regime:"확장·과열",
+        portfolio:{n:8,yield:4.7,cagr:7.6,yield_eq:5.2,cash:9,invested:91,cash_why:"중립 · 강세 계절",tilt:"중립",tilt_reason:"확장·과열 → 수익률·성장 균형",regime:"확장·과열",
           markets:{US:52,KR:48},
           sectors:{"ETF":30,"필수소비":13,"리츠":13,"금융":13,"헬스케어":13,"인프라":9,"기술":9},
           monthly:[1.0,0.7,1.2,1.0,0.7,1.3,1.0,0.7,1.2,1.0,0.7,1.3],
@@ -959,19 +960,21 @@ function renderDividend(){
     host.innerHTML=html+`<div class="cpanel"><div class="cempty">${divMkt==='KR'?'한국 배당 데이터가 없습니다(네이버 보조 수집 전이면 비어있을 수 있어요).':'배당 데이터가 없습니다 — 스크리너 실행 후 채워집니다.'}</div></div>`;
     return wireDivSeg();
   }
-  const p=has.portfolio, maxm=Math.max(...p.monthly,0.0001);
+  const p=has.portfolio, maxm=Math.max(...p.monthly,0.0001), mtot=p.monthly.reduce((a,b)=>a+b,0)||1;
   const tc={"성장":"green","방어":"red","중립":"yellow"}[p.tilt]||"yellow";
+  const cash=p.cash??0, inv=p.invested??100;
   const mkSplit=(p.markets&&divMkt==='ALL')?` · 🟢미국 ${p.markets.US||0}% / 🔵한국 ${p.markets.KR||0}%`:'';
-  html+=`<div class="dtilt dt-${tc}">🔗 모멘텀 대시보드 레짐 연계 — 배당 포트 <b>${p.tilt||'중립'} 성향</b>${p.tilt_reason?` · ${p.tilt_reason}`:''}</div>`;
+  html+=`<div class="dtilt dt-${tc}">🔗 모멘텀 레짐·계절 연계 — 배당 포트 <b>${p.tilt||'중립'} 성향</b> · 현금 <b>${cash}%</b>/주식 <b>${inv}%</b>${p.cash_why?` <span style="opacity:.7">(${p.cash_why})</span>`:''}</div>`;
   html+=`<div class="cpanel">
-    <div class="cttl">💼 ${divMkt==='ALL'?'통합 ':''}모델 배당 포트폴리오 <small>매일 자동 구성 · 레짐 반영 · ${p.n}종목${mkSplit}</small></div>
-    <div class="cstats" style="grid-template-columns:repeat(3,1fr)">
-      <div class="cstat"><div class="lab">포트 배당수익률</div><div class="val teal">${p.yield}%</div><div class="sub">가중평균(연)</div></div>
+    <div class="cttl">💼 ${divMkt==='ALL'?'통합 ':''}모델 배당 포트폴리오 <small>매일 자동 구성 · 레짐+계절 반영 · ${p.n}종목 + 현금${mkSplit}</small></div>
+    <div class="cstats" style="grid-template-columns:repeat(auto-fit,minmax(128px,1fr))">
+      <div class="cstat"><div class="lab">배당수익률</div><div class="val teal">${p.yield}%</div><div class="sub">현금 포함${p.yield_eq?` · 주식분 ${p.yield_eq}%`:''}</div></div>
+      <div class="cstat"><div class="lab">현금 비중</div><div class="val amber">${cash}%</div><div class="sub">주식 ${inv}%</div></div>
       <div class="cstat"><div class="lab">배당성장률</div><div class="val">${p.cagr}%</div><div class="sub">연평균 CAGR</div></div>
-      <div class="cstat"><div class="lab">구성</div><div class="val amber">${p.n}종목</div><div class="sub">${divMkt==='ALL'?'미·한 통합':'섹터 분산'}</div></div>
+      <div class="cstat"><div class="lab">구성</div><div class="val">${p.n}종목</div><div class="sub">${divMkt==='ALL'?'미·한 통합':'섹터 분산'}</div></div>
     </div>
-    <div class="dcal"><div class="dcal-t">📅 월별 배당 분포(포트 기준)</div>
-      <div class="dcal-row">${p.monthly.map((v,i)=>`<div class="dcal-bar"><i style="height:${Math.round(v/maxm*100)}%"></i><span>${i+1}</span></div>`).join("")}</div></div>
+    <div class="dcal"><div class="dcal-t">📅 월별 배당 분포(연 배당 중 비중)</div>
+      <div class="dcal-row">${p.monthly.map((v,i)=>{const sh=Math.round(v/mtot*100);return `<div class="dcal-bar"><b class="dcal-v">${sh>=1?sh+'%':''}</b><i style="height:${Math.round(v/maxm*100)}%"></i><span>${i+1}</span></div>`;}).join("")}</div></div>
     <div class="tbl-scroll"><table class="ctbl"><thead><tr><th class="l">종목</th><th>비중</th><th>배당수익률</th><th class="mhide">성장률</th><th class="mhide">연속↑</th><th class="mhide">섹터</th></tr></thead><tbody>
       ${p.holdings.map(h=>`<tr><td class="l"><b>${dflag(h)}${h.name}</b> <span class="scode" style="color:#8d897f">${h.code}</span></td>
         <td style="color:#ffb000"><b>${h.weight}%</b></td><td class="pos">${h.yield}%</td>

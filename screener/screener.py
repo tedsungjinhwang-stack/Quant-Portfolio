@@ -984,7 +984,24 @@ def _div_tilt(mac):
     return {"tilt": "중립", "reason": f"{cyc} → 수익률·성장 균형", "w": (0.40, 0.35, 0.25), "def_bonus": 0.0, "cyc_bonus": 0.0}
 
 
-def build_dividend_market(mkt, data, mac=None):
+def _cash_pct(tilt, mac, season_weak):
+    """레짐(성향·침체신호) + 계절성으로 현금 보유 비중(%) 산출. 방어·약세계절↑, 성장·강세계절↓."""
+    base = {"성장": 4, "중립": 12, "방어": 25}.get(tilt["tilt"], 12)
+    why = [tilt["tilt"]]
+    if mac and (mac["cycle"].get("flags")):
+        base += 6
+        why.append("침체신호")
+    if season_weak:
+        base += 6
+        why.append("약세 계절(5~10월)")
+    else:
+        base -= 3
+        why.append("강세 계절")
+    cash = max(0, min(40, base))
+    return cash, " · ".join(why)
+
+
+def build_dividend_market(mkt, data, mac=None, season_weak=False):
     """한 시장의 배당 스크리너(랭킹) + 모델 포트폴리오. mac=매크로 레짐(틸트 반영)."""
     uni = DIV_UNIVERSE.get(mkt, {})
     rows = []
@@ -1012,7 +1029,7 @@ def build_dividend_market(mkt, data, mac=None):
         sec_b = tilt["def_bonus"] if r["sector"] in DEF_SECTORS else (tilt["cyc_bonus"] if r["sector"] in CYC_SECTORS else 0.0)
         r["score"] = round(zy[i] * wy + zg[i] * wg + zs[i] * ws + trap + sec_b, 2)
     rows.sort(key=lambda r: r["score"], reverse=True)
-    # 모델 포트폴리오: 섹터 최대 3개 캡, 상위 12종목, 점수 비례·가중 4~14% 캡
+    # 모델 포트폴리오: 섹터 최대 3개 캡, 상위 12종목 → 현금 비중은 레짐·계절로 동적
     picks, sec_cnt = [], {}
     for r in rows:
         if len(picks) >= 12:
@@ -1021,45 +1038,25 @@ def build_dividend_market(mkt, data, mac=None):
             continue
         picks.append(r)
         sec_cnt[r["sector"]] = sec_cnt.get(r["sector"], 0) + 1
-    base = [max(0.1, p["score"] - min(p_["score"] for p_ in picks) + 0.5) for p in picks]
-    tot = sum(base) or 1.0
-    weights = []
-    for w in base:
-        weights.append(min(0.14, max(0.04, w / tot)))
-    wsum = sum(weights)
-    weights = [round(w / wsum * 100, 1) for w in weights]       # 정규화 %
-    port_yield = round(sum(w / 100 * (p["yield"] or 0) for w, p in zip(weights, picks)), 2)
-    port_cagr = round(sum(w / 100 * (p["cagr"] or 0) for w, p in zip(weights, picks)), 1)
-    # 월별 배당 분포(각 종목 연배당을 지급월에 균등 배분)
-    monthly = [0.0] * 12
-    for w, p in zip(weights, picks):
-        ann = w / 100 * (p["yield"] or 0)
-        ms = p["months"] or list(range(1, 13))
-        for mo in ms:
-            monthly[mo - 1] += ann / len(ms)
-    monthly = [round(x, 3) for x in monthly]
-    # 섹터 비중
-    sec_w = {}
-    for w, p in zip(weights, picks):
-        sec_w[p["sector"]] = round(sec_w.get(p["sector"], 0) + w, 1)
-    holdings = [{**p, "weight": w} for p, w in zip(picks, weights)]
-    return {"stocks": rows, "portfolio": {"holdings": holdings, "yield": port_yield, "cagr": port_cagr,
-                                          "monthly": monthly, "sectors": sec_w, "n": len(holdings),
-                                          "tilt": tilt["tilt"], "tilt_reason": tilt["reason"],
-                                          "regime": (mac["cycle"]["phase"] if mac else None),
-                                          "regime_signal": (mac["risk"]["label"] if mac else None)}}
+    if not picks:
+        return None
+    cash, cash_why = _cash_pct(tilt, mac, season_weak)
+    return {"stocks": rows, "portfolio": _assemble_portfolio(picks, tilt, mac, cash, cash_why)}
 
 
-def _assemble_portfolio(picks, tilt, mac=None):
-    """선정 종목 리스트 → 가중치·포트수익률·월별분포·섹터/시장 비중."""
+def _assemble_portfolio(picks, tilt, mac=None, cash=0, cash_why=""):
+    """선정 종목 → 가중치(주식분 = 100−현금%)·포트수익률·월별분포·섹터/시장 비중·현금 비중."""
+    inv = max(0, 100 - cash)
     lo = min(x["score"] for x in picks)
     base = [max(0.1, p["score"] - lo + 0.5) for p in picks]
     tot = sum(base) or 1.0
     weights = [min(0.14, max(0.04, w / tot)) for w in base]
     wsum = sum(weights) or 1.0
-    weights = [round(w / wsum * 100, 1) for w in weights]
-    pyld = round(sum(w / 100 * (p["yield"] or 0) for w, p in zip(weights, picks)), 2)
-    pcagr = round(sum(w / 100 * (p["cagr"] or 0) for w, p in zip(weights, picks)), 1)
+    weights = [round(w / wsum * inv, 1) for w in weights]          # 합계 ≈ 주식분(inv)
+    pyld = round(sum(w / 100 * (p["yield"] or 0) for w, p in zip(weights, picks)), 2)   # 현금 드래그 반영
+    eq = sum(weights) or 1.0
+    pyld_eq = round(sum(w / 100 * (p["yield"] or 0) for w, p in zip(weights, picks)) / (eq / 100), 2)  # 주식분만
+    pcagr = round(sum(w / eq * (p["cagr"] or 0) for w, p in zip(weights, picks)), 1)
     monthly = [0.0] * 12
     for w, p in zip(weights, picks):
         ann = w / 100 * (p["yield"] or 0)
@@ -1072,14 +1069,15 @@ def _assemble_portfolio(picks, tilt, mac=None):
         sec_w[p["sector"]] = round(sec_w.get(p["sector"], 0) + w, 1)
         mk_w[p["market"]] = round(mk_w.get(p["market"], 0) + w, 1)
     holdings = [{**p, "weight": w} for p, w in zip(picks, weights)]
-    return {"holdings": holdings, "yield": pyld, "cagr": pcagr, "monthly": monthly,
+    return {"holdings": holdings, "yield": pyld, "yield_eq": pyld_eq, "cagr": pcagr, "monthly": monthly,
             "sectors": sec_w, "markets": mk_w, "n": len(holdings),
+            "cash": cash, "invested": round(inv, 1), "cash_why": cash_why,
             "tilt": tilt["tilt"], "tilt_reason": tilt["reason"],
             "regime": (mac["cycle"]["phase"] if mac else None),
             "regime_signal": (mac["risk"]["label"] if mac else None)}
 
 
-def build_dividend_integrated(per_market, mac=None):
+def build_dividend_integrated(per_market, mac=None, season_weak=False):
     """미국+한국 통합 모델 포트폴리오 — 양 시장 후보를 한 풀로 합쳐 공정 비교·구성."""
     pool = []
     for mk in ("US", "KR"):
@@ -1111,21 +1109,22 @@ def build_dividend_integrated(per_market, mac=None):
         mk_cnt[r["market"]] = mk_cnt.get(r["market"], 0) + 1
     if not picks:
         return None
-    return {"stocks": ranked, "portfolio": _assemble_portfolio(picks, tilt, mac)}
+    cash, cash_why = _cash_pct(tilt, mac, season_weak)
+    return {"stocks": ranked, "portfolio": _assemble_portfolio(picks, tilt, mac, cash, cash_why)}
 
 
-def build_dividends(data, mac=None):
-    """미국·한국 + 통합 배당 스크리너/모델 포트폴리오. data엔 배당(actions) 포함. mac=레짐 연계."""
+def build_dividends(data, mac=None, season_weak=False):
+    """미국·한국 + 통합 배당 스크리너/모델 포트폴리오. data엔 배당(actions) 포함. mac=레짐, season_weak=약세 계절."""
     out = {}
     for mkt in ("US", "KR"):
         try:
-            d = build_dividend_market(mkt, data, mac)
+            d = build_dividend_market(mkt, data, mac, season_weak)
             if d:
                 out[mkt] = d
         except Exception as e:
             print(f"[dividend] {mkt} 실패: {e}")
     try:
-        allp = build_dividend_integrated(out, mac)
+        allp = build_dividend_integrated(out, mac, season_weak)
         if allp:
             out["ALL"] = allp
     except Exception as e:
@@ -1629,7 +1628,8 @@ def main():
         div_syms = ([f"{c}.KS" for c in DIV_UNIVERSE["KR"]] + list(DIV_UNIVERSE["US"]))
         div_data = yf.download(div_syms, period="6y", interval="1d",
                                group_by="ticker", auto_adjust=False, actions=True, threads=True, progress=False)
-        dividends = build_dividends(div_data, mac)        # 레짐(매크로) 연계
+        season_weak = int(bar_date[5:7]) in (5, 6, 7, 8, 9, 10)   # 5~10월 약세(Sell in May)
+        dividends = build_dividends(div_data, mac, season_weak)    # 레짐+계절 연계(현금 비중 동적)
         for mk, dd in dividends.items():
             p = dd.get("portfolio", {})
             print(f"[dividend] {mk}: {len(dd.get('stocks', []))}종목 · 모델 {p.get('n')} · 수익률 {p.get('yield')}% · 성장 {p.get('cagr')}% · 틸트 {p.get('tilt')}")
