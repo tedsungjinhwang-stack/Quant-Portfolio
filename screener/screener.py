@@ -1142,6 +1142,75 @@ def build_dividends(data, mac=None, season_weak=False):
     return out
 
 
+NAV_FILE = os.path.join(REPORT_DIR, "dividend_nav.json")
+
+
+def _hold_sym(h):
+    return f'{h["code"]}.KS' if h.get("market") == "KR" else h["code"]
+
+
+def update_dividend_nav(dividends, data, bar_date):
+    """모델 포트폴리오의 '가상 운용' 누적성과를 매일 스냅샷으로 적립.
+    - 전일 스냅샷의 보유종목·비중으로 당일까지의 가격수익을 계산해 NAV(가격지수)를 복리 갱신.
+    - tr_nav(총수익지수)는 가격수익 + 배당 적립(전일 포트 수익률 × 경과일/365)으로 갱신.
+    - 같은 날 재실행은 멱등(중복 적립 안 함). reports/dividend_nav.json 에 영구 저장(워크플로 커밋).
+    결과 곡선·누적수익률을 각 포트폴리오 dict에 부착해 대시보드에서 차트로 표시."""
+    try:
+        with open(NAV_FILE, encoding="utf-8") as f:
+            hist = json.load(f)
+    except Exception:
+        hist = {}
+    hist.setdefault("inception", bar_date)
+    mkts = hist.setdefault("markets", {})
+    today_ts = pd.Timestamp(bar_date)
+    for mk in ("ALL", "US", "KR"):
+        port = (dividends.get(mk) or {}).get("portfolio")
+        if not port or not port.get("holdings"):
+            continue
+        rec = mkts.get(mk)
+        if rec is None:                                          # 최초 → 기준 100 으로 출발
+            rec = {"nav": 100.0, "tr_nav": 100.0,
+                   "history": [{"date": bar_date, "nav": 100.0, "tr_nav": 100.0}]}
+        else:
+            last_date = rec["history"][-1]["date"] if rec.get("history") else None
+            if last_date != bar_date and rec.get("holdings"):    # 신규 거래일만 적립
+                prev_ts = pd.Timestamp(last_date)
+                days = max(1, (today_ts - prev_ts).days)
+                pr = 0.0
+                for h in rec["holdings"]:
+                    df = ohlc_for(data, _hold_sym(h))
+                    if df is None:
+                        continue
+                    c = df["Close"]
+                    cp = c.asof(prev_ts)
+                    cn = float(c.iloc[-1])
+                    if cp is not None and not pd.isna(cp) and float(cp) > 0:
+                        pr += (h["weight"] / 100.0) * (cn / float(cp) - 1.0)
+                div_acc = (rec.get("yield", 0) / 100.0) * (days / 365.0)
+                rec["nav"] = round(rec["nav"] * (1 + pr), 4)
+                rec["tr_nav"] = round(rec["tr_nav"] * (1 + pr + div_acc), 4)
+                rec["history"].append({"date": bar_date, "nav": rec["nav"], "tr_nav": rec["tr_nav"]})
+        # 다음 적립을 위해 당일 목표 보유·수익률 저장
+        rec["holdings"] = [{"code": h["code"], "market": h.get("market", mk), "weight": h["weight"]}
+                           for h in port["holdings"]]
+        rec["yield"] = port.get("yield", 0)
+        rec["history"] = rec["history"][-400:]
+        mkts[mk] = rec
+        first = rec["history"][0]
+        port["nav_curve"] = rec["history"]
+        port["since"] = first["date"]
+        port["days_tracked"] = len(rec["history"])
+        port["cum_price"] = round((rec["nav"] / first["nav"] - 1) * 100, 1)
+        port["cum_total"] = round((rec["tr_nav"] / first["tr_nav"] - 1) * 100, 1)
+    try:
+        os.makedirs(REPORT_DIR, exist_ok=True)
+        with open(NAV_FILE, "w", encoding="utf-8") as f:
+            json.dump(hist, f, ensure_ascii=False)
+        print(f"[dividend] NAV 적립 → {NAV_FILE} (inception {hist['inception']})")
+    except Exception as e:
+        print(f"[dividend] NAV 저장 실패: {e}")
+
+
 # ----------------------------------------------------------------------
 # 핫한 종목(거래량 급증 + 단기 모멘텀)
 # ----------------------------------------------------------------------
@@ -1640,6 +1709,7 @@ def main():
                                group_by="ticker", auto_adjust=False, actions=True, threads=True, progress=False)
         season_weak = int(bar_date[5:7]) in (5, 6, 7, 8, 9, 10)   # 5~10월 약세(Sell in May)
         dividends = build_dividends(div_data, mac, season_weak)    # 레짐+계절 연계(현금 비중 동적)
+        update_dividend_nav(dividends, div_data, bar_date)         # 가상 운용 누적성과(매일 스냅샷 적립)
         for mk, dd in dividends.items():
             p = dd.get("portfolio", {})
             print(f"[dividend] {mk}: {len(dd.get('stocks', []))}종목 · 모델 {p.get('n')} · 수익률 {p.get('yield')}% · 성장 {p.get('cagr')}% · 틸트 {p.get('tilt')}")
