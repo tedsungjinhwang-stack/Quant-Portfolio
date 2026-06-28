@@ -10,8 +10,8 @@
   /* Amber Terminal 테마 — 한국식 등락색(빨강=상승, 파랑=하락) */
   :root{--bg:#0a0a0b;--head:#0d0d0f;--panel:#121214;--panel2:#1a1a1d;--line:#26262b;--grid:#1c1c20;
     --txt:#ece9e3;--muted:#8d897f;--faint:#5a574e;--accent:#ffb000;--accentdim:#2a1f05;--accentbd:#5a4410;
-    --up:#ff4d4f;--down:#4d8bff;--warn:#ffb000;
-    --touch:#ff4d4f;--near:#ffb000;--ma20:#f5c518;--ma60:#4d8bff;--ma200:#ff4d4f;--chip:#1a1a1d;
+    --up:#26d07c;--down:#ff4d4f;--warn:#ffb000;
+    --touch:#26d07c;--near:#ffb000;--ma20:#f5c518;--ma60:#4d8bff;--ma200:#ff4d4f;--chip:#1a1a1d;
     --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
     --sans:"IBM Plex Sans KR",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
   *{box-sizing:border-box}
@@ -62,11 +62,11 @@
   tbody tr.sel{background:#1a1a1d;outline:1px solid var(--accent)}
   tbody tr.deep td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
   .bdg{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px}
-  .bdg.t{background:rgba(255,77,79,.2);color:var(--touch)}
+  .bdg.t{background:rgba(38,208,124,.2);color:var(--touch)}
   .bdg.n{background:rgba(255,176,0,.2);color:var(--near)}
   .bdg.x{background:#1a1a1d;color:var(--muted)}
   .bdg.deep{background:rgba(255,176,0,.2);color:var(--warn)}
-  .bdg.up{background:rgba(255,77,79,.2);color:var(--up)}
+  .bdg.up{background:rgba(38,208,124,.2);color:var(--up)}
   .bdg.cau{background:rgba(255,176,0,.2);color:var(--near)}
   .bdg.flip{background:rgba(255,176,0,.2);color:#ff8c42}
   .bdg.dn{background:rgba(255,107,107,.18);color:var(--down)}
@@ -87,11 +87,14 @@
   .ellbox{margin-top:10px;background:var(--panel2);border-left:3px solid var(--warn);border-radius:8px;padding:11px 13px;font-size:13px;line-height:1.55}
   .ellbox b{color:#fff}.caveat{color:var(--muted);font-size:12px;margin-top:6px;line-height:1.5}
   .empty{color:var(--muted);text-align:center;padding:40px 10px}
-  .foot{color:var(--muted);font-size:12px;margin-top:18px;text-align:center;line-height:1.6}
+  .foot{color:var(--faint);font-family:var(--mono);font-size:9px;margin-top:14px;padding-top:10px;border-top:1px solid var(--line);line-height:1.5;letter-spacing:.01em}
+  .thm{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--accent);border:1px solid var(--accentbd);background:var(--accentdim);border-radius:3px;padding:2px 8px;margin-left:8px;letter-spacing:.05em;vertical-align:2px}
+  .thm i{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);margin-right:5px;vertical-align:0}
+  .hbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:10px}
   /* regime banner */
   .rbanner{border-radius:12px;padding:13px 15px;margin-bottom:14px;border:1px solid;display:grid;gap:12px}
   @media(min-width:780px){.rbanner{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);align-items:center}}
-  .rbanner.green{background:rgba(255,77,79,.1);border-color:#2c5a45}
+  .rbanner.green{background:rgba(38,208,124,.1);border-color:#2c5a45}
   .rbanner.yellow{background:rgba(255,176,0,.1);border-color:#5a4f24}
   .rbanner.red{background:rgba(255,107,107,.08);border-color:#5a2c2c}
   .rlight{font-size:21px;font-weight:800;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -100,17 +103,17 @@
   /* 레짐 내 경기국면·매크로 신호 */
   .mcyc{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin-top:9px;font-size:12.5px}
   .cyc-ph{font-weight:800;padding:3px 10px;border-radius:999px;font-size:12.5px}
-  .ph-green{background:rgba(255,77,79,.18);color:var(--up)}
+  .ph-green{background:rgba(38,208,124,.18);color:var(--up)}
   .ph-blue{background:rgba(255,176,0,.16);color:#ffb000}
   .ph-amber{background:rgba(255,176,0,.18);color:var(--warn)}
-  .ph-red{background:rgba(77,139,255,.18);color:var(--down)}
+  .ph-red{background:rgba(255,77,79,.18);color:var(--down)}
   .cyc-x{color:var(--muted)}.cyc-x b{color:var(--txt);font-weight:700}
   .cyc-flag{color:var(--down);font-weight:700;font-size:11.5px}
   .msig{color:var(--muted)}.msig i{font-style:normal;opacity:.8;font-size:11px}
   .msig .sig-green{color:var(--up)}.msig .sig-yellow{color:var(--warn)}.msig .sig-red{color:var(--down)}
   .mpos{margin-top:7px;font-size:12.5px;display:flex;align-items:baseline;flex-wrap:wrap;gap:5px 9px}
   .mpos-ph{font-weight:800;padding:2px 9px;border-radius:999px;font-size:12.5px;background:transparent}
-  .mpos-ph.ph-green{color:var(--up);background:rgba(255,77,79,.14)}
+  .mpos-ph.ph-green{color:var(--up);background:rgba(38,208,124,.14)}
   .mpos-ph.ph-blue{color:#ffb000;background:rgba(255,176,0,.12)}
   .mpos-ph.ph-amber{color:var(--warn);background:rgba(255,176,0,.14)}
   .mpos-ph.ph-red{color:var(--down);background:rgba(255,107,107,.12)}
@@ -119,9 +122,9 @@
   .rmacro{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
   .rmacro .macro{margin-bottom:0}
   .msum{font-size:12.5px;font-weight:800;margin:2px 0 8px;padding:6px 10px;border-radius:8px;background:rgba(141,137,127,.1)}
-  .msum.sig-green{color:var(--up);background:rgba(255,77,79,.12)}
+  .msum.sig-green{color:var(--up);background:rgba(38,208,124,.12)}
   .msum.sig-yellow{color:var(--warn);background:rgba(255,176,0,.12)}
-  .msum.sig-red{color:var(--down);background:rgba(77,139,255,.12)}
+  .msum.sig-red{color:var(--down);background:rgba(255,77,79,.12)}
   .macro{margin-bottom:14px}
   .macro .mttl{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--txt);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .macro .mttl small{color:var(--muted);font-weight:500;font-size:11px}
@@ -145,8 +148,8 @@
   .mg-l{color:var(--muted);font-weight:600}.mg-v{font-variant-numeric:tabular-nums}
   .mg-n{color:var(--muted);line-height:1.4}
   .zchip{font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;text-align:center;white-space:nowrap}
-  .z-good{background:rgba(255,77,79,.18);color:var(--up)}.z-ok{background:rgba(141,137,127,.16);color:#8d897f}
-  .z-warn{background:rgba(255,176,0,.18);color:var(--warn)}.z-bad{background:rgba(77,139,255,.18);color:var(--down)}
+  .z-good{background:rgba(38,208,124,.18);color:var(--up)}.z-ok{background:rgba(141,137,127,.16);color:#8d897f}
+  .z-warn{background:rgba(255,176,0,.18);color:var(--warn)}.z-bad{background:rgba(255,77,79,.18);color:var(--down)}
   @media(max-width:560px){.mg-row{grid-template-columns:1fr auto auto;gap:4px 8px}.mg-n{grid-column:1/-1;margin-top:-1px}}
   /* 계절성 패널 */
   .season{margin-bottom:14px}
@@ -168,9 +171,9 @@
   .stance b{color:var(--txt);font-weight:800}
   .stance .st-div{opacity:.45;font-weight:400}
   .stance .st-ref{font-size:11px;font-weight:400;color:var(--muted);opacity:.8}
-  .rbanner.green .stance{--st-bg:rgba(255,77,79,.14);--st-bd:rgba(255,77,79,.4);--st-fg:var(--up)}
+  .rbanner.green .stance{--st-bg:rgba(38,208,124,.14);--st-bd:rgba(38,208,124,.4);--st-fg:var(--up)}
   .rbanner.yellow .stance{--st-bg:rgba(255,176,0,.16);--st-bd:rgba(255,176,0,.45);--st-fg:var(--warn)}
-  .rbanner.red .stance{--st-bg:rgba(255,107,107,.13);--st-bd:rgba(77,139,255,.45);--st-fg:var(--down)}
+  .rbanner.red .stance{--st-bg:rgba(255,107,107,.13);--st-bd:rgba(255,77,79,.45);--st-fg:var(--down)}
   .ridx{display:flex;gap:8px;flex-wrap:wrap}
   .ridx .ic{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:12px;line-height:1.5}
   .ridx .ic b{font-size:13px}
@@ -236,7 +239,7 @@
     padding:7px 16px;border-radius:3px;cursor:pointer;letter-spacing:-.01em}
   .topnav button.on{background:var(--accent);color:#0a0a0b;font-weight:700}
   /* ===== 컨센서스 뷰(teal) ===== */
-  #viewCons{--ct:#ffb000;--ct2:#c98a10;--cam:#ffb000;--cro:#4d8bff;--cpu:#a855f7;--cbg:#121214;--cbg2:#1a1a1d;
+  #viewCons{--ct:#ffb000;--ct2:#c98a10;--cam:#ffb000;--cro:#ff4d4f;--cpu:#a855f7;--cbg:#121214;--cbg2:#1a1a1d;
     --csurf:#121214;--cdim:#8d897f;--cmut:#8d897f;--ctx:#ece9e3}
   #viewCons .cons-tabs{display:flex;gap:6px;padding:5px;background:#0d0d0f;border:1px solid rgba(255,176,0,.18);
     border-radius:14px;margin-bottom:16px;flex-wrap:wrap}
@@ -303,16 +306,17 @@
   #viewDiv .dcal-bar span{font-size:9px;color:#8d897f}
   #viewDiv .dtilt{font-size:13px;font-weight:700;padding:9px 13px;border-radius:10px;margin-bottom:14px;background:rgba(141,137,127,.1);line-height:1.5}
   #viewDiv .dtilt b{font-size:14px}
-  #viewDiv .dtilt.dt-green{color:var(--up);background:rgba(255,77,79,.12)}
+  #viewDiv .dtilt.dt-green{color:var(--up);background:rgba(38,208,124,.12)}
   #viewDiv .dtilt.dt-yellow{color:var(--warn);background:rgba(255,176,0,.12)}
-  #viewDiv .dtilt.dt-red{color:var(--down);background:rgba(77,139,255,.12)}
+  #viewDiv .dtilt.dt-red{color:var(--down);background:rgba(255,77,79,.12)}
   @media(max-width:640px){#viewDiv .ctbl th,#viewDiv .ctbl td{padding:8px 4px;font-size:12.5px}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div id="badge" class="badge">⚠️ 예시(가짜 데이터)</div>
-  <h1>증시 추세추종 · 기술적 분석 대시보드</h1>
+  <div class="hbar"><div id="badge" class="badge">⚠️ 예시(가짜 데이터)</div>
+    <h1>증시 추세추종 · 기술적 분석 대시보드</h1>
+    <span class="thm"><i></i>AMBER TERMINAL</span></div>
   <div id="ticker" class="ticker"></div>
   <div class="topnav" id="topnav">
     <button data-v="dash" class="on">📊 모멘텀 대시보드</button>
@@ -621,9 +625,9 @@ function renderRegime(){
       <div class="reasons">${(rg.reasons||[]).join(" · ")}</div></div>
     <div><div class="ridx">${idx}</div>
       <div style="margin-top:8px">
-        <div style="font-size:11.5px;color:var(--muted)">240일선 위 종목 ${b.above200??'–'}% <span style="color:#8d897f">(이탈 ${b.below200??'–'}%)</span></div>${bar(b.above200,'#ff4d4f')}
+        <div style="font-size:11.5px;color:var(--muted)">240일선 위 종목 ${b.above200??'–'}% <span style="color:#8d897f">(이탈 ${b.below200??'–'}%)</span></div>${bar(b.above200,'#26d07c')}
         <div style="font-size:11.5px;color:var(--muted)">52주 신고가 ${b.new_high??'–'}% vs 신저가 ${b.new_low??'–'}% · 순증 ${b.net_new_high>0?'+':''}${b.net_new_high??'–'}</div>
-        ${bar(50+(b.net_new_high||0)*2,b.net_new_high>=0?'#ff4d4f':'#4d8bff')}
+        ${bar(50+(b.net_new_high||0)*2,b.net_new_high>=0?'#26d07c':'#ff4d4f')}
         <div style="font-size:11px;color:var(--muted)">신고가 근접 ${b.near_high??'–'}% · 표본 ${b.n}종목</div>
       </div>
       <div class="rmacro">${macroBlockHTML(mac)}</div></div></div>`;
@@ -755,7 +759,7 @@ function chartSVG(r){
   for(let g=0;g<=4;g++){const v=lo+(hi-lo)*g/4,y=Y(v);
     s+=`<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#26262b"/>`+
        `<text x="4" y="${y+3}" fill="#8d897f" font-size="9">${v.toLocaleString("ko-KR",{maximumFractionDigits:0})}</text>`;}
-  bars.forEach((b,i)=>{const up=b.c>=b.o,col=up?"#ff4d4f":"#4d8bff",cx=X(i),bw=Math.max(1,iw*0.6);
+  bars.forEach((b,i)=>{const up=b.c>=b.o,col=up?"#26d07c":"#ff4d4f",cx=X(i),bw=Math.max(1,iw*0.6);
     s+=`<line x1="${cx}" y1="${Y(b.h)}" x2="${cx}" y2="${Y(b.l)}" stroke="${col}"/>`+
        `<rect x="${cx-bw/2}" y="${Y(Math.max(b.o,b.c))}" width="${bw}" height="${Math.max(1,Math.abs(Y(b.o)-Y(b.c)))}" fill="${col}"/>`;});
   const lp=(arr,col)=>{if(!arr)return"";let d="",st=false;arr.forEach((v,i)=>{if(v==null)return;
@@ -785,7 +789,7 @@ function showDetail(r){
       <div style="text-align:right">${r.touched?'<span class="bdg t">풀백 타점</span>':r.near?'<span class="bdg n">근접</span>':'<span class="bdg x">관망</span>'} ${tsBadge(r.trend_state)}</div></div>
     <div class="chartbox">${chartSVG(r)}</div>
     <div class="legend"><span><i style="background:#ffb000"></i>20MA</span><span><i style="background:#ffb000"></i>60MA</span>
-      <span><i style="background:#a855f7"></i>120MA(수급선)</span><span><i style="background:#4d8bff"></i>240MA(추세)</span><span>🟢/🔴 일봉</span></div>
+      <span><i style="background:#a855f7"></i>120MA(수급선)</span><span><i style="background:#ff4d4f"></i>240MA(추세)</span><span>🟢/🔴 일봉</span></div>
     <div class="stats">
       ${st("20MA 이격(거리)",(r.dist20>0?'+':'')+(r.dist20??'–')+'%',sg(r.dist20))}
       ${st("RSI(14)",r.rsi,r.rsi>=70?'neg':r.rsi<=30?'pos':'')}
@@ -819,8 +823,8 @@ function showDetail(r){
 }
 
 // ===== 컨센서스 뷰 =====
-const CCOL=["#ffb000","#ffb000","#4d8bff","#a855f7","#c98a10","#ffb000","#FF9EC4","#ff4d4f","#FFB37A","#7FD8FF","#D6A6FF","#9EF0D0"];
-const OPC={"적극매수":"#c98a10","매수":"#ffb000","비중확대":"#ff4d4f","중립":"#ffb000","비중축소":"#4d8bff","매도":"#4d8bff"};
+const CCOL=["#ffb000","#ffb000","#ff4d4f","#a855f7","#c98a10","#ffb000","#FF9EC4","#26d07c","#FFB37A","#7FD8FF","#D6A6FF","#9EF0D0"];
+const OPC={"적극매수":"#c98a10","매수":"#ffb000","비중확대":"#26d07c","중립":"#ffb000","비중축소":"#ff4d4f","매도":"#ff4d4f"};
 let consSel=null, consMkt="KR";
 const CDM=()=>DATA.consensus_detail||{};
 const cdmIds=()=>Object.keys(CDM()).filter(id=>(S[id]||{}).market===consMkt);
@@ -869,7 +873,7 @@ function gapBar(close,low,mean,high,up){
   const lo=Math.min(low!=null?low:high,close), hi=Math.max(high,close);
   const span=(hi-lo)||1, pos=v=>Math.max(0,Math.min(100,(v-lo)/span*100));
   const cp=pos(close), mp=pos(mean), hp=pos(high), b0=Math.min(cp,hp), b1=Math.max(cp,hp);
-  const upc=up>0?'#ffb000':'#4d8bff';
+  const upc=up>0?'#ffb000':'#ff4d4f';
   return `<div class="cgap"><div class="gh">현재가 <b style="color:#ffb000">${cnum(close)}</b> → 최고 목표가 <b style="color:#ffb000">${cnum(high)}</b> · 상승여력 <b style="color:${upc}">${up==null?'–':(up>0?'+':'')+up+'%'}</b></div>
     <div class="track"><div class="band" style="left:${b0}%;width:${b1-b0}%"></div>
       ${mean!=null?`<div class="mk" style="left:${mp}%;background:#8d897f" title="평균 ${cnum(mean)}"></div><div class="lbl" style="left:${mp}%;color:#8d897f;top:13px;font-weight:600">평균 ${cnum(mean)}</div>`:''}
