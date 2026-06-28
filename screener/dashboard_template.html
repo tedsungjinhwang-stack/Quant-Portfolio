@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>증시 추세추종 · 기술적 분석 대시보드</title>
+<title>추세추종 · 배당 대시보드</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -90,6 +90,7 @@
   .foot{color:var(--faint);font-family:var(--mono);font-size:9px;margin-top:14px;padding-top:10px;border-top:1px solid var(--line);line-height:1.5;letter-spacing:.01em}
   .thm{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--accent);border:1px solid var(--accentbd);background:var(--accentdim);border-radius:3px;padding:2px 8px;margin-left:8px;letter-spacing:.05em;vertical-align:2px}
   .thm i{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);margin-right:5px;vertical-align:0}
+  .hdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);margin-right:8px;vertical-align:1px}
   .hbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:10px}
   /* regime banner */
   .rbanner{border-radius:12px;padding:13px 15px;margin-bottom:14px;border:1px solid;display:grid;gap:12px}
@@ -337,8 +338,7 @@
 <body>
 <div class="wrap">
   <div class="hbar"><div id="badge" class="badge">⚠️ 예시(가짜 데이터)</div>
-    <h1>증시 추세추종 · 기술적 분석 대시보드</h1>
-    <span class="thm"><i></i>AMBER TERMINAL</span></div>
+    <h1><i class="hdot"></i>추세추종 · 배당 대시보드</h1></div>
   <div id="ticker" class="ticker"></div>
   <div class="topnav" id="topnav">
     <button data-v="dash" class="on">📊 모멘텀 대시보드</button>
