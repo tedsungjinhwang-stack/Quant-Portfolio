@@ -320,9 +320,10 @@
   #viewDiv .cempty{color:var(--muted);text-align:center;padding:40px 12px}
   #viewDiv .dcal{margin:4px 0 14px}
   #viewDiv .dcal-t{font-size:12px;color:var(--muted);margin-bottom:7px}
-  #viewDiv .dcal-row{display:flex;gap:4px;align-items:flex-end;height:82px}
-  #viewDiv .dcal-bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:2px}
+  #viewDiv .dcal-row{display:flex;gap:4px;align-items:flex-end;height:98px}
+  #viewDiv .dcal-bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:1px}
   #viewDiv .dcal-v{font-family:var(--mono);font-size:8.5px;color:var(--accent);font-weight:700;line-height:1}
+  #viewDiv .dcal-s{font-family:var(--mono);font-size:7px;color:var(--faint);font-weight:600;line-height:1}
   #viewDiv .dcal-bar i{width:100%;max-width:22px;background:linear-gradient(180deg,#ffb000,#c98a10);border-radius:3px 3px 0 0;min-height:2px}
   #viewDiv .dcal-bar span{font-size:9px;color:#8d897f}
   #viewDiv .dtilt{font-size:13px;font-weight:700;padding:9px 13px;border-radius:10px;margin-bottom:14px;background:rgba(141,137,127,.1);line-height:1.5}
@@ -1028,8 +1029,8 @@ function renderDividend(){
     ${(()=>{const R=p.rets||{};const ks=["7D","1M","3M","6M","1Y"];if(!ks.some(k=>R[k]!=null))return '';
       return `<div class="drets"><span class="drets-t">📈 기간별 가격수익 <small>주식분 가중</small></span><div class="drets-row">${ks.map(k=>{const v=R[k];return `<div class="dret"><span>${k}</span><b class="${(v||0)>=0?'pos':'neg'}">${v==null?'–':(v>0?'+':'')+v+'%'}</b></div>`;}).join("")}</div></div>`;})()}
     ${navPerf(p)}
-    <div class="dcal"><div class="dcal-t">📅 월별 배당 분포(연 배당 중 비중)</div>
-      <div class="dcal-row">${p.monthly.map((v,i)=>{const sh=Math.round(v/mtot*100);return `<div class="dcal-bar"><b class="dcal-v">${sh>=1?sh+'%':''}</b><i style="height:${Math.round(v/maxm*100)}%"></i><span>${i+1}</span></div>`;}).join("")}</div></div>
+    <div class="dcal"><div class="dcal-t">📅 월별 배당 — <b style="color:var(--accent)">막대=실제 배당수익률(%)</b> · <span style="color:var(--faint)">회색=연 배당 중 비중</span> · 연 합계 ${p.yield}%</div>
+      <div class="dcal-row">${p.monthly.map((v,i)=>{const sh=Math.round(v/mtot*100);const yld=v>=0.05?(v<10?v.toFixed(1):Math.round(v))+'%':'';return `<div class="dcal-bar" title="${i+1}월 · 배당수익률 ${v.toFixed(2)}% · 연 배당의 ${sh}%"><b class="dcal-v">${yld}</b><em class="dcal-s">${sh>=1?sh+'%':''}</em><i style="height:${Math.round(v/maxm*100)}%"></i><span>${i+1}</span></div>`;}).join("")}</div></div>
     <div class="tbl-scroll"><table class="ctbl"><thead><tr><th class="l">종목</th><th>비중</th><th>배당수익률</th><th>1Y</th><th class="mhide">성장률</th><th class="mhide">연속↑</th><th class="mhide">섹터</th></tr></thead><tbody>
       ${p.holdings.map(h=>`<tr><td class="l"><b>${dflag(h)}${h.name}</b> <span class="scode" style="color:#8d897f">${h.code}</span></td>
         <td style="color:#ffb000"><b>${h.weight}%</b></td><td class="pos">${h.yield}%</td>
