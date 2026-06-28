@@ -953,7 +953,7 @@ def _div_metrics(close, divs):
         return round((price / float(close.iloc[-1 - n]) - 1) * 100, 1) if len(close) > n else None
     return {"price": round(price, 2), "yield": dy, "cagr": cagr, "streak": streak,
             "freq": freq, "months": months, "ex_date": last_dt.strftime("%Y-%m-%d"), "ttm_div": round(ttm, 4),
-            "ret7d": _ret(5), "ret1m": _ret(21), "ret3m": _ret(63), "ret6m": _ret(126), "ret1y": _ret(252)}
+            "ret1d": _ret(1), "ret7d": _ret(5), "ret1m": _ret(21), "ret3m": _ret(63), "ret6m": _ret(126), "ret1y": _ret(252)}
 
 
 def _zscores(vals):

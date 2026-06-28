@@ -317,6 +317,9 @@
   #viewDiv .ctbl th,#viewDiv .ctbl td{padding:9px 8px;border-bottom:1px solid rgba(255,176,0,.08);text-align:right;white-space:nowrap;color:var(--txt)}
   #viewDiv .ctbl th{color:#8d897f;font-size:11.5px;font-weight:700}
   #viewDiv .ctbl th:first-child,#viewDiv .ctbl td:first-child{text-align:left}
+  #viewDiv .ctbl td.teal{color:#ffb000;font-weight:700}
+  #viewDiv .rtbl{font-size:12px}
+  #viewDiv .rtbl th,#viewDiv .rtbl td{padding:7px 5px;font-variant-numeric:tabular-nums}
   #viewDiv .pos{color:var(--up)}#viewDiv .neg{color:var(--down)}
   #viewDiv .cempty{color:var(--muted);text-align:center;padding:40px 12px}
   #viewDiv .dcal{margin:4px 0 14px}
@@ -332,7 +335,9 @@
   #viewDiv .dtilt.dt-green{color:var(--up);background:rgba(38,208,124,.12)}
   #viewDiv .dtilt.dt-yellow{color:var(--warn);background:rgba(255,176,0,.12)}
   #viewDiv .dtilt.dt-red{color:var(--down);background:rgba(255,77,79,.12)}
-  @media(max-width:640px){#viewDiv .ctbl th,#viewDiv .ctbl td{padding:8px 4px;font-size:12.5px}}
+  @media(max-width:640px){#viewDiv .ctbl th,#viewDiv .ctbl td{padding:8px 4px;font-size:12.5px}
+    #viewDiv .rtbl th,#viewDiv .rtbl td{padding:6px 4px;font-size:11px}
+    #viewDiv .rtbl td.l,#viewDiv .rtbl th.l{font-size:12px}}
 </style>
 </head>
 <body>
@@ -551,13 +556,13 @@ if(!DATA){
           sectors:{"필수소비":18,"금융":34,"통신":16,"인프라":18,"경기소비":14},
           monthly:[0.4,0.9,1.4,0.5,0.4,1.6,0.4,0.9,0.4,0.5,0.4,1.7],
           holdings:[
-            {code:"446720",name:"가상SOL미국배당다우존스",sector:"ETF",yield:3.8,cagr:9.0,streak:3,ret1y:14.2,weight:14},
-            {code:"033780",name:"가상KT&G",sector:"필수소비",yield:6.1,cagr:5.2,streak:6,ret1y:9.5,weight:16},
-            {code:"105560",name:"가상KB금융",sector:"금융",yield:5.4,cagr:8.1,streak:4,ret1y:21.0,weight:17},
-            {code:"088980",name:"가상맥쿼리인프라",sector:"인프라",yield:6.5,cagr:3.0,streak:7,ret1y:3.4,weight:18},
-            {code:"017670",name:"가상SK텔레콤",sector:"통신",yield:6.8,cagr:1.5,streak:3,ret1y:-2.1,weight:16},
-            {code:"000810",name:"가상삼성화재",sector:"금융",yield:4.6,cagr:9.0,streak:5,ret1y:11.8,weight:17},
-            {code:"005387",name:"가상현대차2우B",sector:"경기소비",yield:5.0,cagr:6.0,streak:3,ret1y:-4.3,weight:14}]}},
+            {code:"446720",name:"가상SOL미국배당다우존스",sector:"ETF",yield:3.8,cagr:9.0,streak:3,ret1d:0.2,ret7d:0.6,ret1m:1.8,ret3m:4.8,ret6m:8.5,ret1y:14.2,weight:14},
+            {code:"033780",name:"가상KT&G",sector:"필수소비",yield:6.1,cagr:5.2,streak:6,ret1d:0.1,ret7d:0.4,ret1m:1.2,ret3m:3.2,ret6m:5.7,ret1y:9.5,weight:16},
+            {code:"105560",name:"가상KB금융",sector:"금융",yield:5.4,cagr:8.1,streak:4,ret1d:0.3,ret7d:0.9,ret1m:2.7,ret3m:7.1,ret6m:12.6,ret1y:21.0,weight:17},
+            {code:"088980",name:"가상맥쿼리인프라",sector:"인프라",yield:6.5,cagr:3.0,streak:7,ret1d:0,ret7d:0.2,ret1m:0.4,ret3m:1.2,ret6m:2,ret1y:3.4,weight:18},
+            {code:"017670",name:"가상SK텔레콤",sector:"통신",yield:6.8,cagr:1.5,streak:3,ret1d:-0,ret7d:-0.1,ret1m:-0.3,ret3m:-0.7,ret6m:-1.3,ret1y:-2.1,weight:16},
+            {code:"000810",name:"가상삼성화재",sector:"금융",yield:4.6,cagr:9.0,streak:5,ret1d:0.1,ret7d:0.5,ret1m:1.5,ret3m:4,ret6m:7.1,ret1y:11.8,weight:17},
+            {code:"005387",name:"가상현대차2우B",sector:"경기소비",yield:5.0,cagr:6.0,streak:3,ret1d:-0.1,ret7d:-0.2,ret1m:-0.6,ret3m:-1.5,ret6m:-2.6,ret1y:-4.3,weight:14}]}},
       US:{stocks:[
         {code:"SCHD",name:"가상SCHD ETF",sector:"ETF",price:78.4,yield:3.6,cagr:11.0,streak:10,freq:4,score:1.55},
         {code:"O",name:"가상리얼티인컴",sector:"리츠",price:57.2,yield:5.8,cagr:4.0,streak:12,freq:12,score:1.40},
@@ -571,12 +576,12 @@ if(!DATA){
           sectors:{"ETF":31,"리츠":17,"헬스케어":17,"필수소비":18,"기술":17},
           monthly:[1.1,0.4,1.3,1.1,0.4,1.3,1.1,0.4,1.3,1.1,0.4,1.3],
           holdings:[
-            {code:"SCHD",name:"가상SCHD ETF",sector:"ETF",yield:3.6,cagr:11.0,streak:10,ret1y:12.1,weight:17},
-            {code:"O",name:"가상리얼티인컴",sector:"리츠",yield:5.8,cagr:4.0,streak:12,ret1y:6.7,weight:17},
-            {code:"ABBV",name:"가상애브비",sector:"헬스케어",yield:3.5,cagr:8.0,streak:11,ret1y:18.4,weight:17},
-            {code:"KO",name:"가상코카콜라",sector:"필수소비",yield:3.1,cagr:5.0,streak:12,ret1y:9.2,weight:18},
-            {code:"TXN",name:"가상텍사스인스트",sector:"기술",yield:2.9,cagr:12.0,streak:9,ret1y:26.5,weight:17},
-            {code:"JEPI",name:"가상JEPI",sector:"ETF",yield:7.4,cagr:0,streak:0,ret1y:8.0,weight:14}]}},
+            {code:"SCHD",name:"가상SCHD ETF",sector:"ETF",yield:3.6,cagr:11.0,streak:10,ret1d:0.1,ret7d:0.5,ret1m:1.6,ret3m:4.1,ret6m:7.3,ret1y:12.1,weight:17},
+            {code:"O",name:"가상리얼티인컴",sector:"리츠",yield:5.8,cagr:4.0,streak:12,ret1d:0.1,ret7d:0.3,ret1m:0.9,ret3m:2.3,ret6m:4,ret1y:6.7,weight:17},
+            {code:"ABBV",name:"가상애브비",sector:"헬스케어",yield:3.5,cagr:8.0,streak:11,ret1d:0.2,ret7d:0.8,ret1m:2.4,ret3m:6.3,ret6m:11,ret1y:18.4,weight:17},
+            {code:"KO",name:"가상코카콜라",sector:"필수소비",yield:3.1,cagr:5.0,streak:12,ret1d:0.1,ret7d:0.4,ret1m:1.2,ret3m:3.1,ret6m:5.5,ret1y:9.2,weight:18},
+            {code:"TXN",name:"가상텍사스인스트",sector:"기술",yield:2.9,cagr:12.0,streak:9,ret1d:0.3,ret7d:1.2,ret1m:3.4,ret3m:9,ret6m:15.9,ret1y:26.5,weight:17},
+            {code:"JEPI",name:"가상JEPI",sector:"ETF",yield:7.4,cagr:0,streak:0,ret1d:0.1,ret7d:0.4,ret1m:1,ret3m:2.7,ret6m:4.8,ret1y:8.0,weight:14}]}},
       ALL:{stocks:[
         {code:"SCHD",name:"가상SCHD ETF",sector:"ETF",market:"US",price:78.4,yield:3.6,cagr:11.0,streak:10,freq:4,score:1.61},
         {code:"033780",name:"가상KT&G",sector:"필수소비",market:"KR",price:128000,yield:6.1,cagr:5.2,streak:6,freq:4,score:1.40},
@@ -593,14 +598,14 @@ if(!DATA){
           sectors:{"ETF":30,"필수소비":13,"리츠":13,"금융":13,"헬스케어":13,"인프라":9,"기술":9},
           monthly:[1.0,0.7,1.2,1.0,0.7,1.3,1.0,0.7,1.2,1.0,0.7,1.3],
           holdings:[
-            {code:"SCHD",name:"가상SCHD ETF",sector:"ETF",market:"US",yield:3.6,cagr:11.0,streak:10,ret1y:12.1,weight:14},
-            {code:"033780",name:"가상KT&G",sector:"필수소비",market:"KR",yield:6.1,cagr:5.2,streak:6,ret1y:9.5,weight:13},
-            {code:"O",name:"가상리얼티인컴",sector:"리츠",market:"US",yield:5.8,cagr:4.0,streak:12,ret1y:6.7,weight:13},
-            {code:"446720",name:"가상SOL미국배당다우존스",sector:"ETF",market:"KR",yield:3.8,cagr:9.0,streak:3,ret1y:14.2,weight:13},
-            {code:"105560",name:"가상KB금융",sector:"금융",market:"KR",yield:5.4,cagr:8.1,streak:4,ret1y:21.0,weight:13},
-            {code:"ABBV",name:"가상애브비",sector:"헬스케어",market:"US",yield:3.5,cagr:8.0,streak:11,ret1y:18.4,weight:13},
-            {code:"088980",name:"가상맥쿼리인프라",sector:"인프라",market:"KR",yield:6.5,cagr:3.0,streak:7,ret1y:3.4,weight:9},
-            {code:"TXN",name:"가상텍사스인스트",sector:"기술",market:"US",yield:2.9,cagr:12.0,streak:9,ret1y:26.5,weight:9}]}}
+            {code:"SCHD",name:"가상SCHD ETF",sector:"ETF",market:"US",yield:3.6,cagr:11.0,streak:10,ret1d:0.1,ret7d:0.5,ret1m:1.6,ret3m:4.1,ret6m:7.3,ret1y:12.1,weight:14},
+            {code:"033780",name:"가상KT&G",sector:"필수소비",market:"KR",yield:6.1,cagr:5.2,streak:6,ret1d:0.1,ret7d:0.4,ret1m:1.2,ret3m:3.2,ret6m:5.7,ret1y:9.5,weight:13},
+            {code:"O",name:"가상리얼티인컴",sector:"리츠",market:"US",yield:5.8,cagr:4.0,streak:12,ret1d:0.1,ret7d:0.3,ret1m:0.9,ret3m:2.3,ret6m:4,ret1y:6.7,weight:13},
+            {code:"446720",name:"가상SOL미국배당다우존스",sector:"ETF",market:"KR",yield:3.8,cagr:9.0,streak:3,ret1d:0.2,ret7d:0.6,ret1m:1.8,ret3m:4.8,ret6m:8.5,ret1y:14.2,weight:13},
+            {code:"105560",name:"가상KB금융",sector:"금융",market:"KR",yield:5.4,cagr:8.1,streak:4,ret1d:0.3,ret7d:0.9,ret1m:2.7,ret3m:7.1,ret6m:12.6,ret1y:21.0,weight:13},
+            {code:"ABBV",name:"가상애브비",sector:"헬스케어",market:"US",yield:3.5,cagr:8.0,streak:11,ret1d:0.2,ret7d:0.8,ret1m:2.4,ret3m:6.3,ret6m:11,ret1y:18.4,weight:13},
+            {code:"088980",name:"가상맥쿼리인프라",sector:"인프라",market:"KR",yield:6.5,cagr:3.0,streak:7,ret1d:0,ret7d:0.2,ret1m:0.4,ret3m:1.2,ret6m:2,ret1y:3.4,weight:9},
+            {code:"TXN",name:"가상텍사스인스트",sector:"기술",market:"US",yield:2.9,cagr:12.0,streak:9,ret1d:0.3,ret7d:1.2,ret1m:3.4,ret3m:9,ret6m:15.9,ret1y:26.5,weight:9}]}}
     }};
 }
 
@@ -1031,11 +1036,10 @@ function renderDividend(){
     ${navPerf(p)}
     <div class="dcal"><div class="dcal-t">📅 월별 배당 — <b style="color:var(--accent)">막대=실제 배당수익률(%)</b> · <span style="color:var(--faint)">회색=연 배당 중 비중</span> · 연 합계 ${p.yield}%</div>
       <div class="dcal-row">${p.monthly.map((v,i)=>{const sh=Math.round(v/mtot*100);const yld=v>=0.05?(v<10?v.toFixed(1):Math.round(v))+'%':'';return `<div class="dcal-bar" title="${i+1}월 · 배당수익률 ${v.toFixed(2)}% · 연 배당의 ${sh}%"><b class="dcal-v">${yld}</b><em class="dcal-s">${sh>=1?sh+'%':''}</em><i style="height:${Math.round(v/maxm*100)}%"></i><span>${i+1}</span></div>`;}).join("")}</div></div>
-    <div class="tbl-scroll"><table class="ctbl"><thead><tr><th class="l">종목</th><th>비중</th><th>배당수익률</th><th>1Y</th><th class="mhide">성장률</th><th class="mhide">연속↑</th><th class="mhide">섹터</th></tr></thead><tbody>
-      ${p.holdings.map(h=>`<tr><td class="l"><b>${dflag(h)}${h.name}</b> <span class="scode" style="color:#8d897f">${h.code}</span></td>
-        <td style="color:#ffb000"><b>${h.weight}%</b></td><td class="pos">${h.yield}%</td>
-        <td class="${(h.ret1y||0)>=0?'pos':'neg'}">${h.ret1y==null?'–':(h.ret1y>0?'+':'')+h.ret1y+'%'}</td>
-        <td class="mhide">${h.cagr==null?'–':(h.cagr>0?'+':'')+h.cagr+'%'}</td><td class="mhide">${h.streak==null?'–':h.streak+'년'}</td><td class="mhide">${h.sector}</td></tr>`).join("")}
+    <div class="tbl-scroll"><table class="ctbl rtbl"><thead><tr><th class="l">종목</th><th>비중</th><th>배당</th><th>1D</th><th>7D</th><th>1M</th><th>3M</th><th>6M</th><th>1Y</th></tr></thead><tbody>
+      ${p.holdings.map(h=>{const rc=v=>`<td class="${(v||0)>=0?'pos':'neg'}">${v==null?'–':(v>0?'+':'')+v+'%'}</td>`;return `<tr><td class="l"><b>${dflag(h)}${h.name}</b> <span class="scode" style="color:#8d897f">${h.code}</span></td>
+        <td style="color:#ffb000"><b>${h.weight}%</b></td><td class="teal">${h.yield}%</td>
+        ${rc(h.ret1d)}${rc(h.ret7d)}${rc(h.ret1m)}${rc(h.ret3m)}${rc(h.ret6m)}${rc(h.ret1y)}</tr>`;}).join("")}
     </tbody></table></div></div>`;
   html+=`<div class="cpanel" style="margin-top:14px"><div class="cttl">🔎 배당주 스크리너 <small>점수=배당수익률·성장률·연속증가 종합 (고배당 함정 감점)</small></div>
     <div class="tbl-scroll"><table class="ctbl"><thead><tr><th class="l">종목</th><th>현재가</th><th>배당수익률</th><th class="mhide">성장률</th><th class="mhide">연속↑</th><th class="mhide">지급</th><th>점수</th></tr></thead><tbody>
