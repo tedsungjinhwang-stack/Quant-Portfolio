@@ -319,11 +319,10 @@
   #viewDiv .ctbl th:first-child,#viewDiv .ctbl td:first-child{text-align:left}
   #viewDiv .ctbl td.teal{color:#ffb000;font-weight:700}#viewDiv .ctbl td.amb{color:#ffb000}
   #viewDiv .dtbl-note{font-size:10px;color:var(--faint);text-align:right;margin:6px 0 1px}
-  #viewDiv .rtbl{table-layout:fixed;width:100%;font-size:10px}
-  #viewDiv .rtbl th,#viewDiv .rtbl td{padding:6px 1px;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.3px}
-  #viewDiv .rtbl th:not(.l),#viewDiv .rtbl td:not(.l){width:32px}
-  #viewDiv .rtbl td.l{font-size:11.5px;padding-right:3px}#viewDiv .rtbl th.l{font-size:11px}
-  #viewDiv .rtbl td.l b{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+  #viewDiv .rtbl{width:100%;font-size:13px}
+  #viewDiv .rtbl th,#viewDiv .rtbl td{padding:8px 11px;font-variant-numeric:tabular-nums}     /* 비중·배당·종목 넉넉 */
+  #viewDiv .rtbl th.r,#viewDiv .rtbl td.r{padding-left:6px;padding-right:6px}                  /* 수익률만 촘촘 */
+  #viewDiv .rtbl td.l b{white-space:nowrap}
   #viewDiv .pos{color:var(--up)}#viewDiv .neg{color:var(--down)}
   #viewDiv .cempty{color:var(--muted);text-align:center;padding:40px 12px}
   #viewDiv .dcal{margin:4px 0 14px}
@@ -340,8 +339,10 @@
   #viewDiv .dtilt.dt-yellow{color:var(--warn);background:rgba(255,176,0,.12)}
   #viewDiv .dtilt.dt-red{color:var(--down);background:rgba(255,77,79,.12)}
   @media(max-width:640px){#viewDiv .ctbl th,#viewDiv .ctbl td{padding:8px 4px;font-size:12.5px}
-    #viewDiv .rtbl th,#viewDiv .rtbl td{padding:6px 4px;font-size:11px}
-    #viewDiv .rtbl td.l,#viewDiv .rtbl th.l{font-size:12px}}
+    #viewDiv .rtbl{table-layout:fixed}
+    #viewDiv .rtbl th,#viewDiv .rtbl td,#viewDiv .rtbl th.r,#viewDiv .rtbl td.r{padding:6px 1px;font-size:10px;letter-spacing:-.3px;overflow:hidden;text-overflow:ellipsis}
+    #viewDiv .rtbl th:not(.l),#viewDiv .rtbl td:not(.l){width:32px}
+    #viewDiv .rtbl td.l{font-size:11.5px}}
 </style>
 </head>
 <body>
@@ -1040,11 +1041,12 @@ function renderDividend(){
     ${navPerf(p)}
     <div class="dcal"><div class="dcal-t">📅 월별 배당 — <b style="color:var(--accent)">막대=실제 배당수익률(%)</b> · <span style="color:var(--faint)">회색=연 배당 중 비중</span> · 연 합계 ${p.yield}%</div>
       <div class="dcal-row">${p.monthly.map((v,i)=>{const sh=Math.round(v/mtot*100);const yld=v>=0.05?(v<10?v.toFixed(1):Math.round(v))+'%':'';return `<div class="dcal-bar" title="${i+1}월 · 배당수익률 ${v.toFixed(2)}% · 연 배당의 ${sh}%"><b class="dcal-v">${yld}</b><em class="dcal-s">${sh>=1?sh+'%':''}</em><i style="height:${Math.round(v/maxm*100)}%"></i><span>${i+1}</span></div>`;}).join("")}</div></div>
-    <table class="ctbl rtbl"><thead><tr><th class="l">종목</th><th>비중</th><th>배당</th><th>1D</th><th>7D</th><th>1M</th><th>3M</th><th>6M</th><th>1Y</th></tr></thead><tbody>
-      ${p.holdings.map(h=>{const rc=v=>{if(v==null)return '<td>–</td>';const t=(Math.abs(v)>=10?Math.round(v):v)+'%';return `<td class="${v>=0?'pos':'neg'}">${t}</td>`;};return `<tr><td class="l"><b>${dflag(h)}${h.name}</b></td>
+    <div class="tbl-scroll"><table class="ctbl rtbl"><thead><tr><th class="l">종목</th><th>비중</th><th>배당</th><th class="r">1D</th><th class="r">7D</th><th class="r">1M</th><th class="r">3M</th><th class="r">6M</th><th class="r">1Y</th><th class="mhide">연속↑</th><th class="l mhide">섹터</th></tr></thead><tbody>
+      ${p.holdings.map(h=>{const rc=v=>{if(v==null)return '<td class="r">–</td>';const t=(Math.abs(v)>=10?Math.round(v):v)+'%';return `<td class="r ${v>=0?'pos':'neg'}">${t}</td>`;};return `<tr><td class="l"><b>${dflag(h)}${h.name}</b> <span class="scode" style="color:#8d897f">${h.code}</span></td>
         <td class="amb"><b>${h.weight}%</b></td><td class="teal">${h.yield}%</td>
-        ${rc(h.ret1d)}${rc(h.ret7d)}${rc(h.ret1m)}${rc(h.ret3m)}${rc(h.ret6m)}${rc(h.ret1y)}</tr>`;}).join("")}
-    </tbody></table></div>`;
+        ${rc(h.ret1d)}${rc(h.ret7d)}${rc(h.ret1m)}${rc(h.ret3m)}${rc(h.ret6m)}${rc(h.ret1y)}
+        <td class="mhide">${h.streak==null?'–':h.streak+'년'}</td><td class="l mhide">${h.sector}</td></tr>`;}).join("")}
+    </tbody></table></div></div>`;
   html+=`<div class="cpanel" style="margin-top:14px"><div class="cttl">🔎 배당주 스크리너 <small>점수=배당수익률·성장률·연속증가 종합 (고배당 함정 감점)</small></div>
     <div class="tbl-scroll"><table class="ctbl"><thead><tr><th class="l">종목</th><th>현재가</th><th>배당수익률</th><th class="mhide">성장률</th><th class="mhide">연속↑</th><th class="mhide">지급</th><th>점수</th></tr></thead><tbody>
     ${has.stocks.map(s=>`<tr><td class="l"><b>${dflag(s)}${s.name}</b> <span class="scode" style="color:#8d897f">${s.code}</span></td>
