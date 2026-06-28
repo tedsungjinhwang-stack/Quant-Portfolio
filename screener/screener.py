@@ -948,8 +948,12 @@ def _div_metrics(close, divs):
     recent = [(dt_, v) for dt_, v in zip(idx, d.values) if dt_ >= (last_dt - pd.Timedelta(days=365))]
     freq = len(recent)
     months = sorted({dt_.month for dt_, _ in recent})
+    # 추세(가격) 수익률
+    def _ret(n):
+        return round((price / float(close.iloc[-1 - n]) - 1) * 100, 1) if len(close) > n else None
     return {"price": round(price, 2), "yield": dy, "cagr": cagr, "streak": streak,
-            "freq": freq, "months": months, "ex_date": last_dt.strftime("%Y-%m-%d"), "ttm_div": round(ttm, 4)}
+            "freq": freq, "months": months, "ex_date": last_dt.strftime("%Y-%m-%d"), "ttm_div": round(ttm, 4),
+            "ret3m": _ret(63), "ret1y": _ret(252)}
 
 
 def _zscores(vals):
@@ -1057,6 +1061,9 @@ def _assemble_portfolio(picks, tilt, mac=None, cash=0, cash_why=""):
     eq = sum(weights) or 1.0
     pyld_eq = round(sum(w / 100 * (p["yield"] or 0) for w, p in zip(weights, picks)) / (eq / 100), 2)  # 주식분만
     pcagr = round(sum(w / eq * (p["cagr"] or 0) for w, p in zip(weights, picks)), 1)
+    pr1y = round(sum(w / eq * (p.get("ret1y") or 0) for w, p in zip(weights, picks)), 1)   # 주식분 가중 가격수익(1Y)
+    pr3m = round(sum(w / eq * (p.get("ret3m") or 0) for w, p in zip(weights, picks)), 1)
+    total1y = round(pr1y * inv / 100 + pyld, 1)                                             # 총수익 ≈ 가격(주식분)+배당
     monthly = [0.0] * 12
     for w, p in zip(weights, picks):
         ann = w / 100 * (p["yield"] or 0)
@@ -1070,6 +1077,7 @@ def _assemble_portfolio(picks, tilt, mac=None, cash=0, cash_why=""):
         mk_w[p["market"]] = round(mk_w.get(p["market"], 0) + w, 1)
     holdings = [{**p, "weight": w} for p, w in zip(picks, weights)]
     return {"holdings": holdings, "yield": pyld, "yield_eq": pyld_eq, "cagr": pcagr, "monthly": monthly,
+            "ret1y": pr1y, "ret3m": pr3m, "total1y": total1y,
             "sectors": sec_w, "markets": mk_w, "n": len(holdings),
             "cash": cash, "invested": round(inv, 1), "cash_why": cash_why,
             "tilt": tilt["tilt"], "tilt_reason": tilt["reason"],
