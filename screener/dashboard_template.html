@@ -942,7 +942,7 @@ function renderDividend(){
       <td class="mhide">${s.cagr==null?'–':(s.cagr>0?'+':'')+s.cagr+'%'}</td><td class="mhide">${s.streak==null?'–':s.streak+'년'}</td>
       <td class="mhide">${s.freq?s.freq+'회/년':'–'}</td><td><b>${s.score}</b></td></tr>`).join("")}
     </tbody></table></div></div>
-    <p class="cnote" style="color:var(--muted);font-size:11.5px;margin-top:12px">※ 모델 포트폴리오는 매일 자동 산출되는 <b>참고용 가상 배분</b>입니다. 섹터 최대 3종목·종목당 4~14% 캡. 배당 데이터는 야후 기준(한국은 부정확할 수 있음).</p>`;
+    <p class="cnote" style="color:var(--muted);font-size:11.5px;margin-top:12px">※ 모델 포트폴리오는 매일 자동 산출되는 <b>참고용 가상 배분</b>입니다. 섹터 최대 3종목·종목당 4~14% 캡. 배당 데이터는 야후 기준(한국은 부정확할 수 있음).<br>※ <b>커버드콜</b>은 분배율(수익률)이 높아도 <b>NAV 침식·분배금 변동·성장 왜곡</b>이 있어 '배당성장'과는 성격이 다릅니다 — 고배당은 분배율로만 해석하세요.</p>`;
   host.innerHTML=html; wireDivSeg();
 }
 function wireDivSeg(){
