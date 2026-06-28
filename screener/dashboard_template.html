@@ -29,13 +29,13 @@
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
   .chip{font-size:12.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);
     padding:4px 10px;border-radius:999px}.chip b{color:var(--txt)}
-  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:12px}
-  .seg button{background:transparent;color:var(--muted);border:0;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer}
-  .seg button.on{background:var(--accent);color:#fff}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:12px}
+  .seg button{background:transparent;color:var(--muted);border:0;padding:6px 15px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--sans)}
+  .seg button.on{background:var(--accent);color:#0a0a0b;font-weight:700}
   .layout{display:grid;gap:14px}
   .layout>div{min-width:0}            /* 그리드 자식이 표 때문에 뷰포트보다 넓어지는 것 방지 */
   @media(min-width:1000px){.layout{grid-template-columns:minmax(0,1.02fr) minmax(0,1fr)}}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:12px 13px}
   .ttl{font-size:15.5px;font-weight:700;margin:2px 0 9px;display:flex;align-items:center;gap:6px 8px;flex-wrap:wrap}
   .ttl small{color:var(--muted);font-weight:500}
   .ttl small{color:var(--muted);font-weight:500;font-size:12px}
@@ -225,10 +225,16 @@
     h1{font-size:17.5px}
   }
   /* ===== 상단 뷰 전환 탭 ===== */
-  .topnav{display:inline-flex;gap:4px;background:#0d0d0f;border:1px solid var(--line);border-radius:999px;padding:4px;margin:2px 0 14px}
-  .topnav button{border:none;background:transparent;color:var(--muted);font:inherit;font-size:14px;font-weight:600;
-    padding:7px 18px;border-radius:999px;cursor:pointer;letter-spacing:-.01em}
-  .topnav button.on{background:#ffb000;color:#ffffff;box-shadow:0 0 14px rgba(255,176,0,.3)}
+  .ticker{display:flex;flex-wrap:wrap;background:var(--head);border:1px solid var(--line);border-radius:4px;margin:2px 0 10px;overflow:hidden}
+  .ticker .tkc{display:flex;align-items:baseline;gap:6px;padding:6px 13px;border-right:1px solid var(--line);font-size:11px}
+  .ticker .tkl{color:var(--muted);font-size:10px;letter-spacing:.02em}
+  .ticker .tkv{font-family:var(--mono);font-weight:700;color:var(--txt)}
+  .ticker .tkd{font-family:var(--mono);font-size:10px}
+  .ticker .tkd.pos{color:var(--up)}.ticker .tkd.neg{color:var(--down)}
+  .topnav{display:inline-flex;gap:2px;background:var(--head);border:1px solid var(--line);border-radius:4px;padding:3px;margin:2px 0 12px}
+  .topnav button{border:none;background:transparent;color:var(--muted);font-family:var(--sans);font-size:13px;font-weight:600;
+    padding:7px 16px;border-radius:3px;cursor:pointer;letter-spacing:-.01em}
+  .topnav button.on{background:var(--accent);color:#0a0a0b;font-weight:700}
   /* ===== 컨센서스 뷰(teal) ===== */
   #viewCons{--ct:#ffb000;--ct2:#c98a10;--cam:#ffb000;--cro:#4d8bff;--cpu:#a855f7;--cbg:#121214;--cbg2:#1a1a1d;
     --csurf:#121214;--cdim:#8d897f;--cmut:#8d897f;--ctx:#ece9e3}
@@ -307,6 +313,7 @@
 <div class="wrap">
   <div id="badge" class="badge">⚠️ 예시(가짜 데이터)</div>
   <h1>증시 추세추종 · 기술적 분석 대시보드</h1>
+  <div id="ticker" class="ticker"></div>
   <div class="topnav" id="topnav">
     <button data-v="dash" class="on">📊 모멘텀 대시보드</button>
     <button data-v="cons">🎯 컨센서스</button>
@@ -989,6 +996,17 @@ $("topnav").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=
   if(v==="div") renderDividend();
 }));
 
+function renderTicker(){
+  const el=$("ticker"); if(!el)return;
+  const rg=DATA.regime||{}, mac=DATA.macro||[], macBy={};
+  mac.forEach(m=>macBy[m.label]=m);
+  const out=[];
+  [...((rg.KR&&rg.KR.indexes)||[]),...((rg.US&&rg.US.indexes)||[])].forEach(x=>out.push({l:x.name,v:fmt(x.close,0),c:x.ret1d}));
+  [["원/달러","원/달러"],["WTI 유가","WTI"],["금","금현물"],["VIX 변동성","VIX"]].forEach(([k,lab])=>{const m=macBy[k];if(m)out.push({l:lab,v:fmt(m.value,2),c:m.delta});});
+  if(!out.length){el.style.display="none";return;}
+  el.innerHTML=out.map(t=>`<div class="tkc"><span class="tkl">${t.l}</span><span class="tkv">${t.v}</span><span class="tkd ${sg(t.c)}">${t.c==null?'':(t.c>0?'▲':t.c<0?'▼':'·')}${t.c==null?'':Math.abs(t.c)}</span></div>`).join("");
+}
+renderTicker();
 render();
 </script>
 </body>
