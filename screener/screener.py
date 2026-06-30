@@ -1005,7 +1005,133 @@ def _cash_pct(tilt, mac, season_weak):
     return cash, " · ".join(why)
 
 
-def build_dividend_market(mkt, data, mac=None, season_weak=False):
+# ----------------------------------------------------------------------
+# 영구 보유 장부(book): 배당주는 오래 들고 가므로 매일 새로 뽑지 않고
+# 편입/편출만 판단(히스테리시스). reports/dividend_book.json 에 영구 저장.
+# ----------------------------------------------------------------------
+DIV_BOOK_FILE = os.path.join(REPORT_DIR, "dividend_book.json")
+DIV_TARGET = {"US": 12, "KR": 12, "ALL": 14}   # 시장별 목표 보유 종목 수
+DIV_EXIT_BUF = 6        # 랭크가 (목표+이 값) 밖으로 밀리면 편출 후보(완충구간)
+DIV_MIN_HOLD = 30       # 최소 보유(달력일) — 배당컷 외엔 그 전엔 매도 금지
+DIV_MAX_TURN = 1        # 하루 최대 교체(편입) 종목 수 → 점진적 회전
+DIV_SEC_CAP = 3         # 섹터 최대 종목 수
+DIV_MK_CAP = 9          # (통합) 한 시장 최대 종목 수
+
+
+def select_book(ranked, current, bar_date, N, mk_cap=None):
+    """랭킹된 후보(ranked)와 기존 장부(current)로 오늘의 보유를 결정.
+    반환: (picks=보유종목+편입정보, new_book=저장용 장부, changes={buys,sells})."""
+    rk = {r["code"]: i for i, r in enumerate(ranked)}
+    info = {r["code"]: r for r in ranked}
+    today = pd.Timestamp(bar_date)
+
+    def held_days(h):
+        try:
+            return (today - pd.Timestamp(h["entry_date"])).days
+        except Exception:
+            return 9999
+
+    def counts(lst):
+        sc, mc = {}, {}
+        for h in lst:
+            r = info.get(h["code"])
+            s = r["sector"] if r else h.get("sector")
+            m = r["market"] if r else h.get("market")
+            sc[s] = sc.get(s, 0) + 1
+            mc[m] = mc.get(m, 0) + 1
+        return sc, mc
+
+    def cap_ok(sc, mc, r):
+        if sc.get(r["sector"], 0) >= DIV_SEC_CAP:
+            return False
+        if mk_cap and mc.get(r["market"], 0) >= mk_cap:
+            return False
+        return True
+
+    # 1) 강제 편출: 유니버스 이탈 / 배당 끊김(배당컷)
+    kept, sells, buys = [], [], []
+    for h in current:
+        r = info.get(h["code"])
+        if r is None or not r.get("yield"):
+            sells.append({"code": h["code"], "name": h.get("name"),
+                          "market": h.get("market"), "why": "배당 끊김·유니버스 이탈"})
+        else:
+            kept.append(dict(h))
+
+    # 2) 재량 스왑(회전 캡): 가장 밀린 보유 ↔ top-N 상위 신규 후보
+    turn = 0
+    while turn < DIV_MAX_TURN:
+        held = {h["code"] for h in kept}
+        elig = [h for h in kept
+                if rk.get(h["code"], 9999) > (N - 1 + DIV_EXIT_BUF) and held_days(h) >= DIV_MIN_HOLD]
+        if not elig:
+            break
+        weak = max(elig, key=lambda h: rk.get(h["code"], 9999))
+        sc, mc = counts([h for h in kept if h["code"] != weak["code"]])
+        cand = None
+        for r in ranked:
+            if rk[r["code"]] >= N:            # 신규 편입은 top-N 안에서만(편입>편출 기준 → 회전 억제)
+                break
+            if r["code"] in held or not r.get("yield") or not cap_ok(sc, mc, r):
+                continue
+            cand = r
+            break
+        if not cand or rk[cand["code"]] >= rk.get(weak["code"], 9999):
+            break
+        kept = [h for h in kept if h["code"] != weak["code"]]
+        sells.append({"code": weak["code"], "name": weak.get("name"),
+                      "market": weak.get("market"), "why": f"랭크 {rk.get(weak['code'], 0) + 1}위로 밀림"})
+        ne = {"code": cand["code"], "name": cand["name"], "market": cand["market"],
+              "sector": cand["sector"], "entry_date": bar_date, "entry_price": cand.get("price")}
+        kept.append(ne)
+        buys.append(ne)
+        turn += 1
+
+    # 3) 빈 슬롯 채우기(강제편출·부족분) — 상위 후보부터, 섹터/시장 캡 준수
+    if len(kept) < N:
+        held = {h["code"] for h in kept}
+        sc, mc = counts(kept)
+        for r in ranked:
+            if len(kept) >= N:
+                break
+            if r["code"] in held or not r.get("yield") or not cap_ok(sc, mc, r):
+                continue
+            ne = {"code": r["code"], "name": r["name"], "market": r["market"],
+                  "sector": r["sector"], "entry_date": bar_date, "entry_price": r.get("price")}
+            kept.append(ne)
+            buys.append(ne)
+            sc[r["sector"]] = sc.get(r["sector"], 0) + 1
+            mc[r["market"]] = mc.get(r["market"], 0) + 1
+            held.add(r["code"])
+
+    # 4) 초과분 정리(만일 N 초과면 랭크 나쁜 것부터 컷)
+    kept.sort(key=lambda h: rk.get(h["code"], 9999))
+    if len(kept) > N:
+        for h in kept[N:]:
+            sells.append({"code": h["code"], "name": h.get("name"),
+                          "market": h.get("market"), "why": "슬롯 정리"})
+        kept = kept[:N]
+
+    # 5) picks(랭킹 정보 + 편입일·보유일·편입후 수익률), 저장용 장부, 변경내역
+    picks, new_book = [], []
+    for h in kept:
+        r = dict(info[h["code"]])
+        ep = h.get("entry_price")
+        cp = r.get("price")
+        if ep is None:
+            ep = cp
+        r["entry_date"] = h.get("entry_date", bar_date)
+        r["held_days"] = held_days({"entry_date": r["entry_date"]})
+        r["ret_since"] = round((cp / ep - 1) * 100, 1) if (ep and cp and ep > 0) else None
+        picks.append(r)
+        new_book.append({"code": r["code"], "name": r.get("name"), "market": r["market"],
+                         "sector": r["sector"], "entry_date": r["entry_date"], "entry_price": ep})
+    changes = {"buys": [{"code": b["code"], "name": b.get("name"), "market": b.get("market")} for b in buys],
+               "sells": sells}
+    return picks, new_book, changes
+
+
+def build_dividend_market(mkt, data, mac=None, season_weak=False, book=None, bar_date=None):
     """한 시장의 배당 스크리너(랭킹) + 모델 포트폴리오. mac=매크로 레짐(틸트 반영)."""
     uni = DIV_UNIVERSE.get(mkt, {})
     rows = []
@@ -1033,19 +1159,16 @@ def build_dividend_market(mkt, data, mac=None, season_weak=False):
         sec_b = tilt["def_bonus"] if r["sector"] in DEF_SECTORS else (tilt["cyc_bonus"] if r["sector"] in CYC_SECTORS else 0.0)
         r["score"] = round(zy[i] * wy + zg[i] * wg + zs[i] * ws + trap + sec_b, 2)
     rows.sort(key=lambda r: r["score"], reverse=True)
-    # 모델 포트폴리오: 섹터 최대 3개 캡, 상위 12종목 → 현금 비중은 레짐·계절로 동적
-    picks, sec_cnt = [], {}
-    for r in rows:
-        if len(picks) >= 12:
-            break
-        if sec_cnt.get(r["sector"], 0) >= 3:
-            continue
-        picks.append(r)
-        sec_cnt[r["sector"]] = sec_cnt.get(r["sector"], 0) + 1
+    # 모델 포트폴리오: 영구 장부 기반 편입/편출(오래 보유) — 현금 비중은 레짐·계절로 동적
+    book = {} if book is None else book
+    picks, new_book, changes = select_book(rows, book.get(mkt, []), bar_date, DIV_TARGET[mkt])
+    book[mkt] = new_book
     if not picks:
         return None
     cash, cash_why = _cash_pct(tilt, mac, season_weak)
-    return {"stocks": rows, "portfolio": _assemble_portfolio(picks, tilt, mac, cash, cash_why)}
+    port = _assemble_portfolio(picks, tilt, mac, cash, cash_why)
+    port["changes"] = changes
+    return {"stocks": rows, "portfolio": port}
 
 
 def _assemble_portfolio(picks, tilt, mac=None, cash=0, cash_why=""):
@@ -1087,7 +1210,7 @@ def _assemble_portfolio(picks, tilt, mac=None, cash=0, cash_why=""):
             "regime_signal": (mac["risk"]["label"] if mac else None)}
 
 
-def build_dividend_integrated(per_market, mac=None, season_weak=False):
+def build_dividend_integrated(per_market, mac=None, season_weak=False, book=None, bar_date=None):
     """미국+한국 통합 모델 포트폴리오 — 양 시장 후보를 한 풀로 합쳐 공정 비교·구성."""
     pool = []
     for mk in ("US", "KR"):
@@ -1108,37 +1231,50 @@ def build_dividend_integrated(per_market, mac=None, season_weak=False):
         rr["score"] = round(zy[i] * wy + zg[i] * wg + zs[i] * ws + trap + sec_b, 2)
         ranked.append(rr)
     ranked.sort(key=lambda r: r["score"], reverse=True)
-    picks, sec_cnt, mk_cnt = [], {}, {}
-    for r in ranked:                                   # 상위 14 · 섹터 최대3 · 시장 최대9(균형)
-        if len(picks) >= 14:
-            break
-        if sec_cnt.get(r["sector"], 0) >= 3 or mk_cnt.get(r["market"], 0) >= 9:
-            continue
-        picks.append(r)
-        sec_cnt[r["sector"]] = sec_cnt.get(r["sector"], 0) + 1
-        mk_cnt[r["market"]] = mk_cnt.get(r["market"], 0) + 1
+    book = {} if book is None else book
+    picks, new_book, changes = select_book(ranked, book.get("ALL", []), bar_date,
+                                           DIV_TARGET["ALL"], mk_cap=DIV_MK_CAP)
+    book["ALL"] = new_book
     if not picks:
         return None
     cash, cash_why = _cash_pct(tilt, mac, season_weak)
-    return {"stocks": ranked, "portfolio": _assemble_portfolio(picks, tilt, mac, cash, cash_why)}
+    port = _assemble_portfolio(picks, tilt, mac, cash, cash_why)
+    port["changes"] = changes
+    return {"stocks": ranked, "portfolio": port}
 
 
-def build_dividends(data, mac=None, season_weak=False):
-    """미국·한국 + 통합 배당 스크리너/모델 포트폴리오. data엔 배당(actions) 포함. mac=레짐, season_weak=약세 계절."""
+def build_dividends(data, mac=None, season_weak=False, bar_date=None):
+    """미국·한국 + 통합 배당 스크리너/모델 포트폴리오. data엔 배당(actions) 포함.
+    영구 장부(dividend_book.json)로 매일 편입/편출만 판단(오래 보유)."""
+    try:
+        with open(DIV_BOOK_FILE, encoding="utf-8") as f:
+            book = json.load(f)
+    except Exception:
+        book = {}
     out = {}
     for mkt in ("US", "KR"):
         try:
-            d = build_dividend_market(mkt, data, mac, season_weak)
+            d = build_dividend_market(mkt, data, mac, season_weak, book, bar_date)
             if d:
                 out[mkt] = d
         except Exception as e:
             print(f"[dividend] {mkt} 실패: {e}")
     try:
-        allp = build_dividend_integrated(out, mac, season_weak)
+        allp = build_dividend_integrated(out, mac, season_weak, book, bar_date)
         if allp:
             out["ALL"] = allp
     except Exception as e:
         print(f"[dividend] 통합 실패: {e}")
+    try:
+        os.makedirs(REPORT_DIR, exist_ok=True)
+        with open(DIV_BOOK_FILE, "w", encoding="utf-8") as f:
+            json.dump(book, f, ensure_ascii=False)
+        chg = {mk: (len(out[mk]["portfolio"].get("changes", {}).get("buys", [])),
+                    len(out[mk]["portfolio"].get("changes", {}).get("sells", [])))
+               for mk in out}
+        print(f"[dividend] 장부 저장 → {DIV_BOOK_FILE} · 오늘 편입/편출 {chg}")
+    except Exception as e:
+        print(f"[dividend] 장부 저장 실패: {e}")
     return out
 
 
@@ -1708,7 +1844,7 @@ def main():
         div_data = yf.download(div_syms, period="6y", interval="1d",
                                group_by="ticker", auto_adjust=False, actions=True, threads=True, progress=False)
         season_weak = int(bar_date[5:7]) in (5, 6, 7, 8, 9, 10)   # 5~10월 약세(Sell in May)
-        dividends = build_dividends(div_data, mac, season_weak)    # 레짐+계절 연계(현금 비중 동적)
+        dividends = build_dividends(div_data, mac, season_weak, bar_date)  # 영구 장부 편입/편출 + 레짐 현금
         update_dividend_nav(dividends, div_data, bar_date)         # 가상 운용 누적성과(매일 스냅샷 적립)
         for mk, dd in dividends.items():
             p = dd.get("portfolio", {})
