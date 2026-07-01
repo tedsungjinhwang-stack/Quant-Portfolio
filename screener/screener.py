@@ -1061,6 +1061,7 @@ DIV_MIN_HOLD = 30       # 최소 보유(달력일) — 배당컷 외엔 그 전�
 DIV_MAX_TURN = 1        # 하루 최대 교체(편입) 종목 수 → 점진적 회전
 DIV_SEC_CAP = 3         # 섹터 최대 종목 수
 DIV_MK_CAP = 9          # (통합) 한 시장 최대 종목 수
+DIV_CC_CAP = 2          # 커버드콜 최대 종목 수(NAV 침식·분배 왜곡 쏠림 방지)
 
 
 def select_book(ranked, current, bar_date, N, mk_cap=None):
@@ -1089,6 +1090,8 @@ def select_book(ranked, current, bar_date, N, mk_cap=None):
     def cap_ok(sc, mc, r):
         if sc.get(r["sector"], 0) >= DIV_SEC_CAP:
             return False
+        if r["sector"] == "커버드콜" and sc.get("커버드콜", 0) >= DIV_CC_CAP:
+            return False                                    # 커버드콜 전용 상한(섹터캡보다 엄격)
         if mk_cap and mc.get(r["market"], 0) >= mk_cap:
             return False
         return True
