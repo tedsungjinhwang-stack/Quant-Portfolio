@@ -908,6 +908,43 @@ DIV_UNIVERSE = {
 }
 
 
+# 자동 발굴: 배당/커버드콜/리츠/인컴류로 인식할 이름 키워드 / 제외 키워드
+DIV_ETF_INC = ("배당", "고배당", "커버드콜", "커버드 콜", "프리미엄", "리츠", "부동산", "인프라",
+               "인컴", "분배", "월배당", "타겟위클리", "데일리커버드")
+DIV_ETF_CC = ("커버드콜", "커버드 콜", "프리미엄", "+7%", "+10%", "+12%", "+15%", "위클리", "데일리커버드", "타겟")
+DIV_ETF_EX = ("레버리지", "인버스", "2X", "3X", "곱버스", "선물", "골드", "금선물", "국고채", "채권", "머니마켓", "CD금리", "SOFR")
+
+
+def discover_kr_div_etfs(cap=120):
+    """네이버 ETF 목록에서 배당·커버드콜·리츠·인컴류 ETF를 자동 발굴 → {code:(name,sector)}.
+    레버리지·인버스·채권류는 제외. 실패 시 빈 dict(기존 큐레이션만 사용)."""
+    try:
+        import requests
+        r = requests.get("https://finance.naver.com/api/sise/etfItemList.nhn",
+                         headers={"User-Agent": "Mozilla/5.0", "Referer": "https://finance.naver.com/"},
+                         timeout=20)
+        items = r.json().get("result", {}).get("etfItemList", [])
+    except Exception as e:
+        print(f"[dividend] KR ETF 자동발굴 실패(기존 목록만 사용): {e}")
+        return {}
+    found = {}
+    for it in items:
+        code = str(it.get("itemcode", "")).zfill(6)
+        nm = (it.get("itemname") or "").strip()
+        if not code or not nm:
+            continue
+        if any(x in nm for x in DIV_ETF_EX):
+            continue
+        if not any(k in nm for k in DIV_ETF_INC):
+            continue
+        sec = "커버드콜" if any(k in nm for k in DIV_ETF_CC) else "ETF"
+        found[code] = (nm, sec)
+    if len(found) > cap:                     # 안전 상한(다운로드 폭주 방지)
+        found = dict(list(found.items())[:cap])
+    print(f"[dividend] KR ETF 자동발굴 {len(found)}종(배당·커버드콜·리츠·인컴)")
+    return found
+
+
 def _div_metrics(close, divs):
     """가격·배당 시계열로 배당 지표 산출 → dict 또는 None."""
     import pandas as pd
@@ -1131,18 +1168,18 @@ def select_book(ranked, current, bar_date, N, mk_cap=None):
     return picks, new_book, changes
 
 
-def build_dividend_market(mkt, data, mac=None, season_weak=False, book=None, bar_date=None):
+def build_dividend_market(mkt, data, mac=None, season_weak=False, book=None, bar_date=None, universe=None):
     """한 시장의 배당 스크리너(랭킹) + 모델 포트폴리오. mac=매크로 레짐(틸트 반영)."""
-    uni = DIV_UNIVERSE.get(mkt, {})
+    uni = (universe or DIV_UNIVERSE).get(mkt, {})
     rows = []
     for code, (name, sector) in uni.items():
         sym = f"{code}.KS" if mkt == "KR" else code
         df = ohlc_for(data, sym)
-        if df is None:
+        if df is None or len(df["Close"].dropna()) < 120:      # 상장 6개월 미만 등 이력 부족은 제외(불안정)
             continue
         divs = df["Dividends"] if "Dividends" in df.columns else None
         m = _div_metrics(df["Close"], divs)
-        if not m or not m.get("yield"):
+        if not m or not m.get("yield") or not m.get("freq"):    # 최근 1년 실제 분배(배당) 있는 것만
             continue
         m.update({"code": code, "name": name, "sector": sector, "market": mkt})
         rows.append(m)
@@ -1243,7 +1280,7 @@ def build_dividend_integrated(per_market, mac=None, season_weak=False, book=None
     return {"stocks": ranked, "portfolio": port}
 
 
-def build_dividends(data, mac=None, season_weak=False, bar_date=None):
+def build_dividends(data, mac=None, season_weak=False, bar_date=None, universe=None):
     """미국·한국 + 통합 배당 스크리너/모델 포트폴리오. data엔 배당(actions) 포함.
     영구 장부(dividend_book.json)로 매일 편입/편출만 판단(오래 보유)."""
     try:
@@ -1254,7 +1291,7 @@ def build_dividends(data, mac=None, season_weak=False, bar_date=None):
     out = {}
     for mkt in ("US", "KR"):
         try:
-            d = build_dividend_market(mkt, data, mac, season_weak, book, bar_date)
+            d = build_dividend_market(mkt, data, mac, season_weak, book, bar_date, universe)
             if d:
                 out[mkt] = d
         except Exception as e:
@@ -1840,11 +1877,13 @@ def main():
     # 배당: 유니버스 배당이력(actions) 별도 다운로드 → 스크리너+모델 포트폴리오
     try:
         import yfinance as yf
-        div_syms = ([f"{c}.KS" for c in DIV_UNIVERSE["KR"]] + list(DIV_UNIVERSE["US"]))
+        kr_uni = {**discover_kr_div_etfs(), **DIV_UNIVERSE["KR"]}   # 자동발굴 + 큐레이션(큐레이션 우선)
+        div_universe = {"US": DIV_UNIVERSE["US"], "KR": kr_uni}
+        div_syms = ([f"{c}.KS" for c in kr_uni] + list(DIV_UNIVERSE["US"]))
         div_data = yf.download(div_syms, period="6y", interval="1d",
                                group_by="ticker", auto_adjust=False, actions=True, threads=True, progress=False)
         season_weak = int(bar_date[5:7]) in (5, 6, 7, 8, 9, 10)   # 5~10월 약세(Sell in May)
-        dividends = build_dividends(div_data, mac, season_weak, bar_date)  # 영구 장부 편입/편출 + 레짐 현금
+        dividends = build_dividends(div_data, mac, season_weak, bar_date, div_universe)  # 영구 장부 편입/편출 + 레짐 현금
         update_dividend_nav(dividends, div_data, bar_date)         # 가상 운용 누적성과(매일 스냅샷 적립)
         for mk, dd in dividends.items():
             p = dd.get("portfolio", {})
