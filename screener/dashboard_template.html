@@ -385,6 +385,14 @@
   #viewLev .sgb{font-style:normal;font-size:11px;margin-left:2px}
   #viewLev .sgb.sg-up{color:var(--up)}#viewLev .sgb.sg-pb{color:#4d8bff}#viewLev .sgb.sg-dn{color:var(--down)}
   #viewLev .lev-ref{font-size:11px;font-style:italic}
+  #viewLev .lev-clk{cursor:pointer;transition:background .12s}
+  #viewLev .lev-clk:hover td{background:rgba(255,176,0,.06)}
+  #viewLev .lev-det{position:relative}
+  #viewLev .lev-det .lev-x{position:absolute;top:12px;right:14px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:13px}
+  #viewLev .lev-det .lev-x:hover{color:var(--txt)}
+  #viewLev .chartbox{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px}
+  #viewLev .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;color:var(--dim);margin-top:8px}
+  #viewLev .legend i{display:inline-block;width:11px;height:2px;vertical-align:middle;margin-right:4px}
   @media(max-width:640px){#viewLev .ctbl th,#viewLev .ctbl td{padding:7px 4px;font-size:11px}
     #viewLev .scode{display:none}}
 </style>
@@ -680,6 +688,12 @@ if(!DATA){
       CRYPTO:[{code:"BITU",market:"CRYPTO",state:{align:"정배열",vs240:"위",vs60:"위"},sig:[]},{code:"ETHU",market:"CRYPTO",state:{align:"혼조",vs240:"아래",vs60:"아래"},sig:["풀백"]}],
       fresh:[{code:"SOXL",name:"Direxion 반도체 불3x",market:"US",type:"상승시작"},{code:"TSLL",name:"테슬라 2x",market:"US",type:"풀백"},{code:"CONL",name:"코인베이스 2x",market:"US",type:"상승다이버전스"},{code:"0193W0",name:"삼성전자 2x(KODEX)",market:"KR",type:"풀백"}]
     }}};
+  // 데모 4h 차트 자동 생성(전 종목)
+  const l4=(seed,start)=>{const b=makeBars(seed,300,start||100);return{bars:b,ma60s:MA(b,60),ma120s:MA(b,120),ma240s:MA(b,240),ma480s:MA(b,480),rsis:RSIs(b)};};
+  const lch={}; let li=11;
+  (DATA.leverage.pairs||[]).forEach(p=>[p.bull,p.bear].forEach(m=>{if(m)lch[m.code]=l4(li++,m.price);}));
+  (DATA.leverage.singles||[]).forEach(m=>lch[m.code]=l4(li++,m.price));
+  DATA.leverage.signals=DATA.leverage.signals||{}; DATA.leverage.signals.charts=lch;
 }
 
 const $=id=>document.getElementById(id);
@@ -1145,6 +1159,44 @@ function wireDivSeg(){
 
 // ===== 레버리지 뷰 =====
 let levMkt="US";
+function chart4hSVG(ch){
+  const W=560,padL=44,padR=10,padT=10,padB=16,bars=ch.bars,n=bars.length,iw=(W-padL-padR)/n;
+  const hasRsi=ch.rsis&&ch.rsis.some(v=>v!=null);
+  const PH=hasRsi?206:240,GAP=10,RH=hasRsi?66:0,TH=PH+(hasRsi?GAP+RH:0);
+  let lo=Math.min(...bars.map(b=>b.l)),hi=Math.max(...bars.map(b=>b.h));
+  [ch.ma480s,ch.ma240s,ch.ma120s,ch.ma60s].forEach(s=>s&&s.forEach(v=>{if(v!=null){lo=Math.min(lo,v);hi=Math.max(hi,v);}}));
+  const pd=(hi-lo)*0.05;lo-=pd;hi+=pd;
+  const Y=v=>padT+(PH-padT-padB)*(1-(v-lo)/(hi-lo)),X=i=>padL+iw*(i+0.5);let s="";
+  for(let g=0;g<=4;g++){const v=lo+(hi-lo)*g/4,y=Y(v);
+    s+=`<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#26262b"/><text x="4" y="${y+3}" fill="#8d897f" font-size="9">${v.toLocaleString("ko-KR",{maximumFractionDigits:hi<50?2:0})}</text>`;}
+  bars.forEach((b,i)=>{const up=b.c>=b.o,col=up?"#26d07c":"#ff4d4f",cx=X(i),bw=Math.max(1,iw*0.62);
+    s+=`<line x1="${cx}" y1="${Y(b.h)}" x2="${cx}" y2="${Y(b.l)}" stroke="${col}"/><rect x="${cx-bw/2}" y="${Y(Math.max(b.o,b.c))}" width="${bw}" height="${Math.max(1,Math.abs(Y(b.o)-Y(b.c)))}" fill="${col}"/>`;});
+  const lp=(arr,col)=>{if(!arr)return"";let d="",st=false;arr.forEach((v,i)=>{if(v==null)return;d+=(st?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)+" ";st=true;});return d?`<path d="${d}" fill="none" stroke="${col}" stroke-width="1.4"/>`:"";};
+  s+=lp(ch.ma480s,"#ff4d4f")+lp(ch.ma240s,"#a855f7")+lp(ch.ma120s,"#4d8bff")+lp(ch.ma60s,"#f5c518");
+  if(hasRsi){const ry0=PH+GAP,RY=v=>ry0+RH*(1-Math.max(0,Math.min(100,v))/100);
+    s+=`<rect x="${padL}" y="${ry0}" width="${W-padL-padR}" height="${RH}" fill="rgba(255,255,255,.025)" rx="3"/>`;
+    s+=`<rect x="${padL}" y="${RY(70)}" width="${W-padL-padR}" height="${RY(30)-RY(70)}" fill="rgba(255,176,0,.08)"/>`;
+    [70,50,30].forEach(g=>{const y=RY(g),ob=g!==50;
+      s+=`<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="${ob?'rgba(255,176,0,.3)':'#26262b'}" ${ob?'stroke-dasharray="3 3"':''}/><text x="4" y="${y+3}" fill="#8d897f" font-size="9">${g}</text>`;});
+    let d="",st=false;ch.rsis.forEach((v,i)=>{if(v==null)return;d+=(st?"L":"M")+X(i).toFixed(1)+" "+RY(v).toFixed(1)+" ";st=true;});
+    s+=`<path d="${d}" fill="none" stroke="#4fd1e0" stroke-width="1.4"/><text x="${padL+3}" y="${ry0+11}" fill="#8d897f" font-size="9.5" font-weight="700">RSI(14)</text>`;}
+  return `<svg viewBox="0 0 ${W} ${TH}" width="100%" style="display:block">${s}</svg>`;
+}
+function levFind(code){const lv=DATA.leverage||{};for(const p of(lv.pairs||[])){if(p.bull&&p.bull.code===code)return p.bull;if(p.bear&&p.bear.code===code)return p.bear;}return(lv.singles||[]).find(s=>s.code===code)||{code:code,name:code};}
+function showLevDetail(code){
+  const det=$("levDetail"); if(!det)return;
+  const ch=(((DATA.leverage||{}).signals||{}).charts||{})[code], m=levFind(code);
+  const sg=(((DATA.leverage||{}).signals||{})[m.market]||[]).find(x=>x.code===code);
+  if(!ch){det.innerHTML=`<div class="cpanel"><div class="cempty">${m.name}(${code}) 4시간봉 차트 데이터가 없습니다 — 시간봉 미제공 종목일 수 있어요.</div></div>`;det.scrollIntoView({behavior:'smooth',block:'start'});return;}
+  const badge=sg&&sg.sig&&sg.sig.length?sg.sig.map(t=>`<span class="lx" style="background:rgba(255,176,0,.14)">${t}</span>`).join(" "):'';
+  const al=sg?sg.state.align:'';
+  det.innerHTML=`<div class="cpanel lev-det"><div class="cttl">📈 ${m.name} <span style="color:#8d897f;font-size:13px">${code}</span> <small>4시간봉 · 60·120·240·480 MA · RSI(14)</small><button class="lev-x" aria-label="닫기">✕</button></div>
+    ${al?`<div style="font-size:12px;color:var(--dim);margin-bottom:6px">4h 배열: <b class="${al==='역배열'?'neg':al==='정배열'?'pos':'dimt'}">${al}</b> ${badge}</div>`:''}
+    <div class="chartbox">${chart4hSVG(ch)}</div>
+    <div class="legend"><span><i style="background:#f5c518"></i>60MA</span><span><i style="background:#4d8bff"></i>120MA</span><span><i style="background:#a855f7"></i>240MA</span><span><i style="background:#ff4d4f"></i>480MA</span><span>🟢/🔴 4h캔들</span></div></div>`;
+  det.querySelector('.lev-x').addEventListener('click',()=>{det.innerHTML='';});
+  det.scrollIntoView({behavior:'smooth',block:'start'});
+}
 const levPrice=m=>(levMkt==='KR'?'':'$')+cnum(m.price,levMkt==='KR'?0:2);
 const SG={"상승시작":{c:"sg-up",i:"▲"},"풀백":{c:"sg-pb",i:"●"},"하락전환":{c:"sg-dn",i:"▼"},"상승다이버전스":{c:"sg-dv",i:"◆"}};
 function lev4h(sg,side){
@@ -1163,7 +1215,7 @@ function levRow(m,theme,x,side,sg){
   const isBull=side&&side.indexOf('불')===0;
   const sd=side?`<span class="lv-${isBull?'b':'s'}">${side==='베어'?'베어':'불'}</span>`:'';
   const cls=side==='불'?'pair-b':(side==='베어'?'pair-s':'');
-  return `<tr class="${cls}">
+  return `<tr class="${cls} lev-clk" data-lc="${m.code}">
     <td class="l">${th}</td><td>${sd}</td>
     <td class="l"><b>${m.name}</b> <span class="scode" style="color:#8d897f">${m.code}</span></td>
     <td>${levPrice(m)}</td>
@@ -1185,6 +1237,7 @@ function renderLeverage(){
     html+=`<div class="cpanel sig-panel"><div class="sig-none">🚨 새 <b>4h 시그널 없음</b> — 지난 실행 이후 롱 기준(상승시작·풀백·하락전환) 발생 없음</div></div>`;
   }
   html+=`<div class="lev-warn">⚠️ <b>레버리지·인버스 ETF는 '하루' 배율(2x·3x)을 추종</b>합니다. 변동성이 크면 여러 날 보유 시 <b>복리 감쇠(변동성 decay)</b>로 손실이 누적될 수 있어요 — <b>단기 트레이딩용</b>. ${levMkt==='CRYPTO'?'<b>크립토 ETF는 미국 장중에만</b> 거래돼 밤사이 코인 움직임은 4h봉에 안 잡힙니다.':''}</div>`;
+  html+=`<div id="levDetail"></div>`;
   const pairs=lv.pairs.filter(p=>p.market===levMkt);
   const singles=lv.singles.filter(s=>s.market===levMkt);
   if(!pairs.length&&!singles.length){
@@ -1205,8 +1258,9 @@ function renderLeverage(){
       ${singles.map(s=>levRow(s,'단일',s.x,'불',stMap[s.code])).join("")}
       </tbody></table></div></div>`;
   }
-  html+=`<p class="cnote">※ 지연 종가 기준 참고용. 추세=종가·20MA·60MA 배열. <b>4h 시그널은 롱(불) 종목만</b> 산출 — 베어/인버스는 '참고만'. 상승시작=4h 역배열서 240선 돌파 · 풀백=60선 터치 · 하락전환=직전 전저점 붕괴(CHoCH) · 🟣상승다이버전스=전저점 깼지만 직전 저점 대비 RSI가 오히려 반등(반전 가능).</p>`;
+  html+=`<p class="cnote">※ 지연 종가 기준 참고용. <b>행 클릭 → 4시간봉 차트</b>(60·120·240·480 MA + RSI). 추세=종가·20MA·60MA 배열. <b>4h 시그널은 롱(불) 종목만</b> 산출 — 베어/인버스는 '참고만'. 상승시작=4h 역배열서 240선 돌파 · 풀백=60선 터치 · 하락전환=직전 전저점 붕괴(CHoCH) · 🟣상승다이버전스=전저점 깼지만 직전 저점 대비 RSI가 오히려 반등(반전 가능).</p>`;
   host.innerHTML=html; wireLevSeg();
+  host.querySelectorAll(".lev-clk").forEach(tr=>tr.addEventListener("click",()=>showLevDetail(tr.dataset.lc)));
 }
 function wireLevSeg(){
   const seg=$("levMktSeg"); if(!seg)return;

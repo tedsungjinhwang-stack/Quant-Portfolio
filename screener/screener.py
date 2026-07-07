@@ -1562,23 +1562,44 @@ def lev_signals(df4, prev_ts):
             "state": {"align": align(last), "vs240": vs(m240), "vs60": vs(m60)}}
 
 
+def _lev_chart(d4, cap=150):
+    """4h 캔들 차트용 시계열(최근 cap봉) — 캔들 + 60·120·240·480 MA + RSI(14)."""
+    c = d4["Close"]
+    ma = lambda k: c.rolling(k).mean()
+    m60, m120, m240, m480, rv = ma(60), ma(120), ma(240), ma(480), rsi(c)
+    sl = slice(-cap, None)
+
+    def arr(s):
+        return [None if pd.isna(x) else round(float(x), 3) for x in s.iloc[sl]]
+
+    bars = [{"o": round(float(o), 3), "h": round(float(h), 3), "l": round(float(l), 3), "c": round(float(cl), 3)}
+            for o, h, l, cl in zip(d4["Open"].iloc[sl], d4["High"].iloc[sl], d4["Low"].iloc[sl], c.iloc[sl])]
+    return {"bars": bars, "ma60s": arr(m60), "ma120s": arr(m120),
+            "ma240s": arr(m240), "ma480s": arr(m480), "rsis": arr(rv)}
+
+
 def build_lev_signals(data1h):
-    """레버리지 전 종목 4h 시그널 산출. 상태파일로 중복 알림 방지."""
+    """레버리지 전 종목 4h 시그널(롱만) + 클릭용 4h 차트(전 종목). 상태파일로 중복 알림 방지."""
     try:
         with open(LEV_SIG_FILE, encoding="utf-8") as f:
             st = json.load(f)
     except Exception:
         st = {}
-    syms = []
-    for _t, mk, _x, bc, bn, _rc, _rn in LEV_PAIRS:
-        syms.append((bc, bn, mk))            # 롱(불)만 — 베어/인버스는 시그널 제외
-    syms += [(code, nm, mk) for nm, mk, _x, code in LEV_SINGLES]
+    allt = []
+    for _t, mk, _x, bc, bn, rc_, rn in LEV_PAIRS:
+        allt.append((bc, bn, mk, True))          # 불=롱(시그널 O)
+        if rc_:
+            allt.append((rc_, rn, mk, False))    # 베어=시그널 X, 차트만
+    allt += [(code, nm, mk, True) for nm, mk, _x, code in LEV_SINGLES]
     out = {"US": [], "KR": [], "CRYPTO": []}
-    fresh_all = []
-    for code, name, mk in syms:
+    fresh_all, charts = [], {}
+    for code, name, mk, is_long in allt:
         sym = f"{code}.KS" if mk == "KR" else code
         d4 = _resample_4h(ohlc_for(data1h, sym))
         if d4 is None:
+            continue
+        charts[code] = _lev_chart(d4)
+        if not is_long:
             continue
         r = lev_signals(d4, st.get(code))
         st[code] = r["last_ts"]
@@ -1596,8 +1617,8 @@ def build_lev_signals(data1h):
     except Exception as e:
         print(f"[lev-sig] state 저장 실패: {e}")
     tot = sum(len(v) for v in out.values())
-    print(f"[lev-sig] fresh 시그널 {len(fresh_all)}건 · 상태 {tot}종")
-    return {**out, "fresh": fresh_all}
+    print(f"[lev-sig] fresh 시그널 {len(fresh_all)}건 · 상태 {tot}종 · 차트 {len(charts)}종")
+    return {**out, "fresh": fresh_all, "charts": charts}
 
 
 def lev_signal_text(fresh):
