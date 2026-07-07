@@ -1396,6 +1396,73 @@ def update_dividend_nav(dividends, data, bar_date):
 
 
 # ----------------------------------------------------------------------
+# 레버리지 ETF(불/베어 쌍 + 개별주) — 트레이딩용 모멘텀·기술 지표
+# ----------------------------------------------------------------------
+# (테마, 시장, 배율, 불코드, 불이름, 베어코드, 베어이름)
+LEV_PAIRS = [
+    ("반도체", "US", 3, "SOXL", "Direxion 반도체 불3x", "SOXS", "반도체 베어3x"),
+    ("나스닥100", "US", 3, "TQQQ", "ProShares 나스닥100 3x", "SQQQ", "나스닥100 베어3x"),
+    ("S&P500", "US", 3, "UPRO", "ProShares S&P500 3x", "SPXU", "S&P500 베어3x"),
+    ("소형주 러셀2000", "US", 3, "TNA", "러셀2000 3x", "TZA", "러셀2000 베어3x"),
+    ("FANG+", "US", 3, "FNGU", "FANG+ 3x", "FNGD", "FANG+ 베어3x"),
+    ("코스피200", "KR", 2, "122630", "KODEX 레버리지", "252670", "KODEX 200선물인버스2X"),
+    ("코스닥150", "KR", 2, "233740", "KODEX 코스닥150레버리지", "251340", "KODEX 코스닥150선물인버스2X"),
+]
+# 개별주 레버리지(2x 롱) — (이름, 시장, 배율, 코드)
+LEV_SINGLES = [
+    ("테슬라 2x", "US", 2, "TSLL"), ("엔비디아 2x", "US", 2, "NVDL"), ("코인베이스 2x", "US", 2, "CONL"),
+    ("MSTR 2x", "US", 2, "MSTX"), ("애플 2x", "US", 2, "AAPU"), ("AMD 2x", "US", 2, "AMDL"),
+]
+
+
+def _lev_metrics(df):
+    """레버리지 ETF 1종의 추세·모멘텀 지표(가격·기간수익·RSI·20MA이격·추세·신고가이격)."""
+    close = df["Close"].dropna()
+    if len(close) < 60:
+        return None
+    price = float(close.iloc[-1])
+    if not price:
+        return None
+    ma = lambda n: float(close.rolling(n).mean().iloc[-1]) if len(close) >= n else None
+    ma20, ma60 = ma(20), ma(60)
+    r = lambda n: round((price / float(close.iloc[-1 - n]) - 1) * 100, 1) if len(close) > n else None
+    hi = float(close.iloc[-252:].max())
+    rsi_v = round(float(rsi(close).iloc[-1]), 0)
+    dist20 = round((price / ma20 - 1) * 100, 1) if ma20 else None
+    if ma20 and ma60:
+        trend = "상승추세" if price > ma20 > ma60 else ("하락추세" if price < ma20 < ma60 else "횡보")
+    else:
+        trend = "—"
+    return {"price": round(price, 2), "ret1d": r(1), "ret1w": r(5), "ret1m": r(21), "ret3m": r(63),
+            "rsi": rsi_v, "dist20": dist20, "trend": trend, "high52": round((price / hi - 1) * 100, 1)}
+
+
+def build_leverage(data):
+    """레버리지 ETF 불/베어 쌍 + 개별주 → 지표 부착. data는 가격 다운로드 결과."""
+    def rec(code, market):
+        sym = f"{code}.KS" if market == "KR" else code
+        df = ohlc_for(data, sym)
+        return _lev_metrics(df) if df is not None else None
+
+    pairs = []
+    for theme, mk, x, bc, bn, rc_, rn in LEV_PAIRS:
+        b = rec(bc, mk)
+        s = rec(rc_, mk)
+        if not b and not s:
+            continue
+        pairs.append({"theme": theme, "market": mk, "x": x,
+                      "bull": ({**b, "code": bc, "name": bn} if b else None),
+                      "bear": ({**s, "code": rc_, "name": rn} if s else None)})
+    singles = []
+    for nm, mk, x, code in LEV_SINGLES:
+        m = rec(code, mk)
+        if m:
+            singles.append({**m, "code": code, "name": nm, "market": mk, "x": x})
+    print(f"[leverage] 쌍 {len(pairs)}테마 · 개별주 {len(singles)}종")
+    return {"pairs": pairs, "singles": singles}
+
+
+# ----------------------------------------------------------------------
 # 핫한 종목(거래량 급증 + 단기 모멘텀)
 # ----------------------------------------------------------------------
 def hot_score(rec):
@@ -1903,6 +1970,20 @@ def main():
         print(f"[dividend] 실패: {e}")
         dividends = {}
 
+    # 레버리지 ETF: 별도 다운로드 → 불/베어 쌍·개별주 모멘텀 지표
+    try:
+        import yfinance as yf
+        lev_syms = []
+        for _t, mk, _x, bc, _bn, rc_, _rn in LEV_PAIRS:
+            lev_syms += [f"{bc}.KS" if mk == "KR" else bc, f"{rc_}.KS" if mk == "KR" else rc_]
+        lev_syms += [f"{c}.KS" if mk == "KR" else c for _n, mk, _x, c in LEV_SINGLES]
+        lev_data = yf.download(lev_syms, period="2y", interval="1d",
+                               group_by="ticker", auto_adjust=False, threads=True, progress=False)
+        leverage = build_leverage(lev_data)
+    except Exception as e:
+        print(f"[leverage] 실패: {e}")
+        leverage = {"pairs": [], "singles": []}
+
     markets = build_tracks(allrecs, units_by_market)
     stocks = collect_selected(markets, allrecs)
     for rec in commodities:  # 원자재를 stocks에 추가(상세 차트용)
@@ -1943,6 +2024,7 @@ def main():
                                           "leaders_per_sector", "individual_top", "deep_top",
                                           "proximity_pct", "rs_weights", "zigzag_pct")},
         "regime": regime, "seasonality": seasonality, "macro": macro, "dividends": dividends,
+        "leverage": leverage,
         "markets": markets, "stocks": stocks,
         "commodities": [c["id"] for c in commodities],
         "hot": [h["id"] for h in hot],

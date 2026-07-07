@@ -350,6 +350,29 @@
     #viewDiv .rtbl th,#viewDiv .rtbl td,#viewDiv .rtbl th.r,#viewDiv .rtbl td.r{padding:6px 1px;font-size:10px;letter-spacing:-.3px;overflow:hidden;text-overflow:ellipsis}
     #viewDiv .rtbl th:not(.l),#viewDiv .rtbl td:not(.l){width:32px}
     #viewDiv .rtbl td.l{font-size:11.5px}}
+  /* ===== 레버리지 뷰 ===== */
+  #viewLev .lev-warn{font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:10px;margin-bottom:14px;
+    background:rgba(255,77,79,.1);border:1px solid rgba(255,77,79,.3);color:#ffb3b4}
+  #viewLev .lev-warn b{color:#ff8a8b}
+  #viewLev .cpanel{background:#121214;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:14px}
+  #viewLev .cttl{font-size:15px;font-weight:700;color:var(--txt);margin-bottom:12px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  #viewLev .cttl small{color:var(--muted);font-weight:500;font-size:12px}
+  #viewLev .ctbl{width:100%;border-collapse:collapse;font-size:13px}
+  #viewLev .ctbl th,#viewLev .ctbl td{padding:8px 8px;border-bottom:1px solid rgba(255,176,0,.08);text-align:right;white-space:nowrap;color:var(--txt);font-variant-numeric:tabular-nums}
+  #viewLev .ctbl th{color:#8d897f;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  #viewLev .ctbl th.l,#viewLev .ctbl td.l{text-align:left}
+  #viewLev .ctbl tr.pair-b td{border-bottom:0}
+  #viewLev .ctbl tr.pair-s td{border-bottom:1px solid var(--line)}
+  #viewLev .pos{color:var(--up)}#viewLev .neg{color:var(--down)}#viewLev .dimt{color:var(--dim)}
+  #viewLev .lv-b,#viewLev .lv-s{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:5px}
+  #viewLev .lv-b{color:var(--up);background:rgba(38,208,124,.15)}
+  #viewLev .lv-s{color:var(--down);background:rgba(255,77,79,.14)}
+  #viewLev .lx{font-size:10px;font-weight:700;color:var(--accent);background:rgba(255,176,0,.14);padding:1px 5px;border-radius:4px;margin-left:3px}
+  #viewLev .scode{font-size:11px}
+  #viewLev .cempty{color:var(--muted);text-align:center;padding:34px 12px}
+  #viewLev .cnote{color:var(--muted);font-size:11.5px;margin-top:6px;line-height:1.6}
+  @media(max-width:640px){#viewLev .ctbl th,#viewLev .ctbl td{padding:7px 4px;font-size:11px}
+    #viewLev .scode{display:none}}
 </style>
 </head>
 <body>
@@ -361,6 +384,7 @@
     <button data-v="dash" class="on">📊 모멘텀 대시보드</button>
     <button data-v="cons">🎯 컨센서스</button>
     <button data-v="div">💸 배당 포트폴리오</button>
+    <button data-v="lev">⚡ 레버리지</button>
   </div>
   <div id="viewDash">
   <div id="chips" class="chips"></div>
@@ -422,6 +446,8 @@
   </div>
 
   <div id="viewDiv" style="display:none"></div>
+
+  <div id="viewLev" style="display:none"></div>
 
   <p class="foot">무료 지연 종가 · RS=지수 대비 상대강도(1·3·6개월 가중, 양수=지수 이김) · 눌림목=당일 저가≤20MA≤고가 · 엘리어트는 주관적이라 알고리즘 '추정'(참고용) · US 섹터=SPDR ETF / KR 섹터=KODEX ETF 구성종목 · 투자 판단은 원본 차트 확인 후</p>
 </div>
@@ -618,7 +644,18 @@ if(!DATA){
             {code:"ABBV",name:"가상애브비",sector:"헬스케어",market:"US",yield:3.5,cagr:8.0,streak:11,ret1d:0.2,ret7d:0.8,ret1m:2.4,ret3m:6.3,ret6m:11,ret1y:18.4,ret_since:9.2,held_days:45,weight:13},
             {code:"088980",name:"가상맥쿼리인프라",sector:"인프라",market:"KR",yield:6.5,cagr:3.0,streak:7,ret1d:0,ret7d:0.2,ret1m:0.4,ret3m:1.2,ret6m:2,ret1y:3.4,ret_since:1.7,held_days:90,weight:9},
             {code:"TXN",name:"가상텍사스인스트",sector:"기술",market:"US",yield:2.9,cagr:12.0,streak:9,ret1d:0.3,ret7d:1.2,ret1m:3.4,ret3m:9,ret6m:15.9,ret1y:26.5,ret_since:13.2,held_days:250,weight:9}]}}
-    }};
+    },
+    leverage:{pairs:[
+      {theme:"반도체",market:"US",x:3,bull:{code:"SOXL",name:"Direxion 반도체 불3x",price:42.3,ret1d:2.1,ret1w:5.4,ret1m:12.3,ret3m:28.5,rsi:62,dist20:4.2,trend:"상승추세",high52:-8},bear:{code:"SOXS",name:"반도체 베어3x",price:6.1,ret1d:-2.0,ret1w:-5.1,ret1m:-11.5,ret3m:-24.0,rsi:38,dist20:-4.0,trend:"하락추세",high52:-55}},
+      {theme:"나스닥100",market:"US",x:3,bull:{code:"TQQQ",name:"ProShares 나스닥100 3x",price:78.5,ret1d:1.5,ret1w:3.8,ret1m:9.2,ret3m:20.1,rsi:66,dist20:3.1,trend:"상승추세",high52:-4},bear:{code:"SQQQ",name:"나스닥100 베어3x",price:11.2,ret1d:-1.5,ret1w:-3.6,ret1m:-8.5,ret3m:-17.0,rsi:34,dist20:-3.0,trend:"하락추세",high52:-60}},
+      {theme:"S&P500",market:"US",x:3,bull:{code:"UPRO",name:"ProShares S&P500 3x",price:105.2,ret1d:1.0,ret1w:2.4,ret1m:6.0,ret3m:13.5,rsi:60,dist20:2.0,trend:"상승추세",high52:-3},bear:{code:"SPXU",name:"S&P500 베어3x",price:12.8,ret1d:-1.0,ret1w:-2.3,ret1m:-5.7,ret3m:-12.0,rsi:40,dist20:-2.0,trend:"하락추세",high52:-50}},
+      {theme:"코스피200",market:"KR",x:2,bull:{code:"122630",name:"KODEX 레버리지",price:18500,ret1d:1.2,ret1w:2.4,ret1m:3.5,ret3m:6.0,rsi:58,dist20:1.8,trend:"상승추세",high52:-5},bear:{code:"252670",name:"KODEX 200선물인버스2X",price:3200,ret1d:-1.2,ret1w:-2.4,ret1m:-3.6,ret3m:-6.0,rsi:42,dist20:-1.8,trend:"하락추세",high52:-40}},
+      {theme:"코스닥150",market:"KR",x:2,bull:{code:"233740",name:"KODEX 코스닥150레버리지",price:9800,ret1d:1.5,ret1w:-1.0,ret1m:-4.0,ret3m:-8.0,rsi:45,dist20:-2.0,trend:"하락추세",high52:-25},bear:{code:"251340",name:"KODEX 코스닥150선물인버스2X",price:12500,ret1d:-1.5,ret1w:1.0,ret1m:4.2,ret3m:8.5,rsi:55,dist20:2.0,trend:"상승추세",high52:-10}}
+    ],singles:[
+      {code:"TSLL",name:"테슬라 2x",market:"US",x:2,price:14.2,ret1d:3.5,ret1w:-2.0,ret1m:8.4,ret3m:15.0,rsi:55,dist20:1.5,trend:"횡보",high52:-20},
+      {code:"NVDL",name:"엔비디아 2x",market:"US",x:2,price:88.0,ret1d:2.8,ret1w:6.1,ret1m:18.4,ret3m:42.0,rsi:71,dist20:6.0,trend:"상승추세",high52:-3},
+      {code:"CONL",name:"코인베이스 2x",market:"US",x:2,price:32.1,ret1d:-4.0,ret1w:8.0,ret1m:-12.0,ret3m:25.0,rsi:48,dist20:-3.0,trend:"횡보",high52:-30}
+    ]}};
 }
 
 const $=id=>document.getElementById(id);
@@ -1081,13 +1118,64 @@ function wireDivSeg(){
   const seg=$("divMktSeg"); if(!seg)return;
   seg.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{divMkt=b.dataset.dm;renderDividend();}));
 }
+
+// ===== 레버리지 뷰 =====
+let levMkt="US";
+const levPrice=m=>(levMkt==='US'?'$':'')+cnum(m.price,levMkt==='US'?2:0);
+function levRow(m,theme,x,side){
+  if(!m)return '';
+  const rc=v=>`<td class="${(v||0)>=0?'pos':'neg'}">${v==null?'–':(v>0?'+':'')+v+'%'}</td>`;
+  const tcl=m.trend==='상승추세'?'pos':(m.trend==='하락추세'?'neg':'dimt');
+  const rcls=m.rsi>=70?'neg':(m.rsi<=30?'pos':'');
+  const th=theme?`<b>${theme}</b> <span class="lx">${x}x</span>`:'';
+  const sd=side?`<span class="lv-${side==='불'?'b':'s'}">${side}</span>`:'';
+  return `<tr class="${side==='불'?'pair-b':(side==='베어'?'pair-s':'')}">
+    <td class="l">${th}</td><td>${sd}</td>
+    <td class="l"><b>${m.name}</b> <span class="scode" style="color:#8d897f">${m.code}</span></td>
+    <td>${levPrice(m)}</td>
+    ${rc(m.ret1d)}${rc(m.ret1w)}${rc(m.ret1m)}${rc(m.ret3m)}
+    <td class="${rcls}">${m.rsi==null?'–':m.rsi}</td>${rc(m.dist20)}
+    <td class="${tcl}">${m.trend||'—'}</td></tr>`;
+}
+function renderLeverage(){
+  const host=$("viewLev"), lv=(DATA.leverage||{pairs:[],singles:[]});
+  let html=`<div class="seg" id="levMktSeg"><button data-lm="US" class="${levMkt==='US'?'on':''}">🟢 미국</button><button data-lm="KR" class="${levMkt==='KR'?'on':''}">🔵 한국</button></div>`;
+  html+=`<div class="lev-warn">⚠️ <b>레버리지·인버스 ETF는 '하루' 배율(2x·3x)을 추종</b>합니다. 변동성이 크면 여러 날 보유 시 원지수 대비 <b>복리 감쇠(변동성 decay)</b>로 손실이 누적될 수 있어요 — <b>단기 트레이딩용</b>이며 장기 보유엔 부적합합니다.</div>`;
+  const pairs=lv.pairs.filter(p=>p.market===levMkt);
+  const singles=lv.singles.filter(s=>s.market===levMkt);
+  if(!pairs.length&&!singles.length){
+    host.innerHTML=html+`<div class="cpanel"><div class="cempty">${levMkt==='KR'?'한국 레버리지 데이터가 없습니다 — 스크리너 실행 후 채워집니다.':'레버리지 데이터가 없습니다 — 스크리너 실행 후 채워집니다.'}</div></div>`;
+    return wireLevSeg();
+  }
+  const head=`<thead><tr><th class="l">테마</th><th>방향</th><th class="l">종목</th><th>현재가</th><th>1D</th><th>1W</th><th>1M</th><th>3M</th><th>RSI</th><th>20MA</th><th>추세</th></tr></thead>`;
+  if(pairs.length){
+    html+=`<div class="cpanel"><div class="cttl">🔀 지수·섹터 레버리지 <small>불(강세)/베어(약세) 쌍 · RSI≥70 과열·≤30 과매도 · 20MA=이격</small></div>
+      <div class="tbl-scroll"><table class="ctbl ltbl">${head}<tbody>
+      ${pairs.map(p=>levRow(p.bull,p.theme,p.x,'불')+levRow(p.bear,'',p.x,'베어')).join("")}
+      </tbody></table></div></div>`;
+  }
+  if(singles.length){
+    html+=`<div class="cpanel"><div class="cttl">🎯 개별주 레버리지 <small>대부분 2x 롱 · 개별종목 변동성 그대로 증폭</small></div>
+      <div class="tbl-scroll"><table class="ctbl ltbl">${head}<tbody>
+      ${singles.map(s=>levRow(s,'단일',s.x,'불')).join("")}
+      </tbody></table></div></div>`;
+  }
+  html+=`<p class="cnote">※ 지연 종가 기준 참고용. 추세=종가·20MA·60MA 배열(상승=종가>20>60). 배율은 <b>일간</b> 기준이라 표의 1W·1M·3M 수익률엔 이미 감쇠가 반영돼 있습니다.</p>`;
+  host.innerHTML=html; wireLevSeg();
+}
+function wireLevSeg(){
+  const seg=$("levMktSeg"); if(!seg)return;
+  seg.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{levMkt=b.dataset.lm;renderLeverage();}));
+}
 $("topnav").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
   const v=b.dataset.v;$("topnav").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
   $("viewDash").style.display=v==="dash"?"":"none";
   $("viewCons").style.display=v==="cons"?"":"none";
   $("viewDiv").style.display=v==="div"?"":"none";
+  $("viewLev").style.display=v==="lev"?"":"none";
   if(v==="cons") renderConsensus();
   if(v==="div") renderDividend();
+  if(v==="lev") renderLeverage();
 }));
 
 function renderTicker(){
