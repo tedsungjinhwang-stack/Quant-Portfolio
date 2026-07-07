@@ -1402,6 +1402,18 @@ def update_dividend_nav(dividends, data, bar_date):
 LEV_PAIRS = [
     ("반도체", "US", 3, "SOXL", "Direxion 반도체 불3x", "SOXS", "반도체 베어3x"),
     ("나스닥100", "US", 3, "TQQQ", "ProShares 나스닥100 3x", "SQQQ", "나스닥100 베어3x"),
+    ("금융", "US", 3, "FAS", "금융 3x", "FAZ", "금융 베어3x"),
+    ("바이오", "US", 3, "LABU", "바이오 3x", "LABD", "바이오 베어3x"),
+    ("에너지", "US", 2, "ERX", "에너지 2x", "ERY", "에너지 베어2x"),
+    ("금광", "US", 2, "NUGT", "금광 2x", "DUST", "금광 베어2x"),
+    ("중국", "US", 3, "YINN", "중국 3x", "YANG", "중국 베어3x"),
+    ("미국채 20y+", "US", 3, "TMF", "장기국채 3x", "TMV", "장기국채 베어3x"),
+    ("부동산", "US", 3, "DRN", "부동산 3x", "DRV", "부동산 베어3x"),
+    ("지역은행", "US", 3, "DPST", "지역은행 3x", None, None),
+    ("유틸리티", "US", 3, "UTSL", "유틸 3x", None, None),
+    ("방산·우주", "US", 3, "DFEN", "방산 3x", None, None),
+    ("주택건설", "US", 3, "NAIL", "주택건설 3x", None, None),
+    ("소매", "US", 3, "RETL", "소매 3x", None, None),
     ("코스피200", "KR", 2, "122630", "KODEX 레버리지", "252670", "KODEX 200선물인버스2X"),
     ("코스닥150", "KR", 2, "233740", "KODEX 코스닥150레버리지", "251340", "KODEX 코스닥150선물인버스2X"),
     ("비트코인", "CRYPTO", 2, "BITU", "ProShares 비트코인 2x", "SBIT", "비트코인 -2x"),
@@ -1447,7 +1459,7 @@ def build_leverage(data):
     pairs = []
     for theme, mk, x, bc, bn, rc_, rn in LEV_PAIRS:
         b = rec(bc, mk)
-        s = rec(rc_, mk)
+        s = rec(rc_, mk) if rc_ else None       # 베어 쌍 없는 3x(불 단독)는 None
         if not b and not s:
             continue
         pairs.append({"theme": theme, "market": mk, "x": x,
@@ -2112,7 +2124,9 @@ def main():
         import yfinance as yf
         lev_syms = []
         for _t, mk, _x, bc, _bn, rc_, _rn in LEV_PAIRS:
-            lev_syms += [f"{bc}.KS" if mk == "KR" else bc, f"{rc_}.KS" if mk == "KR" else rc_]
+            lev_syms.append(f"{bc}.KS" if mk == "KR" else bc)
+            if rc_:
+                lev_syms.append(f"{rc_}.KS" if mk == "KR" else rc_)
         lev_syms += [f"{c}.KS" if mk == "KR" else c for _n, mk, _x, c in LEV_SINGLES]
         lev_data = yf.download(lev_syms, period="2y", interval="1d",
                                group_by="ticker", auto_adjust=False, threads=True, progress=False)

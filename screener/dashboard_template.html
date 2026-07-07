@@ -662,6 +662,8 @@ if(!DATA){
     leverage:{pairs:[
       {theme:"반도체",market:"US",x:3,bull:{code:"SOXL",name:"Direxion 반도체 불3x",price:42.3,ret1d:2.1,ret1w:5.4,ret1m:12.3,ret3m:28.5,rsi:62,dist20:4.2,trend:"상승추세",high52:-8},bear:{code:"SOXS",name:"반도체 베어3x",price:6.1,ret1d:-2.0,ret1w:-5.1,ret1m:-11.5,ret3m:-24.0,rsi:38,dist20:-4.0,trend:"하락추세",high52:-55}},
       {theme:"나스닥100",market:"US",x:3,bull:{code:"TQQQ",name:"ProShares 나스닥100 3x",price:78.5,ret1d:1.5,ret1w:3.8,ret1m:9.2,ret3m:20.1,rsi:66,dist20:3.1,trend:"상승추세",high52:-4},bear:{code:"SQQQ",name:"나스닥100 베어3x",price:11.2,ret1d:-1.5,ret1w:-3.6,ret1m:-8.5,ret3m:-17.0,rsi:34,dist20:-3.0,trend:"하락추세",high52:-60}},
+      {theme:"금융",market:"US",x:3,bull:{code:"FAS",name:"금융 3x",price:145.0,ret1d:0.9,ret1w:2.1,ret1m:5.5,ret3m:11.0,rsi:58,dist20:1.7,trend:"상승추세",high52:-5},bear:{code:"FAZ",name:"금융 베어3x",price:8.4,ret1d:-0.9,ret1w:-2.0,ret1m:-5.2,ret3m:-10.0,rsi:42,dist20:-1.6,trend:"하락추세",high52:-52}},
+      {theme:"지역은행",market:"US",x:3,bull:{code:"DPST",name:"지역은행 3x",price:88.0,ret1d:1.8,ret1w:-3.0,ret1m:-9.0,ret3m:14.0,rsi:47,dist20:-2.5,trend:"횡보",high52:-18},bear:null},
       {theme:"코스피200",market:"KR",x:2,bull:{code:"122630",name:"KODEX 레버리지",price:18500,ret1d:1.2,ret1w:2.4,ret1m:3.5,ret3m:6.0,rsi:58,dist20:1.8,trend:"상승추세",high52:-5},bear:{code:"252670",name:"KODEX 200선물인버스2X",price:3200,ret1d:-1.2,ret1w:-2.4,ret1m:-3.6,ret3m:-6.0,rsi:42,dist20:-1.8,trend:"하락추세",high52:-40}},
       {theme:"코스닥150",market:"KR",x:2,bull:{code:"233740",name:"KODEX 코스닥150레버리지",price:9800,ret1d:1.5,ret1w:-1.0,ret1m:-4.0,ret3m:-8.0,rsi:45,dist20:-2.0,trend:"하락추세",high52:-25},bear:{code:"251340",name:"KODEX 코스닥150선물인버스2X",price:12500,ret1d:-1.5,ret1w:1.0,ret1m:4.2,ret3m:8.5,rsi:55,dist20:2.0,trend:"상승추세",high52:-10}},
       {theme:"비트코인",market:"CRYPTO",x:2,bull:{code:"BITU",name:"ProShares 비트코인 2x",price:58.4,ret1d:3.2,ret1w:7.5,ret1m:15.0,ret3m:35.0,rsi:64,dist20:5.0,trend:"상승추세",high52:-6},bear:{code:"SBIT",name:"비트코인 -2x",price:9.8,ret1d:-3.1,ret1w:-7.0,ret1m:-14.0,ret3m:-30.0,rsi:36,dist20:-4.8,trend:"하락추세",high52:-58}},
@@ -1158,8 +1160,10 @@ function levRow(m,theme,x,side,sg){
   const tcl=m.trend==='상승추세'?'pos':(m.trend==='하락추세'?'neg':'dimt');
   const rcls=m.rsi>=70?'neg':(m.rsi<=30?'pos':'');
   const th=theme?`<b>${theme}</b> <span class="lx">${x}x</span>`:'';
-  const sd=side?`<span class="lv-${side==='불'?'b':'s'}">${side}</span>`:'';
-  return `<tr class="${side==='불'?'pair-b':(side==='베어'?'pair-s':'')}">
+  const isBull=side&&side.indexOf('불')===0;
+  const sd=side?`<span class="lv-${isBull?'b':'s'}">${side==='베어'?'베어':'불'}</span>`:'';
+  const cls=side==='불'?'pair-b':(side==='베어'?'pair-s':'');
+  return `<tr class="${cls}">
     <td class="l">${th}</td><td>${sd}</td>
     <td class="l"><b>${m.name}</b> <span class="scode" style="color:#8d897f">${m.code}</span></td>
     <td>${levPrice(m)}</td>
@@ -1192,7 +1196,7 @@ function renderLeverage(){
   if(pairs.length){
     html+=`<div class="cpanel"><div class="cttl">🔀 지수·섹터 레버리지 <small>불(강세)/베어(약세) 쌍 · 4h=롱 기준 배열·시그널(▲상승시작 ●풀백 ▼하락전환) · 베어는 참고만</small></div>
       <div class="tbl-scroll"><table class="ctbl ltbl">${head}<tbody>
-      ${pairs.map(p=>levRow(p.bull,p.theme,p.x,'불',stMap[p.bull&&p.bull.code])+levRow(p.bear,'',p.x,'베어',null)).join("")}
+      ${pairs.map(p=>levRow(p.bull,p.theme,p.x,p.bear?'불':'불단독',stMap[p.bull&&p.bull.code])+levRow(p.bear,'',p.x,'베어',null)).join("")}
       </tbody></table></div></div>`;
   }
   if(singles.length){
