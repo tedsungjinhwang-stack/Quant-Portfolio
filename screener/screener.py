@@ -1402,7 +1402,6 @@ def update_dividend_nav(dividends, data, bar_date):
 LEV_PAIRS = [
     ("반도체", "US", 3, "SOXL", "Direxion 반도체 불3x", "SOXS", "반도체 베어3x"),
     ("나스닥100", "US", 3, "TQQQ", "ProShares 나스닥100 3x", "SQQQ", "나스닥100 베어3x"),
-    ("S&P500", "US", 3, "UPRO", "ProShares S&P500 3x", "SPXU", "S&P500 베어3x"),
     ("코스피200", "KR", 2, "122630", "KODEX 레버리지", "252670", "KODEX 200선물인버스2X"),
     ("코스닥150", "KR", 2, "233740", "KODEX 코스닥150레버리지", "251340", "KODEX 코스닥150선물인버스2X"),
     ("비트코인", "CRYPTO", 2, "BITU", "ProShares 비트코인 2x", "SBIT", "비트코인 -2x"),
