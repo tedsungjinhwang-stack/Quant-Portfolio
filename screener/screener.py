@@ -1496,6 +1496,7 @@ def lev_signals(df4, prev_ts):
     n = len(c)
     ma = lambda k: c.rolling(k).mean()
     m60, m120, m240, m480 = ma(60), ma(120), ma(240), ma(480)
+    rv = rsi(c)                                    # 4h RSI(14) — 다이버전스 판정용
     idx = [str(t) for t in df4.index]
 
     def align(i):
@@ -1517,7 +1518,7 @@ def lev_signals(df4, prev_ts):
         best = None
         for j, v in piv:
             if j < i - kk:
-                best = v
+                best = (j, v)               # (전저점 봉 인덱스, 저가)
             else:
                 break
         return best
@@ -1539,8 +1540,12 @@ def lev_signals(df4, prev_ts):
         if not pd.isna(m60.iloc[i]) and low.iloc[i] <= m60.iloc[i] and low.iloc[i - 1] > m60.iloc[i - 1]:
             fresh.append(("풀백", idx[i]))          # 위에서 내려와 60선 '터치'(저가가 닿음)
         sl = prior_sl(i)
-        if sl is not None and c.iloc[i] < sl and c.iloc[i - 1] >= sl:
-            fresh.append(("하락전환", idx[i]))
+        if sl is not None and c.iloc[i] < sl[1] and c.iloc[i - 1] >= sl[1]:
+            j = sl[0]                          # 전저점 하향돌파 — RSI 상승 다이버전스면 반전 신호로 구분
+            if not pd.isna(rv.iloc[i]) and not pd.isna(rv.iloc[j]) and rv.iloc[i] > rv.iloc[j]:
+                fresh.append(("상승다이버전스", idx[i]))   # 가격은 저점 낮췄는데 RSI는 높아짐
+            else:
+                fresh.append(("하락전환", idx[i]))
 
     last = n - 1
     vs = lambda m: ("위" if c.iloc[-1] > m.iloc[last] else "아래") if not pd.isna(m.iloc[last]) else "?"
@@ -1588,7 +1593,8 @@ def build_lev_signals(data1h):
 
 def lev_signal_text(fresh):
     """텔레그램용 4h 시그널 요약."""
-    ico = {"상승시작": "🟢 상승 시작(240선 돌파)", "풀백": "🔵 풀백 타점(60선 터치)", "하락전환": "🔴 하락 전환(전저점 붕괴)"}
+    ico = {"상승시작": "🟢 상승 시작(240선 돌파)", "풀백": "🔵 풀백 타점(60선 터치)",
+           "하락전환": "🔴 하락 전환(전저점 붕괴)", "상승다이버전스": "🟣 상승 다이버전스(전저점 붕괴+RSI 반등)"}
     lines = ["", "⚡ <b>4시간봉 레버리지 시그널</b>"]
     for f in fresh:
         flag = "🟢" if f["market"] == "US" else "🔵"

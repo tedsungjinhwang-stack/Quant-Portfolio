@@ -378,6 +378,8 @@
   #viewLev .sig-chip.sg-up{color:var(--up);border-color:rgba(38,208,124,.4);background:rgba(38,208,124,.1)}
   #viewLev .sig-chip.sg-pb{color:#4d8bff;border-color:rgba(77,139,255,.4);background:rgba(77,139,255,.1)}
   #viewLev .sig-chip.sg-dn{color:var(--down);border-color:rgba(255,77,79,.4);background:rgba(255,77,79,.1)}
+  #viewLev .sig-chip.sg-dv{color:#c084fc;border-color:rgba(168,85,247,.45);background:rgba(168,85,247,.12)}
+  #viewLev .sgb.sg-dv{color:#c084fc}
   #viewLev .sig-chip .scode{font-size:11px;color:var(--faint)}
   #viewLev .al-inv{color:var(--down);font-weight:700}#viewLev .al-nrm{color:var(--up);font-weight:700}#viewLev .al-mix{color:var(--dim)}
   #viewLev .sgb{font-style:normal;font-size:11px;margin-left:2px}
@@ -672,10 +674,10 @@ if(!DATA){
       {code:"0193W0",name:"삼성전자 2x(KODEX)",market:"KR",x:2,price:12500,ret1d:1.8,ret1w:3.2,ret1m:-5.0,ret3m:8.0,rsi:52,dist20:2.2,trend:"횡보",high52:-15},
       {code:"0193T0",name:"SK하이닉스 2x(KODEX)",market:"KR",x:2,price:18700,ret1d:4.2,ret1w:9.5,ret1m:22.0,ret3m:55.0,rsi:74,dist20:8.5,trend:"상승추세",high52:-2}
     ],signals:{
-      US:[{code:"SOXL",market:"US",state:{align:"역배열",vs240:"위",vs60:"위"},sig:["상승시작"]},{code:"TQQQ",market:"US",state:{align:"정배열",vs240:"위",vs60:"아래"},sig:["풀백"]},{code:"UPRO",market:"US",state:{align:"정배열",vs240:"위",vs60:"위"},sig:[]},{code:"TSLL",market:"US",state:{align:"혼조",vs240:"위",vs60:"아래"},sig:["풀백"]},{code:"NVDL",market:"US",state:{align:"정배열",vs240:"위",vs60:"위"},sig:[]},{code:"CONL",market:"US",state:{align:"혼조",vs240:"아래",vs60:"아래"},sig:["하락전환"]}],
+      US:[{code:"SOXL",market:"US",state:{align:"역배열",vs240:"위",vs60:"위"},sig:["상승시작"]},{code:"TQQQ",market:"US",state:{align:"정배열",vs240:"위",vs60:"아래"},sig:["풀백"]},{code:"UPRO",market:"US",state:{align:"정배열",vs240:"위",vs60:"위"},sig:[]},{code:"TSLL",market:"US",state:{align:"혼조",vs240:"위",vs60:"아래"},sig:["풀백"]},{code:"NVDL",market:"US",state:{align:"정배열",vs240:"위",vs60:"위"},sig:[]},{code:"CONL",market:"US",state:{align:"혼조",vs240:"아래",vs60:"아래"},sig:["상승다이버전스"]}],
       KR:[{code:"122630",market:"KR",state:{align:"정배열",vs240:"위",vs60:"위"},sig:[]},{code:"233740",market:"KR",state:{align:"역배열",vs240:"아래",vs60:"아래"},sig:[]},{code:"0193W0",market:"KR",state:{align:"혼조",vs240:"위",vs60:"아래"},sig:["풀백"]},{code:"0193T0",market:"KR",state:{align:"정배열",vs240:"위",vs60:"위"},sig:[]}],
       CRYPTO:[{code:"BITU",market:"CRYPTO",state:{align:"정배열",vs240:"위",vs60:"위"},sig:[]},{code:"ETHU",market:"CRYPTO",state:{align:"혼조",vs240:"아래",vs60:"아래"},sig:["풀백"]}],
-      fresh:[{code:"SOXL",name:"Direxion 반도체 불3x",market:"US",type:"상승시작"},{code:"TSLL",name:"테슬라 2x",market:"US",type:"풀백"},{code:"CONL",name:"코인베이스 2x",market:"US",type:"하락전환"},{code:"0193W0",name:"삼성전자 2x(KODEX)",market:"KR",type:"풀백"}]
+      fresh:[{code:"SOXL",name:"Direxion 반도체 불3x",market:"US",type:"상승시작"},{code:"TSLL",name:"테슬라 2x",market:"US",type:"풀백"},{code:"CONL",name:"코인베이스 2x",market:"US",type:"상승다이버전스"},{code:"0193W0",name:"삼성전자 2x(KODEX)",market:"KR",type:"풀백"}]
     }}};
 }
 
@@ -1143,7 +1145,7 @@ function wireDivSeg(){
 // ===== 레버리지 뷰 =====
 let levMkt="US";
 const levPrice=m=>(levMkt==='KR'?'':'$')+cnum(m.price,levMkt==='KR'?0:2);
-const SG={"상승시작":{c:"sg-up",i:"▲"},"풀백":{c:"sg-pb",i:"●"},"하락전환":{c:"sg-dn",i:"▼"}};
+const SG={"상승시작":{c:"sg-up",i:"▲"},"풀백":{c:"sg-pb",i:"●"},"하락전환":{c:"sg-dn",i:"▼"},"상승다이버전스":{c:"sg-dv",i:"◆"}};
 function lev4h(sg,side){
   if(side==='베어')return `<td class="dimt lev-ref">참고만</td>`;
   if(!sg)return `<td class="dimt">–</td>`;
@@ -1173,8 +1175,9 @@ function renderLeverage(){
   // 4h 시그널 패널(롱 기준)
   const fresh=(sig.fresh||[]).filter(f=>f.market===levMkt);
   if(fresh.length){
+    const SLB={"상승시작":"🟢 상승 시작(240선 돌파)","풀백":"🔵 풀백 타점(60선 터치)","하락전환":"🔴 하락 전환(전저점 붕괴)","상승다이버전스":"🟣 상승 다이버전스(전저점 붕괴+직전저점 대비 RSI 반등)"};
     html+=`<div class="cpanel sig-panel"><div class="cttl">🚨 4시간봉 시그널 <small>롱 기준 · 지난 실행 이후 새로 발생 · ${mkName[levMkt]}</small></div>
-      <div class="sig-list">${fresh.map(f=>{const g=SG[f.type]||{};const lb=f.type==='상승시작'?'🟢 상승 시작(240선 돌파)':(f.type==='풀백'?'🔵 풀백 타점(60선 터치)':'🔴 하락 전환(전저점)');return `<span class="sig-chip ${g.c||''}">${lb} · <b>${f.name}</b> <span class="scode">${f.code}</span></span>`;}).join("")}</div></div>`;
+      <div class="sig-list">${fresh.map(f=>{const g=SG[f.type]||{};return `<span class="sig-chip ${g.c||''}">${SLB[f.type]||f.type} · <b>${f.name}</b> <span class="scode">${f.code}</span></span>`;}).join("")}</div></div>`;
   }else{
     html+=`<div class="cpanel sig-panel"><div class="sig-none">🚨 새 <b>4h 시그널 없음</b> — 지난 실행 이후 롱 기준(상승시작·풀백·하락전환) 발생 없음</div></div>`;
   }
@@ -1199,7 +1202,7 @@ function renderLeverage(){
       ${singles.map(s=>levRow(s,'단일',s.x,'불',stMap[s.code])).join("")}
       </tbody></table></div></div>`;
   }
-  html+=`<p class="cnote">※ 지연 종가 기준 참고용. 추세=종가·20MA·60MA 배열. <b>4h 시그널은 롱(불) 종목만</b> 산출 — 베어/인버스는 '참고만'. 상승시작=4h 역배열서 240선 돌파 · 풀백=60선 터치 · 하락전환=직전 전저점 붕괴(CHoCH).</p>`;
+  html+=`<p class="cnote">※ 지연 종가 기준 참고용. 추세=종가·20MA·60MA 배열. <b>4h 시그널은 롱(불) 종목만</b> 산출 — 베어/인버스는 '참고만'. 상승시작=4h 역배열서 240선 돌파 · 풀백=60선 터치 · 하락전환=직전 전저점 붕괴(CHoCH) · 🟣상승다이버전스=전저점 깼지만 직전 저점 대비 RSI가 오히려 반등(반전 가능).</p>`;
   host.innerHTML=html; wireLevSeg();
 }
 function wireLevSeg(){
