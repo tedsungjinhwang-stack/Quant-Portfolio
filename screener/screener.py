@@ -1407,6 +1407,8 @@ LEV_PAIRS = [
     ("FANG+", "US", 3, "FNGU", "FANG+ 3x", "FNGD", "FANG+ 베어3x"),
     ("코스피200", "KR", 2, "122630", "KODEX 레버리지", "252670", "KODEX 200선물인버스2X"),
     ("코스닥150", "KR", 2, "233740", "KODEX 코스닥150레버리지", "251340", "KODEX 코스닥150선물인버스2X"),
+    ("비트코인", "CRYPTO", 2, "BITU", "ProShares 비트코인 2x", "SBIT", "비트코인 -2x"),
+    ("이더리움", "CRYPTO", 2, "ETHU", "ProShares 이더 2x", "ETHD", "이더 -2x"),
 ]
 # 개별주 레버리지(2x 롱) — (이름, 시장, 배율, 코드)
 LEV_SINGLES = [
@@ -1553,10 +1555,10 @@ def build_lev_signals(data1h):
     except Exception:
         st = {}
     syms = []
-    for _t, mk, _x, bc, bn, rc_, rn in LEV_PAIRS:
-        syms += [(bc, bn, mk), (rc_, rn, mk)]
+    for _t, mk, _x, bc, bn, _rc, _rn in LEV_PAIRS:
+        syms.append((bc, bn, mk))            # 롱(불)만 — 베어/인버스는 시그널 제외
     syms += [(code, nm, mk) for nm, mk, _x, code in LEV_SINGLES]
-    out = {"US": [], "KR": []}
+    out = {"US": [], "KR": [], "CRYPTO": []}
     fresh_all = []
     for code, name, mk in syms:
         sym = f"{code}.KS" if mk == "KR" else code
@@ -1569,7 +1571,7 @@ def build_lev_signals(data1h):
         for typ, _ts in r["fresh"]:
             if typ not in types:
                 types.append(typ)
-        out[mk].append({"code": code, "name": name, "market": mk, "state": r["state"], "sig": types})
+        out.setdefault(mk, []).append({"code": code, "name": name, "market": mk, "state": r["state"], "sig": types})
         for typ in types:
             fresh_all.append({"code": code, "name": name, "market": mk, "type": typ})
     try:
@@ -1578,8 +1580,9 @@ def build_lev_signals(data1h):
             json.dump(st, f, ensure_ascii=False)
     except Exception as e:
         print(f"[lev-sig] state 저장 실패: {e}")
-    print(f"[lev-sig] fresh 시그널 {len(fresh_all)}건 · 상태 {len(out['US']) + len(out['KR'])}종")
-    return {"US": out["US"], "KR": out["KR"], "fresh": fresh_all}
+    tot = sum(len(v) for v in out.values())
+    print(f"[lev-sig] fresh 시그널 {len(fresh_all)}건 · 상태 {tot}종")
+    return {**out, "fresh": fresh_all}
 
 
 def lev_signal_text(fresh):

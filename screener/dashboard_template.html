@@ -371,6 +371,18 @@
   #viewLev .scode{font-size:11px}
   #viewLev .cempty{color:var(--muted);text-align:center;padding:34px 12px}
   #viewLev .cnote{color:var(--muted);font-size:11.5px;margin-top:6px;line-height:1.6}
+  #viewLev .sig-panel{padding:14px 16px}
+  #viewLev .sig-none{color:var(--dim);font-size:12.5px}
+  #viewLev .sig-list{display:flex;flex-wrap:wrap;gap:8px}
+  #viewLev .sig-chip{font-size:12.5px;font-weight:700;padding:6px 11px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);white-space:nowrap}
+  #viewLev .sig-chip.sg-up{color:var(--up);border-color:rgba(38,208,124,.4);background:rgba(38,208,124,.1)}
+  #viewLev .sig-chip.sg-pb{color:#4d8bff;border-color:rgba(77,139,255,.4);background:rgba(77,139,255,.1)}
+  #viewLev .sig-chip.sg-dn{color:var(--down);border-color:rgba(255,77,79,.4);background:rgba(255,77,79,.1)}
+  #viewLev .sig-chip .scode{font-size:11px;color:var(--faint)}
+  #viewLev .al-inv{color:var(--down);font-weight:700}#viewLev .al-nrm{color:var(--up);font-weight:700}#viewLev .al-mix{color:var(--dim)}
+  #viewLev .sgb{font-style:normal;font-size:11px;margin-left:2px}
+  #viewLev .sgb.sg-up{color:var(--up)}#viewLev .sgb.sg-pb{color:#4d8bff}#viewLev .sgb.sg-dn{color:var(--down)}
+  #viewLev .lev-ref{font-size:11px;font-style:italic}
   @media(max-width:640px){#viewLev .ctbl th,#viewLev .ctbl td{padding:7px 4px;font-size:11px}
     #viewLev .scode{display:none}}
 </style>
@@ -650,12 +662,19 @@ if(!DATA){
       {theme:"나스닥100",market:"US",x:3,bull:{code:"TQQQ",name:"ProShares 나스닥100 3x",price:78.5,ret1d:1.5,ret1w:3.8,ret1m:9.2,ret3m:20.1,rsi:66,dist20:3.1,trend:"상승추세",high52:-4},bear:{code:"SQQQ",name:"나스닥100 베어3x",price:11.2,ret1d:-1.5,ret1w:-3.6,ret1m:-8.5,ret3m:-17.0,rsi:34,dist20:-3.0,trend:"하락추세",high52:-60}},
       {theme:"S&P500",market:"US",x:3,bull:{code:"UPRO",name:"ProShares S&P500 3x",price:105.2,ret1d:1.0,ret1w:2.4,ret1m:6.0,ret3m:13.5,rsi:60,dist20:2.0,trend:"상승추세",high52:-3},bear:{code:"SPXU",name:"S&P500 베어3x",price:12.8,ret1d:-1.0,ret1w:-2.3,ret1m:-5.7,ret3m:-12.0,rsi:40,dist20:-2.0,trend:"하락추세",high52:-50}},
       {theme:"코스피200",market:"KR",x:2,bull:{code:"122630",name:"KODEX 레버리지",price:18500,ret1d:1.2,ret1w:2.4,ret1m:3.5,ret3m:6.0,rsi:58,dist20:1.8,trend:"상승추세",high52:-5},bear:{code:"252670",name:"KODEX 200선물인버스2X",price:3200,ret1d:-1.2,ret1w:-2.4,ret1m:-3.6,ret3m:-6.0,rsi:42,dist20:-1.8,trend:"하락추세",high52:-40}},
-      {theme:"코스닥150",market:"KR",x:2,bull:{code:"233740",name:"KODEX 코스닥150레버리지",price:9800,ret1d:1.5,ret1w:-1.0,ret1m:-4.0,ret3m:-8.0,rsi:45,dist20:-2.0,trend:"하락추세",high52:-25},bear:{code:"251340",name:"KODEX 코스닥150선물인버스2X",price:12500,ret1d:-1.5,ret1w:1.0,ret1m:4.2,ret3m:8.5,rsi:55,dist20:2.0,trend:"상승추세",high52:-10}}
+      {theme:"코스닥150",market:"KR",x:2,bull:{code:"233740",name:"KODEX 코스닥150레버리지",price:9800,ret1d:1.5,ret1w:-1.0,ret1m:-4.0,ret3m:-8.0,rsi:45,dist20:-2.0,trend:"하락추세",high52:-25},bear:{code:"251340",name:"KODEX 코스닥150선물인버스2X",price:12500,ret1d:-1.5,ret1w:1.0,ret1m:4.2,ret3m:8.5,rsi:55,dist20:2.0,trend:"상승추세",high52:-10}},
+      {theme:"비트코인",market:"CRYPTO",x:2,bull:{code:"BITU",name:"ProShares 비트코인 2x",price:58.4,ret1d:3.2,ret1w:7.5,ret1m:15.0,ret3m:35.0,rsi:64,dist20:5.0,trend:"상승추세",high52:-6},bear:{code:"SBIT",name:"비트코인 -2x",price:9.8,ret1d:-3.1,ret1w:-7.0,ret1m:-14.0,ret3m:-30.0,rsi:36,dist20:-4.8,trend:"하락추세",high52:-58}},
+      {theme:"이더리움",market:"CRYPTO",x:2,bull:{code:"ETHU",name:"ProShares 이더 2x",price:22.6,ret1d:-2.5,ret1w:4.0,ret1m:-8.0,ret3m:18.0,rsi:47,dist20:-2.0,trend:"횡보",high52:-22},bear:{code:"ETHD",name:"이더 -2x",price:14.1,ret1d:2.4,ret1w:-3.8,ret1m:7.5,ret3m:-16.0,rsi:53,dist20:1.9,trend:"횡보",high52:-30}}
     ],singles:[
       {code:"TSLL",name:"테슬라 2x",market:"US",x:2,price:14.2,ret1d:3.5,ret1w:-2.0,ret1m:8.4,ret3m:15.0,rsi:55,dist20:1.5,trend:"횡보",high52:-20},
       {code:"NVDL",name:"엔비디아 2x",market:"US",x:2,price:88.0,ret1d:2.8,ret1w:6.1,ret1m:18.4,ret3m:42.0,rsi:71,dist20:6.0,trend:"상승추세",high52:-3},
       {code:"CONL",name:"코인베이스 2x",market:"US",x:2,price:32.1,ret1d:-4.0,ret1w:8.0,ret1m:-12.0,ret3m:25.0,rsi:48,dist20:-3.0,trend:"횡보",high52:-30}
-    ]}};
+    ],signals:{
+      US:[{code:"SOXL",market:"US",state:{align:"역배열",vs240:"위",vs60:"위"},sig:["상승시작"]},{code:"TQQQ",market:"US",state:{align:"정배열",vs240:"위",vs60:"아래"},sig:["풀백"]},{code:"UPRO",market:"US",state:{align:"정배열",vs240:"위",vs60:"위"},sig:[]},{code:"TSLL",market:"US",state:{align:"혼조",vs240:"위",vs60:"아래"},sig:["풀백"]},{code:"NVDL",market:"US",state:{align:"정배열",vs240:"위",vs60:"위"},sig:[]},{code:"CONL",market:"US",state:{align:"혼조",vs240:"아래",vs60:"아래"},sig:["하락전환"]}],
+      KR:[{code:"122630",market:"KR",state:{align:"정배열",vs240:"위",vs60:"위"},sig:[]},{code:"233740",market:"KR",state:{align:"역배열",vs240:"아래",vs60:"아래"},sig:[]}],
+      CRYPTO:[{code:"BITU",market:"CRYPTO",state:{align:"정배열",vs240:"위",vs60:"위"},sig:[]},{code:"ETHU",market:"CRYPTO",state:{align:"혼조",vs240:"아래",vs60:"아래"},sig:["풀백"]}],
+      fresh:[{code:"SOXL",name:"Direxion 반도체 불3x",market:"US",type:"상승시작"},{code:"TSLL",name:"테슬라 2x",market:"US",type:"풀백"},{code:"CONL",name:"코인베이스 2x",market:"US",type:"하락전환"}]
+    }}};
 }
 
 const $=id=>document.getElementById(id);
@@ -1121,8 +1140,16 @@ function wireDivSeg(){
 
 // ===== 레버리지 뷰 =====
 let levMkt="US";
-const levPrice=m=>(levMkt==='US'?'$':'')+cnum(m.price,levMkt==='US'?2:0);
-function levRow(m,theme,x,side){
+const levPrice=m=>(levMkt==='KR'?'':'$')+cnum(m.price,levMkt==='KR'?0:2);
+const SG={"상승시작":{c:"sg-up",i:"▲"},"풀백":{c:"sg-pb",i:"●"},"하락전환":{c:"sg-dn",i:"▼"}};
+function lev4h(sg,side){
+  if(side==='베어')return `<td class="dimt lev-ref">참고만</td>`;
+  if(!sg)return `<td class="dimt">–</td>`;
+  const al=sg.state.align, acl=al==='역배열'?'al-inv':(al==='정배열'?'al-nrm':'al-mix');
+  const badges=(sg.sig||[]).map(t=>`<i class="sgb ${SG[t]?SG[t].c:''}" title="${t}">${SG[t]?SG[t].i:''}</i>`).join("");
+  return `<td><span class="${acl}">${al}</span> ${badges}</td>`;
+}
+function levRow(m,theme,x,side,sg){
   if(!m)return '';
   const rc=v=>`<td class="${(v||0)>=0?'pos':'neg'}">${v==null?'–':(v>0?'+':'')+v+'%'}</td>`;
   const tcl=m.trend==='상승추세'?'pos':(m.trend==='하락추세'?'neg':'dimt');
@@ -1135,32 +1162,42 @@ function levRow(m,theme,x,side){
     <td>${levPrice(m)}</td>
     ${rc(m.ret1d)}${rc(m.ret1w)}${rc(m.ret1m)}${rc(m.ret3m)}
     <td class="${rcls}">${m.rsi==null?'–':m.rsi}</td>${rc(m.dist20)}
-    <td class="${tcl}">${m.trend||'—'}</td></tr>`;
+    <td class="${tcl}">${m.trend||'—'}</td>${lev4h(sg,side)}</tr>`;
 }
 function renderLeverage(){
-  const host=$("viewLev"), lv=(DATA.leverage||{pairs:[],singles:[]});
-  let html=`<div class="seg" id="levMktSeg"><button data-lm="US" class="${levMkt==='US'?'on':''}">🟢 미국</button><button data-lm="KR" class="${levMkt==='KR'?'on':''}">🔵 한국</button></div>`;
-  html+=`<div class="lev-warn">⚠️ <b>레버리지·인버스 ETF는 '하루' 배율(2x·3x)을 추종</b>합니다. 변동성이 크면 여러 날 보유 시 원지수 대비 <b>복리 감쇠(변동성 decay)</b>로 손실이 누적될 수 있어요 — <b>단기 트레이딩용</b>이며 장기 보유엔 부적합합니다.</div>`;
+  const host=$("viewLev"), lv=(DATA.leverage||{pairs:[],singles:[]}), sig=(lv.signals||{});
+  const mkName={US:"🟢 미국",KR:"🔵 한국",CRYPTO:"🪙 크립토"};
+  let html=`<div class="seg" id="levMktSeg">${["US","KR","CRYPTO"].map(k=>`<button data-lm="${k}" class="${levMkt===k?'on':''}">${mkName[k]}</button>`).join("")}</div>`;
+  // 4h 시그널 패널(롱 기준)
+  const fresh=(sig.fresh||[]).filter(f=>f.market===levMkt);
+  if(fresh.length){
+    html+=`<div class="cpanel sig-panel"><div class="cttl">🚨 4시간봉 시그널 <small>롱 기준 · 지난 실행 이후 새로 발생 · ${mkName[levMkt]}</small></div>
+      <div class="sig-list">${fresh.map(f=>{const g=SG[f.type]||{};const lb=f.type==='상승시작'?'🟢 상승 시작(240선 돌파)':(f.type==='풀백'?'🔵 풀백 타점(60선 터치)':'🔴 하락 전환(전저점)');return `<span class="sig-chip ${g.c||''}">${lb} · <b>${f.name}</b> <span class="scode">${f.code}</span></span>`;}).join("")}</div></div>`;
+  }else{
+    html+=`<div class="cpanel sig-panel"><div class="sig-none">🚨 새 <b>4h 시그널 없음</b> — 지난 실행 이후 롱 기준(상승시작·풀백·하락전환) 발생 없음</div></div>`;
+  }
+  html+=`<div class="lev-warn">⚠️ <b>레버리지·인버스 ETF는 '하루' 배율(2x·3x)을 추종</b>합니다. 변동성이 크면 여러 날 보유 시 <b>복리 감쇠(변동성 decay)</b>로 손실이 누적될 수 있어요 — <b>단기 트레이딩용</b>. ${levMkt==='CRYPTO'?'<b>크립토 ETF는 미국 장중에만</b> 거래돼 밤사이 코인 움직임은 4h봉에 안 잡힙니다.':''}</div>`;
   const pairs=lv.pairs.filter(p=>p.market===levMkt);
   const singles=lv.singles.filter(s=>s.market===levMkt);
   if(!pairs.length&&!singles.length){
-    host.innerHTML=html+`<div class="cpanel"><div class="cempty">${levMkt==='KR'?'한국 레버리지 데이터가 없습니다 — 스크리너 실행 후 채워집니다.':'레버리지 데이터가 없습니다 — 스크리너 실행 후 채워집니다.'}</div></div>`;
+    host.innerHTML=html+`<div class="cpanel"><div class="cempty">레버리지 데이터가 없습니다 — 스크리너 실행 후 채워집니다.</div></div>`;
     return wireLevSeg();
   }
-  const head=`<thead><tr><th class="l">테마</th><th>방향</th><th class="l">종목</th><th>현재가</th><th>1D</th><th>1W</th><th>1M</th><th>3M</th><th>RSI</th><th>20MA</th><th>추세</th></tr></thead>`;
+  const stMap={}; (sig[levMkt]||[]).forEach(s=>stMap[s.code]=s);
+  const head=`<thead><tr><th class="l">테마</th><th>방향</th><th class="l">종목</th><th>현재가</th><th>1D</th><th>1W</th><th>1M</th><th>3M</th><th>RSI</th><th>20MA</th><th>추세</th><th class="l">4h(롱)</th></tr></thead>`;
   if(pairs.length){
-    html+=`<div class="cpanel"><div class="cttl">🔀 지수·섹터 레버리지 <small>불(강세)/베어(약세) 쌍 · RSI≥70 과열·≤30 과매도 · 20MA=이격</small></div>
+    html+=`<div class="cpanel"><div class="cttl">🔀 지수·섹터 레버리지 <small>불(강세)/베어(약세) 쌍 · 4h=롱 기준 배열·시그널(▲상승시작 ●풀백 ▼하락전환) · 베어는 참고만</small></div>
       <div class="tbl-scroll"><table class="ctbl ltbl">${head}<tbody>
-      ${pairs.map(p=>levRow(p.bull,p.theme,p.x,'불')+levRow(p.bear,'',p.x,'베어')).join("")}
+      ${pairs.map(p=>levRow(p.bull,p.theme,p.x,'불',stMap[p.bull&&p.bull.code])+levRow(p.bear,'',p.x,'베어',null)).join("")}
       </tbody></table></div></div>`;
   }
   if(singles.length){
-    html+=`<div class="cpanel"><div class="cttl">🎯 개별주 레버리지 <small>대부분 2x 롱 · 개별종목 변동성 그대로 증폭</small></div>
+    html+=`<div class="cpanel"><div class="cttl">🎯 개별주 레버리지 <small>2x 롱 · 개별종목 변동성 그대로 증폭</small></div>
       <div class="tbl-scroll"><table class="ctbl ltbl">${head}<tbody>
-      ${singles.map(s=>levRow(s,'단일',s.x,'불')).join("")}
+      ${singles.map(s=>levRow(s,'단일',s.x,'불',stMap[s.code])).join("")}
       </tbody></table></div></div>`;
   }
-  html+=`<p class="cnote">※ 지연 종가 기준 참고용. 추세=종가·20MA·60MA 배열(상승=종가>20>60). 배율은 <b>일간</b> 기준이라 표의 1W·1M·3M 수익률엔 이미 감쇠가 반영돼 있습니다.</p>`;
+  html+=`<p class="cnote">※ 지연 종가 기준 참고용. 추세=종가·20MA·60MA 배열. <b>4h 시그널은 롱(불) 종목만</b> 산출 — 베어/인버스는 '참고만'. 상승시작=4h 역배열서 240선 돌파 · 풀백=60선 터치 · 하락전환=직전 전저점 붕괴(CHoCH).</p>`;
   host.innerHTML=html; wireLevSeg();
 }
 function wireLevSeg(){
