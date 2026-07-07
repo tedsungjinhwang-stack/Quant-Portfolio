@@ -1566,7 +1566,7 @@ def _lev_chart(d4, cap=150):
     """4h 캔들 차트용 시계열(최근 cap봉) — 캔들 + 60·120·240·480 MA + RSI(14)."""
     c = d4["Close"]
     ma = lambda k: c.rolling(k).mean()
-    m60, m120, m240, m480, rv = ma(60), ma(120), ma(240), ma(480), rsi(c)
+    m60, m120, m240, m480, m960, rv = ma(60), ma(120), ma(240), ma(480), ma(960), rsi(c)
     sl = slice(-cap, None)
 
     def arr(s):
@@ -1574,8 +1574,8 @@ def _lev_chart(d4, cap=150):
 
     bars = [{"o": round(float(o), 3), "h": round(float(h), 3), "l": round(float(l), 3), "c": round(float(cl), 3)}
             for o, h, l, cl in zip(d4["Open"].iloc[sl], d4["High"].iloc[sl], d4["Low"].iloc[sl], c.iloc[sl])]
-    return {"bars": bars, "ma60s": arr(m60), "ma120s": arr(m120),
-            "ma240s": arr(m240), "ma480s": arr(m480), "rsis": arr(rv)}
+    return {"bars": bars, "ma60s": arr(m60), "ma120s": arr(m120), "ma240s": arr(m240),
+            "ma480s": arr(m480), "ma960s": arr(m960), "rsis": arr(rv)}
 
 
 def build_lev_signals(data1h):
