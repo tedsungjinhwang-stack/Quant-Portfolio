@@ -1414,6 +1414,7 @@ LEV_PAIRS = [
 LEV_SINGLES = [
     ("테슬라 2x", "US", 2, "TSLL"), ("엔비디아 2x", "US", 2, "NVDL"), ("코인베이스 2x", "US", 2, "CONL"),
     ("MSTR 2x", "US", 2, "MSTX"), ("애플 2x", "US", 2, "AAPU"), ("AMD 2x", "US", 2, "AMDL"),
+    ("삼성전자 2x(KODEX)", "KR", 2, "0193W0"), ("SK하이닉스 2x(KODEX)", "KR", 2, "0193T0"),
 ]
 
 
