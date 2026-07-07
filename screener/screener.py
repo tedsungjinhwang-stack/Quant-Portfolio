@@ -1462,6 +1462,136 @@ def build_leverage(data):
     return {"pairs": pairs, "singles": singles}
 
 
+# ---- 4시간봉 스윙 시그널(상승시작·풀백·하락전환/CHoCH) ------------------------
+LEV_SIG_FILE = os.path.join(REPORT_DIR, "lev_signals.json")
+
+
+def _resample_4h(df1h):
+    """1시간봉 OHLC → 4시간봉으로 합성. 480MA 계산 위해 충분한 봉이 있어야 함."""
+    if df1h is None or len(df1h) == 0:
+        return None
+    d = df1h.dropna(subset=["Close"])
+    try:
+        out = pd.DataFrame({
+            "Open": d["Open"].resample("4h").first(),
+            "High": d["High"].resample("4h").max(),
+            "Low": d["Low"].resample("4h").min(),
+            "Close": d["Close"].resample("4h").last(),
+        }).dropna()
+    except Exception:
+        return None
+    return out if len(out) >= 60 else None
+
+
+def lev_signals(df4, prev_ts):
+    """4h OHLC로 시그널 검출.
+    · 상승시작: MA(60·120·240·480) 역배열에서 캔들이 240선 상향돌파
+    · 풀백:     캔들이 60선에 '터치'(위에서 내려와 저가가 60선에 닿음) — 완전 이탈 아님
+    · 하락전환: 직전 스윙 전저점 하향돌파(CHoCH)
+    prev_ts(마지막 처리 봉) 이후 새 봉에서 뜬 것만 fresh로 반환."""
+    c, low, high = df4["Close"], df4["Low"], df4["High"]
+    n = len(c)
+    ma = lambda k: c.rolling(k).mean()
+    m60, m120, m240, m480 = ma(60), ma(120), ma(240), ma(480)
+    idx = [str(t) for t in df4.index]
+
+    def align(i):
+        v = [m60.iloc[i], m120.iloc[i], m240.iloc[i], m480.iloc[i]]
+        if any(pd.isna(x) for x in v):
+            return "?"
+        if v[0] < v[1] < v[2] < v[3]:
+            return "역배열"
+        if v[0] > v[1] > v[2] > v[3]:
+            return "정배열"
+        return "혼조"
+
+    # 스윙 전저점(피벗 로우, ±3봉) — 확정 피벗만
+    kk = 3
+    lv = low.values
+    piv = [(j, lv[j]) for j in range(kk, n - kk) if lv[j] == lv[j - kk:j + kk + 1].min()]
+
+    def prior_sl(i):
+        best = None
+        for j, v in piv:
+            if j < i - kk:
+                best = v
+            else:
+                break
+        return best
+
+    if prev_ts:
+        start = n
+        for i in range(n):
+            if idx[i] > prev_ts:
+                start = max(1, i)
+                break
+    else:
+        start = n - 1                      # 최초 실행: 마지막 봉만(과거 폭주 방지)
+
+    fresh = []
+    for i in range(max(1, start), n):
+        if not pd.isna(m240.iloc[i]) and align(i - 1) == "역배열" \
+                and c.iloc[i] > m240.iloc[i] and c.iloc[i - 1] <= m240.iloc[i - 1]:
+            fresh.append(("상승시작", idx[i]))
+        if not pd.isna(m60.iloc[i]) and low.iloc[i] <= m60.iloc[i] and low.iloc[i - 1] > m60.iloc[i - 1]:
+            fresh.append(("풀백", idx[i]))          # 위에서 내려와 60선 '터치'(저가가 닿음)
+        sl = prior_sl(i)
+        if sl is not None and c.iloc[i] < sl and c.iloc[i - 1] >= sl:
+            fresh.append(("하락전환", idx[i]))
+
+    last = n - 1
+    vs = lambda m: ("위" if c.iloc[-1] > m.iloc[last] else "아래") if not pd.isna(m.iloc[last]) else "?"
+    return {"fresh": fresh, "last_ts": idx[-1],
+            "state": {"align": align(last), "vs240": vs(m240), "vs60": vs(m60)}}
+
+
+def build_lev_signals(data1h):
+    """레버리지 전 종목 4h 시그널 산출. 상태파일로 중복 알림 방지."""
+    try:
+        with open(LEV_SIG_FILE, encoding="utf-8") as f:
+            st = json.load(f)
+    except Exception:
+        st = {}
+    syms = []
+    for _t, mk, _x, bc, bn, rc_, rn in LEV_PAIRS:
+        syms += [(bc, bn, mk), (rc_, rn, mk)]
+    syms += [(code, nm, mk) for nm, mk, _x, code in LEV_SINGLES]
+    out = {"US": [], "KR": []}
+    fresh_all = []
+    for code, name, mk in syms:
+        sym = f"{code}.KS" if mk == "KR" else code
+        d4 = _resample_4h(ohlc_for(data1h, sym))
+        if d4 is None:
+            continue
+        r = lev_signals(d4, st.get(code))
+        st[code] = r["last_ts"]
+        types = []
+        for typ, _ts in r["fresh"]:
+            if typ not in types:
+                types.append(typ)
+        out[mk].append({"code": code, "name": name, "market": mk, "state": r["state"], "sig": types})
+        for typ in types:
+            fresh_all.append({"code": code, "name": name, "market": mk, "type": typ})
+    try:
+        os.makedirs(REPORT_DIR, exist_ok=True)
+        with open(LEV_SIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(st, f, ensure_ascii=False)
+    except Exception as e:
+        print(f"[lev-sig] state 저장 실패: {e}")
+    print(f"[lev-sig] fresh 시그널 {len(fresh_all)}건 · 상태 {len(out['US']) + len(out['KR'])}종")
+    return {"US": out["US"], "KR": out["KR"], "fresh": fresh_all}
+
+
+def lev_signal_text(fresh):
+    """텔레그램용 4h 시그널 요약."""
+    ico = {"상승시작": "🟢 상승 시작(240선 돌파)", "풀백": "🔵 풀백 타점(60선 터치)", "하락전환": "🔴 하락 전환(전저점 붕괴)"}
+    lines = ["", "⚡ <b>4시간봉 레버리지 시그널</b>"]
+    for f in fresh:
+        flag = "🟢" if f["market"] == "US" else "🔵"
+        lines.append(f"{ico.get(f['type'], f['type'])} — {flag}{f['name']}({f['code']})")
+    return "\n".join(lines)
+
+
 # ----------------------------------------------------------------------
 # 핫한 종목(거래량 급증 + 단기 모멘텀)
 # ----------------------------------------------------------------------
@@ -1980,9 +2110,16 @@ def main():
         lev_data = yf.download(lev_syms, period="2y", interval="1d",
                                group_by="ticker", auto_adjust=False, threads=True, progress=False)
         leverage = build_leverage(lev_data)
+        try:  # 4시간봉 시그널: 1시간봉 다운로드 → 4h 합성 → 상승시작/풀백/하락전환
+            lev1h = yf.download(lev_syms, period="720d", interval="1h",
+                                group_by="ticker", auto_adjust=False, threads=True, progress=False)
+            leverage["signals"] = build_lev_signals(lev1h)
+        except Exception as e:
+            print(f"[lev-sig] 실패: {e}")
+            leverage["signals"] = {"US": [], "KR": [], "fresh": []}
     except Exception as e:
         print(f"[leverage] 실패: {e}")
-        leverage = {"pairs": [], "singles": []}
+        leverage = {"pairs": [], "singles": [], "signals": {"US": [], "KR": [], "fresh": []}}
 
     markets = build_tracks(allrecs, units_by_market)
     stocks = collect_selected(markets, allrecs)
@@ -2035,8 +2172,12 @@ def main():
                    "near": sum(1 for r in stocks.values() if r["near"])},
     }
     write_outputs(payload)
-    send_telegram(build_message(markets, stocks, bar_date, payload["commodities"], regime,
-                                payload["hot"], seasonality, payload["consensus"]))
+    msg = build_message(markets, stocks, bar_date, payload["commodities"], regime,
+                        payload["hot"], seasonality, payload["consensus"])
+    lev_fresh = leverage.get("signals", {}).get("fresh", [])
+    if lev_fresh:
+        msg += "\n" + lev_signal_text(lev_fresh)
+    send_telegram(msg)
     print("[done]")
 
 
