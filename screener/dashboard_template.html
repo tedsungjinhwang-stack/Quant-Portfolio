@@ -1260,7 +1260,7 @@ function renderLeverage(){
       ${singles.map(s=>levRow(s,'단일',s.x,'불',stMap[s.code])).join("")}
       </tbody></table></div></div>`;
   }
-  html+=`<p class="cnote">※ 지연 종가 기준 참고용. <b>행 클릭 → 4시간봉 차트</b>(60·120·240·480·960 MA + RSI). 미국·크립토는 티커, 한국은 종목명. 추세=종가·20MA·60MA 배열. <b>4h 시그널은 롱(불) 종목만</b> — 베어/인버스는 '참고만'. 상승시작=4h 역배열서 240선 돌파 · 풀백=60선 터치 · 하락전환=직전 전저점 붕괴(CHoCH) · 🟣상승다이버전스=전저점 깼지만 직전 저점 대비 RSI가 오히려 반등(반전 가능).</p>`;
+  html+=`<p class="cnote">※ 지연 종가 기준 참고용. <b>행 클릭 → 4시간봉 차트</b>(60·120·240·480·960 MA + RSI). 미국·크립토는 티커, 한국은 종목명. 추세=종가·20MA·60MA 배열. <b>4h 시그널은 롱(불) 종목만 · 당일(최근 거래일) 4h봉 중 발생 기준</b> — 베어/인버스는 '참고만'. 상승시작=당일 4h 역배열서 240선 돌파 · 풀백=당일 60선 터치(봉 범위 안) · 하락전환=당일 직전 전저점 붕괴(CHoCH) · 🟣상승다이버전스=전저점 깼지만 직전 저점 대비 RSI가 오히려 반등(반전 가능).</p>`;
   host.innerHTML=html;
   host.querySelectorAll(".lev-clk").forEach(tr=>tr.addEventListener("click",()=>showLevDetail(tr.dataset.lc)));
 }

@@ -1495,18 +1495,20 @@ def _resample_4h(df1h):
     return out if len(out) >= 60 else None
 
 
-def lev_signals(df4, prev_ts):
-    """4h OHLC로 시그널 검출.
-    · 상승시작: MA(60·120·240·480) 역배열에서 캔들이 240선 상향돌파
-    · 풀백:     캔들이 60선에 '터치'(위에서 내려와 저가가 60선에 닿음) — 완전 이탈 아님
-    · 하락전환: 직전 스윙 전저점 하향돌파(CHoCH)
-    prev_ts(마지막 처리 봉) 이후 새 봉에서 뜬 것만 fresh로 반환."""
+def lev_signals(df4):
+    """4h OHLC로 시그널 검출 — '당일(가장 최근 거래일) 4h봉 중 하나라도' 조건 충족 시.
+    (하루 1배치라 봉 사이 크로스가 깜빡일 수 있어 당일 발생 여부로 판정)
+    · 상승시작: 역배열에서 240선을 당일 상향돌파
+    · 풀백:     60선이 당일 어느 봉의 범위 안(저가≤60≤고가)에 들어옴 = '터치'
+    · 하락전환: 직전 스윙 전저점을 당일 하향돌파(CHoCH)  · RSI 상승 다이버전스면 '상승다이버전스'"""
     c, low, high = df4["Close"], df4["Low"], df4["High"]
     n = len(c)
     ma = lambda k: c.rolling(k).mean()
     m60, m120, m240, m480 = ma(60), ma(120), ma(240), ma(480)
-    rv = rsi(c)                                    # 4h RSI(14) — 다이버전스 판정용
+    rv = rsi(c)
     idx = [str(t) for t in df4.index]
+    dates = [t.split(" ")[0].split("T")[0] for t in idx]   # 봉의 날짜 부분
+    today = dates[-1]
 
     def align(i):
         v = [m60.iloc[i], m120.iloc[i], m240.iloc[i], m480.iloc[i]]
@@ -1518,7 +1520,6 @@ def lev_signals(df4, prev_ts):
             return "정배열"
         return "혼조"
 
-    # 스윙 전저점(피벗 로우, ±3봉) — 확정 피벗만
     kk = 3
     lv = low.values
     piv = [(j, lv[j]) for j in range(kk, n - kk) if lv[j] == lv[j - kk:j + kk + 1].min()]
@@ -1527,38 +1528,33 @@ def lev_signals(df4, prev_ts):
         best = None
         for j, v in piv:
             if j < i - kk:
-                best = (j, v)               # (전저점 봉 인덱스, 저가)
+                best = (j, v)
             else:
                 break
         return best
 
-    if prev_ts:
-        start = n
-        for i in range(n):
-            if idx[i] > prev_ts:
-                start = max(1, i)
-                break
-    else:
-        start = n - 1                      # 최초 실행: 마지막 봉만(과거 폭주 방지)
-
-    fresh = []
-    for i in range(max(1, start), n):
+    tset = set()
+    for i in range(1, n):
+        if dates[i] != today:                  # 당일 봉만
+            continue
         if not pd.isna(m240.iloc[i]) and align(i - 1) == "역배열" \
                 and c.iloc[i] > m240.iloc[i] and c.iloc[i - 1] <= m240.iloc[i - 1]:
-            fresh.append(("상승시작", idx[i]))
-        if not pd.isna(m60.iloc[i]) and low.iloc[i] <= m60.iloc[i] and low.iloc[i - 1] > m60.iloc[i - 1]:
-            fresh.append(("풀백", idx[i]))          # 위에서 내려와 60선 '터치'(저가가 닿음)
+            tset.add("상승시작")
+        if not pd.isna(m60.iloc[i]) and low.iloc[i] <= m60.iloc[i] <= high.iloc[i]:
+            tset.add("풀백")                    # 60선이 봉 범위 안 = 당일 터치
         sl = prior_sl(i)
         if sl is not None and c.iloc[i] < sl[1] and c.iloc[i - 1] >= sl[1]:
-            j = sl[0]                          # 전저점 하향돌파 — RSI 상승 다이버전스면 반전 신호로 구분
+            j = sl[0]
             if not pd.isna(rv.iloc[i]) and not pd.isna(rv.iloc[j]) and rv.iloc[i] > rv.iloc[j]:
-                fresh.append(("상승다이버전스", idx[i]))   # 가격은 저점 낮췄는데 RSI는 높아짐
+                tset.add("상승다이버전스")
             else:
-                fresh.append(("하락전환", idx[i]))
+                tset.add("하락전환")
+    order = ["상승시작", "풀백", "하락전환", "상승다이버전스"]
+    types_today = [t for t in order if t in tset]
 
     last = n - 1
     vs = lambda m: ("위" if c.iloc[-1] > m.iloc[last] else "아래") if not pd.isna(m.iloc[last]) else "?"
-    return {"fresh": fresh, "last_ts": idx[-1],
+    return {"today": today, "types_today": types_today,
             "state": {"align": align(last), "vs240": vs(m240), "vs60": vs(m60)}}
 
 
@@ -1601,14 +1597,14 @@ def build_lev_signals(data1h):
         charts[code] = _lev_chart(d4)
         if not is_long:
             continue
-        r = lev_signals(d4, st.get(code))
-        st[code] = r["last_ts"]
-        types = []
-        for typ, _ts in r["fresh"]:
-            if typ not in types:
-                types.append(typ)
-        out.setdefault(mk, []).append({"code": code, "name": name, "market": mk, "state": r["state"], "sig": types})
-        for typ in types:
+        r = lev_signals(d4)
+        prev = st.get(code) if isinstance(st.get(code), dict) else {}
+        already = prev.get("types", []) if prev.get("date") == r["today"] else []
+        new_types = [t for t in r["types_today"] if t not in already]   # 당일 이미 알린 건 제외(재실행 중복 방지)
+        st[code] = {"date": r["today"], "types": r["types_today"]}
+        out.setdefault(mk, []).append({"code": code, "name": name, "market": mk,
+                                       "state": r["state"], "sig": r["types_today"]})   # 표: 당일 신호 전부
+        for typ in new_types:                                          # 패널·텔레그램: 새로 뜬 것만
             fresh_all.append({"code": code, "name": name, "market": mk, "type": typ})
     try:
         os.makedirs(REPORT_DIR, exist_ok=True)
