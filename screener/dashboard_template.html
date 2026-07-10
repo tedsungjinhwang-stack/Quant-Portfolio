@@ -1239,7 +1239,6 @@ function renderLeverage(){
   }else{
     html+=`<div class="cpanel sig-panel"><div class="sig-none">🚨 새 <b>4h 시그널 없음</b> — 지난 실행 이후 롱 기준(상승시작·풀백·하락전환) 발생 없음</div></div>`;
   }
-  html+=`<div class="lev-warn">⚠️ <b>레버리지·인버스 ETF는 '하루' 배율(2x·3x)을 추종</b>합니다. 변동성이 크면 여러 날 보유 시 <b>복리 감쇠(변동성 decay)</b>로 손실이 누적될 수 있어요 — <b>단기 트레이딩용</b>. <b>크립토 ETF(🪙)는 미국 장중에만</b> 거래돼 밤사이 코인 움직임은 4h봉에 안 잡힙니다.</div>`;
   html+=`<div id="levDetail"></div>`;
   const pairs=lv.pairs||[], singles=lv.singles||[];
   if(!pairs.length&&!singles.length){
