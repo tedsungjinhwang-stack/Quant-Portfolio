@@ -725,7 +725,7 @@ function renderRegime(){
   const rg=(DATA.regime||{})[market], el=$("regime");
   if(!rg){el.innerHTML="";return;}
   const lc={green:"🟢",yellow:"🟡",red:"🔴"}[rg.color]||"⚪", b=rg.breadth||{};
-  const idx=(rg.indexes||[]).map(x=>`<div class="ic"><span class="ixn">${x.name}</span> <b class="ixv">${fmt(x.close)}</b><br>
+  const idx=(rg.indexes||[]).map(x=>`<div class="ic"><span class="ixn">${x.name}</span> <b class="ixv">${fmt(x.close)}</b>${(x.asof&&DATA.bar_date&&x.asof<DATA.bar_date)?` <span style="color:var(--warn);font-size:10px">(${x.asof} 기준·지연)</span>`:''}<br>
     <span class="${x.above200?'pos':'neg'}">${x.above200?'▲240MA':'▼240MA'}</span> ${x.golden?'·정배열':'·역배열'} ·RSI ${x.rsi}
     <br><span style="font-size:10.5px">1D ${prc(x.ret1d)} · 1M ${prc(x.ret1m)} · YTD ${prc(x.ret_ytd)} · 1Y ${prc(x.ret1y)}</span>
     ${x.wyckoff?`<br><span style="color:#a855f7">🔍 ${x.wyckoff}</span>`:''}</div>`).join("");

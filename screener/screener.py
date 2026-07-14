@@ -558,15 +558,18 @@ def metrics(meta, df, relaxed=False, bench=0.0):
 def index_health(name, ticker, df):
     if df is None or len(df) < 60:
         return None
-    close = df["Close"].astype(float)
+    close = df["Close"].astype(float).dropna()
+    if len(close) < 60:
+        return None
     last = float(close.iloc[-1])
+    asof = pd.to_datetime(close.index[-1]).date().isoformat()
     ma50 = close.rolling(50).mean()
     ma200 = close.rolling(min(240, len(close))).mean()
     v50, v200 = ma50.iloc[-1], ma200.iloc[-1]
     slope_up = bool(pd.notna(v200) and len(ma200.dropna()) > 21 and v200 > ma200.iloc[-21])
     wyck, wyck_note = wyckoff_estimate(df)
     return {
-        "name": name, "ticker": ticker, "close": round(last, 2),
+        "name": name, "ticker": ticker, "close": round(last, 2), "asof": asof,
         "wyckoff": wyck, "wyckoff_note": wyck_note,
         "ma50": round(float(v50), 2) if pd.notna(v50) else None,
         "ma200": round(float(v200), 2) if pd.notna(v200) else None,
@@ -2092,10 +2095,30 @@ def main():
     idx_map = {}
     for mkt, lst in INDEXES.items():
         for tk, nm in lst:
-            h = index_health(nm, tk, ohlc_for(data, tk))
+            df_i = ohlc_for(data, tk)
+            # 지수(^GSPC·^KS11 등)는 야후 피드가 개별종목보다 하루 늦게 갱신되는 일이 잦음.
+            # bar_date보다 뒤처지면 개별 재조회로 최신 봉을 보강(집합 다운로드가 놓친 마지막 봉 확보).
+            try:
+                if df_i is None or pd.to_datetime(df_i["Close"].dropna().index[-1]).date().isoformat() < bar_date:
+                    import yfinance as yf
+                    fresh = yf.download(tk, period="6mo", interval="1d",
+                                        auto_adjust=False, threads=False, progress=False)
+                    if fresh is not None and len(fresh):
+                        if isinstance(fresh.columns, pd.MultiIndex):
+                            fresh.columns = fresh.columns.get_level_values(0)
+                        fresh = fresh.dropna(subset=["Close"])
+                        if len(fresh) and (df_i is None or pd.to_datetime(fresh.index[-1]) > pd.to_datetime(df_i["Close"].dropna().index[-1])):
+                            df_i = fresh
+                            print(f"[regime] {tk} 지수 최신봉 보강 → {pd.to_datetime(fresh.index[-1]).date()}")
+            except Exception as e:
+                print(f"[regime] {tk} 재조회 실패: {e}")
+            h = index_health(nm, tk, df_i)
             if h:
                 idx_map[tk] = h
     regime = build_regime(allrecs, idx_map)
+    stale = [f"{h['name']}({h['asof']})" for mk in regime for h in regime[mk].get("indexes", []) if h.get("asof") and h["asof"] < bar_date]
+    if stale:
+        print(f"[regime] ⚠️ 기준일({bar_date})보다 뒤처진 지수: {', '.join(stale)}")
     print(f"[regime] US={regime['US']['label']} KR={regime['KR']['label']}")
 
     macro = build_global_macro() + build_macro(data)
