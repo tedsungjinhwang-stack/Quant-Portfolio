@@ -395,6 +395,49 @@
   #viewLev .legend i{display:inline-block;width:11px;height:2px;vertical-align:middle;margin-right:4px}
   @media(max-width:640px){#viewLev .ctbl th,#viewLev .ctbl td{padding:7px 4px;font-size:11px}
     #viewLev .scode{display:none}}
+  /* ===== 테마포착 뷰 ===== */
+  #viewTheme .cpanel{background:#121214;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:14px}
+  #viewTheme .cttl{font-size:15px;font-weight:700;color:var(--txt);margin-bottom:12px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  #viewTheme .cttl small{color:var(--muted);font-weight:500;font-size:12px}
+  #viewTheme .cstat{background:#1a1a1d;border:1px solid var(--line);border-radius:14px;padding:13px 15px}
+  #viewTheme .cstat .lab{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#8d897f;font-weight:700}
+  #viewTheme .cstat .val{font-size:20px;font-weight:800;margin-top:5px;color:var(--txt);font-variant-numeric:tabular-nums}
+  #viewTheme .cstat .sub{font-size:11px;color:var(--muted);margin-top:3px}
+  #viewTheme .pos{color:var(--up)}#viewTheme .neg{color:var(--down)}#viewTheme .dimt{color:var(--dim)}
+  #viewTheme .cempty{color:var(--muted);text-align:center;padding:40px 12px}
+  #viewTheme .cnote{color:var(--muted);font-size:11.5px;margin-top:6px;line-height:1.6}
+  #viewTheme .tm-chg{font-size:12.5px;padding:9px 13px;border-radius:10px;margin-bottom:14px;background:var(--panel2);border:1px solid var(--line);line-height:1.7}
+  #viewTheme .tm-chg .ch-b,#viewTheme .tm-chg .ch-s,#viewTheme .tm-chg .ch-l{font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap;margin-right:4px}
+  #viewTheme .tm-chg .ch-b{color:var(--up);background:rgba(38,208,124,.14)}
+  #viewTheme .tm-chg .ch-s{color:var(--dim);background:rgba(141,137,127,.15)}
+  #viewTheme .tm-chg .ch-l{color:var(--down);background:rgba(255,77,79,.12)}
+  #viewTheme .tm-dday{float:right;font-family:var(--mono);font-size:11.5px;color:var(--accent);font-weight:700}
+  #viewTheme .th-row{margin-bottom:13px}
+  #viewTheme .th-name{font-size:13.5px;font-weight:800;color:var(--txt)}
+  #viewTheme .th-pts{font-family:var(--mono);font-size:11.5px;color:var(--accent);font-weight:700;margin-left:6px}
+  #viewTheme .th-bar{height:9px;background:var(--panel2);border-radius:5px;margin:5px 0 6px;overflow:hidden}
+  #viewTheme .th-bar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#c98a10,#ffb000)}
+  #viewTheme .th-lead{display:flex;flex-wrap:wrap;gap:5px}
+  #viewTheme .th-etf{font-size:11.5px;padding:3px 9px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+  #viewTheme .th-etf b{font-weight:700}
+  #viewTheme .th-etf .y{font-family:var(--mono);margin-left:4px}
+  #viewTheme .ctbl{width:100%;border-collapse:collapse;font-size:12.5px}
+  #viewTheme .ctbl th,#viewTheme .ctbl td{padding:8px 7px;border-bottom:1px solid rgba(255,176,0,.08);text-align:right;white-space:nowrap;color:var(--txt);font-variant-numeric:tabular-nums}
+  #viewTheme .ctbl th{color:#8d897f;font-size:11px;font-weight:700}
+  #viewTheme .ctbl th.l,#viewTheme .ctbl td.l{text-align:left}
+  #viewTheme .ctbl td.amb{color:#ffb000;font-weight:700}
+  #viewTheme .st-ext{font-size:10px;font-weight:700;color:#4d8bff;background:rgba(77,139,255,.13);padding:1px 6px;border-radius:5px}
+  #viewTheme .st-lc{font-size:10px;font-weight:700;color:var(--down);background:rgba(255,77,79,.13);padding:1px 6px;border-radius:5px}
+  #viewTheme .nstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+  #viewTheme .navchart{width:100%;height:110px;margin-top:10px;display:block}
+  #viewTheme .navchart .nbase{stroke:var(--faint);stroke-width:1;stroke-dasharray:3 3;opacity:.7}
+  #viewTheme .navchart .nline{fill:none;stroke-width:2;vector-effect:non-scaling-stroke}
+  #viewTheme .navchart .nline.pos{stroke:var(--up)}#viewTheme .navchart .nline.neg{stroke:var(--down)}
+  #viewTheme .navchart .narea{stroke:none;opacity:.12}
+  #viewTheme .navchart .narea.pos{fill:var(--up)}#viewTheme .navchart .narea.neg{fill:var(--down)}
+  #viewTheme .ncempty{margin-top:8px;padding:14px;background:var(--panel2);border:1px dashed var(--line);border-radius:10px;color:var(--dim);font-size:12px;line-height:1.6}
+  @media(max-width:640px){#viewTheme .ctbl th,#viewTheme .ctbl td{padding:7px 4px;font-size:11px}
+    #viewTheme .mh{display:none}}
 </style>
 </head>
 <body>
@@ -407,6 +450,7 @@
     <button data-v="cons">🎯 컨센서스</button>
     <button data-v="div">💸 배당 포트폴리오</button>
     <button data-v="lev">⚡ ETF</button>
+    <button data-v="theme">🚀 테마포착</button>
   </div>
   <div id="viewDash">
   <div id="chips" class="chips"></div>
@@ -470,6 +514,8 @@
   <div id="viewDiv" style="display:none"></div>
 
   <div id="viewLev" style="display:none"></div>
+
+  <div id="viewTheme" style="display:none"></div>
 
   <p class="foot">무료 지연 종가 · RS=지수 대비 상대강도(1·3·6개월 가중, 양수=지수 이김) · 눌림목=당일 저가≤20MA≤고가 · 엘리어트는 주관적이라 알고리즘 '추정'(참고용) · US 섹터=SPDR ETF / KR 섹터=KODEX ETF 구성종목 · 투자 판단은 원본 차트 확인 후</p>
 </div>
@@ -688,6 +734,40 @@ if(!DATA){
       CRYPTO:[{code:"BITU",market:"CRYPTO",state:{align:"정배열",vs240:"위",vs60:"위"},sig:[]},{code:"ETHU",market:"CRYPTO",state:{align:"혼조",vs240:"아래",vs60:"아래"},sig:["풀백"]}],
       fresh:[{code:"SOXL",name:"Direxion 반도체 불3x",market:"US",type:"상승시작"},{code:"TSLL",name:"테슬라 2x",market:"US",type:"풀백"},{code:"CONL",name:"코인베이스 2x",market:"US",type:"상승다이버전스"},{code:"0193W0",name:"삼성전자 2x(KODEX)",market:"KR",type:"풀백"}]
     }}};
+  DATA.etfmom={universe:612,last_reb:"2026-06-25",next_reb:"2026-07-15",dleft:9,
+    since:"2026-06-01",days_tracked:12,cum:4.2,
+    nav_curve:[{date:"2026-06-01",nav:100},{date:"2026-06-03",nav:100.8},{date:"2026-06-05",nav:101.5},{date:"2026-06-09",nav:100.9},{date:"2026-06-11",nav:102.2},{date:"2026-06-15",nav:101.8},{date:"2026-06-17",nav:102.9},{date:"2026-06-19",nav:103.4},{date:"2026-06-23",nav:102.8},{date:"2026-06-25",nav:103.6},{date:"2026-06-26",nav:104.0},{date:"2026-06-28",nav:104.2}],
+    changes:{buys:[{code:"468370",name:"가상HANARO 전력설비투자",market:"KR"}],sells:[{code:"EWW",name:"멕시코",market:"US",why:"이익 실현",pl:8.4}],losscut:[]},
+    themes:[
+      {theme:"인프라·전력",pts:87,w:100,leaders:[{code:"468370",name:"가상HANARO 전력설비투자",market:"KR",ytd:141.3,rank:1},{code:"GRID",name:"스마트그리드",market:"US",ytd:38.2,rank:4},{code:"487240",name:"가상KODEX AI전력핵심설비",market:"KR",ytd:142.7,rank:6}]},
+      {theme:"우라늄·원자력",pts:64,w:74,leaders:[{code:"URNM",name:"우라늄 광산",market:"US",ytd:52.0,rank:2},{code:"NLR",name:"원자력",market:"US",ytd:41.5,rank:7}]},
+      {theme:"금·귀금속",pts:49,w:56,leaders:[{code:"GDX",name:"금광",market:"US",ytd:44.1,rank:3},{code:"SIL",name:"은광",market:"US",ytd:39.8,rank:9}]},
+      {theme:"조선",pts:38,w:44,leaders:[{code:"466920",name:"가상SOL 조선TOP3플러스",market:"KR",ytd:88.4,rank:5}]},
+      {theme:"방산·우주",pts:29,w:33,leaders:[{code:"449450",name:"가상PLUS K방산",market:"KR",ytd:76.2,rank:8},{code:"ITA",name:"방산·우주 iShares",market:"US",ytd:28.9,rank:12}]}],
+    holdings:[
+      {code:"468370",name:"가상HANARO 전력설비투자",market:"KR",theme:"인프라·전력",score:3.21,rank:1,ret15:12.4,ret_since:2.1,ytd:141.3,entry_date:"2026-06-28",held_days:0,extended:false,losscut:false},
+      {code:"URNM",name:"우라늄 광산",market:"US",theme:"우라늄·원자력",score:2.88,rank:2,ret15:10.8,ret_since:6.2,ytd:52.0,entry_date:"2026-06-11",held_days:17,extended:false,losscut:false},
+      {code:"GDX",name:"금광",market:"US",theme:"금·귀금속",score:2.64,rank:3,ret15:9.5,ret_since:9.0,ytd:44.1,entry_date:"2026-05-28",held_days:31,extended:false,losscut:false},
+      {code:"GRID",name:"스마트그리드",market:"US",theme:"인프라·전력",score:2.41,rank:4,ret15:8.9,ret_since:4.4,ytd:38.2,entry_date:"2026-06-11",held_days:17,extended:false,losscut:false},
+      {code:"466920",name:"가상SOL 조선TOP3플러스",market:"KR",theme:"조선",score:2.28,rank:5,ret15:8.2,ret_since:3.6,ytd:88.4,entry_date:"2026-06-25",held_days:3,extended:false,losscut:false},
+      {code:"487240",name:"가상KODEX AI전력핵심설비",market:"KR",theme:"인프라·전력",score:2.11,rank:6,ret15:7.8,ret_since:1.9,ytd:142.7,entry_date:"2026-06-25",held_days:3,extended:false,losscut:false},
+      {code:"NLR",name:"원자력",market:"US",theme:"우라늄·원자력",score:1.97,rank:7,ret15:7.1,ret_since:-2.3,ytd:41.5,entry_date:"2026-06-25",held_days:3,extended:true,losscut:false},
+      {code:"449450",name:"가상PLUS K방산",market:"KR",theme:"방산·우주",score:1.85,rank:8,ret15:6.6,ret_since:5.5,ytd:76.2,entry_date:"2026-06-11",held_days:17,extended:false,losscut:false},
+      {code:"SIL",name:"은광",market:"US",theme:"금·귀금속",score:1.74,rank:9,ret15:6.2,ret_since:-8.8,ytd:39.8,entry_date:"2026-06-26",held_days:2,extended:false,losscut:true},
+      {code:"EPU",name:"페루",market:"US",theme:"페루",score:1.62,rank:10,ret15:5.9,ret_since:7.7,ytd:35.6,entry_date:"2026-05-28",held_days:31,extended:false,losscut:false}],
+    top30:[
+      {rank:1,code:"468370",name:"가상HANARO 전력설비투자",theme:"인프라·전력",market:"KR",score:3.21,ret15:12.4,ytd:141.3},
+      {rank:2,code:"URNM",name:"우라늄 광산",theme:"우라늄·원자력",market:"US",score:2.88,ret15:10.8,ytd:52.0},
+      {rank:3,code:"GDX",name:"금광",theme:"금·귀금속",market:"US",score:2.64,ret15:9.5,ytd:44.1},
+      {rank:4,code:"GRID",name:"스마트그리드",theme:"인프라·전력",market:"US",score:2.41,ret15:8.9,ytd:38.2},
+      {rank:5,code:"466920",name:"가상SOL 조선TOP3플러스",theme:"조선",market:"KR",score:2.28,ret15:8.2,ytd:88.4},
+      {rank:6,code:"487240",name:"가상KODEX AI전력핵심설비",theme:"인프라·전력",market:"KR",score:2.11,ret15:7.8,ytd:142.7},
+      {rank:7,code:"NLR",name:"원자력",theme:"우라늄·원자력",market:"US",score:1.97,ret15:7.1,ytd:41.5},
+      {rank:8,code:"449450",name:"가상PLUS K방산",theme:"방산·우주",market:"KR",score:1.85,ret15:6.6,ytd:76.2},
+      {rank:9,code:"SIL",name:"은광",theme:"금·귀금속",market:"US",score:1.74,ret15:6.2,ytd:39.8},
+      {rank:10,code:"EPU",name:"페루",theme:"페루",market:"US",score:1.62,ret15:5.9,ytd:35.6},
+      {rank:11,code:"COPX",name:"구리 광산",theme:"구리·산업금속",market:"US",score:1.55,ret15:5.6,ytd:22.1},
+      {rank:12,code:"ITA",name:"방산·우주 iShares",theme:"방산·우주",market:"US",score:1.49,ret15:5.3,ytd:28.9}]};
   // 데모 4h 차트 자동 생성(전 종목)
   const l4=(seed,start)=>{const f=makeBars(seed,1150,start||100),cut=f.length-150,sl=a=>a.slice(cut);
     return{bars:f.slice(cut),ma60s:sl(MA(f,60)),ma120s:sl(MA(f,120)),ma240s:sl(MA(f,240)),ma480s:sl(MA(f,480)),ma960s:sl(MA(f,960)),rsis:sl(RSIs(f))};};
@@ -1263,15 +1343,85 @@ function renderLeverage(){
   host.innerHTML=html;
   host.querySelectorAll(".lev-clk").forEach(tr=>tr.addEventListener("click",()=>showLevDetail(tr.dataset.lc)));
 }
+
+// ===== 테마포착 뷰 (ETF 모멘텀 TOP10 + 주도테마 TOP5) =====
+const emFlag=m=>m==='KR'?'🔵':'🟢';
+const emName=h=>h.market==='KR'?h.name:`${h.code}`;
+function themeNavSVG(cv){
+  if(!cv||cv.length<2)return '';
+  const W=560,H=110,pad=6,vs=cv.map(d=>d.nav),all=vs.concat([100]);
+  const mn=Math.min(...all),mx=Math.max(...all),rng=(mx-mn)||1;
+  const X=i=>pad+i*(W-2*pad)/(cv.length-1),Y=v=>H-pad-(v-mn)/rng*(H-2*pad);
+  const path=vs.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join(' ');
+  const up=vs[vs.length-1]>=100;
+  const ar=path+` L ${X(cv.length-1).toFixed(1)} ${(H-pad).toFixed(1)} L ${pad} ${(H-pad).toFixed(1)} Z`;
+  return `<svg class="navchart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <line x1="${pad}" y1="${Y(100).toFixed(1)}" x2="${W-pad}" y2="${Y(100).toFixed(1)}" class="nbase"/>
+    <path d="${ar}" class="narea ${up?'pos':'neg'}"/><path d="${path}" class="nline ${up?'pos':'neg'}"/></svg>`;
+}
+function renderTheme(){
+  const host=$("viewTheme"), em=DATA.etfmom;
+  if(!em||!em.holdings||!em.holdings.length){
+    host.innerHTML=`<div class="cpanel"><div class="cempty">테마포착 데이터가 없습니다 — 스크리너 실행 후 채워집니다.</div></div>`;return;
+  }
+  const ch=em.changes||{buys:[],sells:[],losscut:[]};
+  let html="";
+  // 오늘의 운용 배너
+  const acts=[];
+  (ch.losscut||[]).forEach(l=>acts.push(`<span class="ch-l">🔴 로스컷 ${emFlag(l.market)}${l.name} (${l.pl}%)</span>`));
+  (ch.buys||[]).forEach(b=>acts.push(`<span class="ch-b">＋${emFlag(b.market)}${b.name}</span>`));
+  (ch.sells||[]).forEach(s=>acts.push(`<span class="ch-s">－${emFlag(s.market)}${s.name}${s.why?' ('+s.why+')':''}</span>`));
+  html+=`<div class="tm-chg"><span class="tm-dday">다음 리밸런싱 D-${em.dleft??'?'}</span>🔁 <b>오늘의 운용</b> — ${acts.length?'':'변동 없음 · 보유 유지'}<br>${acts.join(' ')}</div>`;
+  // 주도테마 TOP5
+  const th=em.themes||[];
+  if(th.length){
+    html+=`<div class="cpanel"><div class="cttl">📌 주도테마 TOP5 <small>모멘텀 상위 30개 ETF의 테마 가중 집계 · 매일 갱신</small></div>
+      ${th.map(t=>`<div class="th-row"><span class="th-name">${t.theme}</span><span class="th-pts">${t.pts}점</span>
+        <div class="th-bar"><i style="width:${t.w}%"></i></div>
+        <div class="th-lead">${(t.leaders||[]).map(l=>`<span class="th-etf">${emFlag(l.market)} <b>${l.market==='KR'?l.name:l.code}</b><span class="y ${(l.ytd||0)>=0?'pos':'neg'}">${l.ytd==null?'':((l.ytd>0?'+':'')+l.ytd+'%')}</span></span>`).join("")}</div></div>`).join("")}
+    </div>`;
+  }
+  // TOP10 포트폴리오
+  const cum=em.cum;
+  html+=`<div class="cpanel"><div class="cttl">🚀 ETF 모멘텀 TOP10 <small>동일비중 10% · 14영업일 리밸런싱 · -10% 로스컷 · 손실 1회 연장 · 유니버스 ${em.universe||'–'}종</small></div>
+    <div class="nstats">
+      <div class="cstat"><div class="lab">누적 수익</div><div class="val ${(cum||0)>=0?'pos':'neg'}">${cum==null?'–':(cum>0?'+':'')+cum+'%'}</div><div class="sub">${em.since||''} 시작 · ${em.days_tracked||0}거래일</div></div>
+      <div class="cstat"><div class="lab">기준지수(NAV)</div><div class="val">${em.nav_curve&&em.nav_curve.length?em.nav_curve[em.nav_curve.length-1].nav.toFixed(1):'–'}</div><div class="sub">시작 100.0</div></div>
+      <div class="cstat"><div class="lab">리밸런싱</div><div class="val amb" style="color:#ffb000">D-${em.dleft??'–'}</div><div class="sub">최근 ${em.last_reb||'–'}</div></div>
+    </div>
+    ${em.nav_curve&&em.nav_curve.length>1?themeNavSVG(em.nav_curve):`<div class="ncempty">최초 적립일 — 다음 거래일부터 NAV 곡선이 그려집니다.</div>`}
+    <div class="tbl-scroll"><table class="ctbl"><thead><tr><th class="l">#</th><th class="l">종목</th><th class="l mh">테마</th><th>점수</th><th>15D</th><th>편입후</th><th class="mh">편입일</th><th class="mh">YTD</th><th>상태</th></tr></thead><tbody>
+    ${em.holdings.map((h,i)=>{const rc=v=>v==null?'–':`<span class="${v>=0?'pos':'neg'}">${(v>0?'+':'')+v}%</span>`;
+      const st=h.losscut?'<span class="st-lc">로스컷保</span>':(h.extended?'<span class="st-ext">연장</span>':'–');
+      return `<tr><td class="l">${i+1}</td><td class="l">${emFlag(h.market)} <b>${emName(h)}</b>${h.market==='KR'?'':' <span style="color:#8d897f;font-size:10.5px">'+h.name+'</span>'}</td>
+      <td class="l mh" style="color:var(--dim)">${h.theme||''}</td><td class="amb">${h.score??'–'}</td>
+      <td>${rc(h.ret15)}</td><td>${rc(h.ret_since)}</td><td class="mh" style="color:var(--dim)">${h.entry_date||''}</td>
+      <td class="mh">${rc(h.ytd)}</td><td>${st}</td></tr>`;}).join("")}
+    </tbody></table></div></div>`;
+  // TOP30 관찰 리스트
+  const t30=em.top30||[];
+  if(t30.length){
+    html+=`<div class="cpanel"><div class="cttl">🔎 모멘텀 TOP30 <small>리스크조정 모멘텀(15일 수익률÷변동성) 상위 관찰 리스트</small></div>
+      <div class="tbl-scroll" style="max-height:420px"><table class="ctbl"><thead><tr><th class="l">#</th><th class="l">종목</th><th class="l mh">테마</th><th>점수</th><th>15D</th><th class="mh">YTD</th></tr></thead><tbody>
+      ${t30.map(r=>{const rc=v=>v==null?'–':`<span class="${v>=0?'pos':'neg'}">${(v>0?'+':'')+v}%</span>`;
+        return `<tr><td class="l">${r.rank}</td><td class="l">${emFlag(r.market)} <b>${r.market==='KR'?r.name:r.code}</b>${r.market==='KR'?'':' <span style="color:#8d897f;font-size:10.5px">'+r.name+'</span>'}</td>
+        <td class="l mh" style="color:var(--dim)">${r.theme}</td><td class="amb">${r.score}</td><td>${rc(r.ret15)}</td><td class="mh">${rc(r.ytd)}</td></tr>`;}).join("")}
+      </tbody></table></div></div>`;
+  }
+  html+=`<p class="cnote">※ 가상 모델 포트폴리오(참고용). 스코어=직전 15영업일 수익률을 변동성으로 나눠 표준화(Z)한 비대칭 매핑값. 유니버스=미국 큐레이션+한국 전체 주식형 ETF(레버리지·인버스·채권·액티브·리츠 제외, 시총 50억↑). 미국·크립토는 티커, 한국은 종목명.</p>`;
+  host.innerHTML=html;
+}
 $("topnav").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
   const v=b.dataset.v;$("topnav").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
   $("viewDash").style.display=v==="dash"?"":"none";
   $("viewCons").style.display=v==="cons"?"":"none";
   $("viewDiv").style.display=v==="div"?"":"none";
   $("viewLev").style.display=v==="lev"?"":"none";
+  $("viewTheme").style.display=v==="theme"?"":"none";
   if(v==="cons") renderConsensus();
   if(v==="div") renderDividend();
   if(v==="lev") renderLeverage();
+  if(v==="theme") renderTheme();
 }));
 
 function renderTicker(){

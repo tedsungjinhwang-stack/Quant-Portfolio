@@ -1632,6 +1632,375 @@ def lev_signal_text(fresh):
 
 
 # ----------------------------------------------------------------------
+# ETF 모멘텀 TOP10 (테마포착) — 광역 ETF 유니버스 리스크조정 모멘텀 스캔
+#  · 스코어: 15영업일 수익률 ÷ 15일 변동성 → 크로스섹션 Z → 비대칭 매핑(1+Z / 1/(1-Z))
+#  · 운용: 상위 10종목 동일비중(10%) · 14영업일 리밸런싱 · -10% 로스컷 즉시 교체
+#          · 손실 종목 1회 보유 연장 · 로스컷 매수분은 첫 리밸런싱까지 무조건 보유
+# ----------------------------------------------------------------------
+ETFMOM_BOOK_FILE = os.path.join(REPORT_DIR, "etfmom_book.json")
+ETFMOM_NAV_FILE = os.path.join(REPORT_DIR, "etfmom_nav.json")
+ETFMOM_N = 10           # 보유 종목 수(동일비중)
+ETFMOM_REB_BD = 14      # 리밸런싱 주기(영업일)
+ETFMOM_OBS = 15         # 모멘텀 관측 기간(영업일)
+ETFMOM_LOSSCUT = -10.0  # 로스컷(%)
+
+# 미국 큐레이션 유니버스 — ticker: (한글명, 테마)
+US_ETF_UNIVERSE = {
+    "SPY": ("S&P500", "미국 대형"), "QQQ": ("나스닥100", "미국 테크"), "DIA": ("다우30", "미국 대형"),
+    "IWM": ("러셀2000", "미국 중소형"), "RSP": ("S&P 동일가중", "미국 대형"), "MDY": ("미드캡400", "미국 중소형"),
+    "MTUM": ("모멘텀 팩터", "팩터·모멘텀"), "SPMO": ("S&P 모멘텀", "팩터·모멘텀"), "QUAL": ("퀄리티", "팩터·모멘텀"),
+    "USMV": ("저변동", "팩터·모멘텀"), "VLUE": ("밸류 팩터", "가치·성장"), "VUG": ("성장주", "가치·성장"),
+    "VTV": ("가치주", "가치·성장"), "COWZ": ("캐시카우100", "팩터·모멘텀"), "CALF": ("소형 캐시카우", "미국 중소형"),
+    "SCHD": ("슈왑 배당", "배당·인컴"), "VYM": ("뱅가드 고배당", "배당·인컴"), "VIG": ("배당성장", "배당·인컴"),
+    "DVY": ("셀렉트 배당", "배당·인컴"), "NOBL": ("배당귀족", "배당·인컴"), "SDY": ("배당 SPDR", "배당·인컴"),
+    "HDV": ("고배당 iShares", "배당·인컴"), "DGRW": ("배당성장 WT", "배당·인컴"), "SPYD": ("S&P 고배당", "배당·인컴"),
+    "XLK": ("기술 섹터", "미국 테크"), "VGT": ("뱅가드 기술", "미국 테크"),
+    "SMH": ("반도체 VanEck", "반도체"), "SOXX": ("반도체 iShares", "반도체"),
+    "IGV": ("소프트웨어", "AI·소프트웨어"), "AIQ": ("AI 테크", "AI·소프트웨어"), "IRBO": ("AI·로봇", "AI·소프트웨어"),
+    "FDN": ("인터넷", "클라우드·인터넷"), "SKYY": ("클라우드", "클라우드·인터넷"), "WCLD": ("클라우드 WT", "클라우드·인터넷"),
+    "CIBR": ("사이버보안", "사이버보안"), "HACK": ("사이버보안 ETFMG", "사이버보안"),
+    "BOTZ": ("로봇·AI", "로봇·자동화"), "ROBO": ("로보틱스", "로봇·자동화"),
+    "ESPO": ("비디오게임", "게임·엔터"), "HERO": ("게임·e스포츠", "게임·엔터"),
+    "BLOK": ("블록체인", "크립토 관련주"), "DAPP": ("디지털자산", "크립토 관련주"),
+    "WGMI": ("비트 마이너", "크립토 관련주"), "BITQ": ("크립토 이코노미", "크립토 관련주"),
+    "XLV": ("헬스케어 섹터", "바이오·헬스케어"), "XBI": ("바이오테크", "바이오·헬스케어"), "IBB": ("나스닥 바이오", "바이오·헬스케어"),
+    "IHI": ("의료기기", "의료기기"), "XPH": ("제약", "제약"), "PPH": ("제약 VanEck", "제약"),
+    "XLF": ("금융 섹터", "은행·금융"), "KBE": ("은행", "은행·금융"), "KRE": ("지역은행", "은행·금융"),
+    "IAI": ("증권·거래소", "증권"), "IAK": ("보험", "보험"),
+    "XLI": ("산업재 섹터", "인프라·전력"), "ITA": ("방산·우주 iShares", "방산·우주"), "PPA": ("방산 Invesco", "방산·우주"),
+    "XAR": ("방산 SPDR", "방산·우주"), "UFO": ("우주", "방산·우주"),
+    "JETS": ("항공", "항공·운송"), "IYT": ("운송", "항공·운송"), "XTN": ("운송 SPDR", "항공·운송"),
+    "PAVE": ("미국 인프라", "인프라·전력"), "IFRA": ("인프라 iShares", "인프라·전력"), "GRID": ("스마트그리드", "인프라·전력"),
+    "XLU": ("유틸리티 섹터", "인프라·전력"),
+    "XHB": ("주택건설", "주택·건설"), "ITB": ("주택건설 iShares", "주택·건설"),
+    "XLY": ("경기소비 섹터", "소매·소비"), "XLP": ("필수소비 섹터", "소매·소비"), "XRT": ("소매", "소매·소비"),
+    "PEJ": ("레저·엔터", "레저·여행"), "BETZ": ("스포츠베팅", "레저·여행"),
+    "DRIV": ("자율주행·EV", "전기차·자율주행"),
+    "XLE": ("에너지 섹터", "석유·가스"), "XOP": ("석유 E&P", "석유·가스"), "OIH": ("오일서비스", "석유·가스"),
+    "AMLP": ("MLP 인프라", "석유·가스"), "FCG": ("천연가스주", "석유·가스"),
+    "TAN": ("태양광", "태양광"), "FAN": ("풍력", "클린에너지"), "ICLN": ("클린에너지", "클린에너지"),
+    "QCLN": ("클린에너지 FT", "클린에너지"), "PBW": ("클린에너지 Invesco", "클린에너지"),
+    "URA": ("우라늄", "우라늄·원자력"), "URNM": ("우라늄 광산", "우라늄·원자력"), "NLR": ("원자력", "우라늄·원자력"),
+    "XLB": ("소재 섹터", "철강·소재"), "GDX": ("금광", "금·귀금속"), "GDXJ": ("주니어 금광", "금·귀금속"),
+    "SIL": ("은광", "금·귀금속"), "SILJ": ("주니어 은광", "금·귀금속"),
+    "COPX": ("구리 광산", "구리·산업금속"), "REMX": ("희토류", "희토류·광물"), "LIT": ("리튬·배터리", "리튬·2차전지"),
+    "XME": ("금속·광산", "구리·산업금속"), "SLX": ("철강", "철강·소재"),
+    "MOO": ("농업", "농업"), "PHO": ("물 산업", "물"), "FIW": ("물 FT", "물"),
+    "KWEB": ("중국 인터넷", "중국"), "CQQQ": ("중국 테크", "중국"), "MCHI": ("MSCI 중국", "중국"),
+    "FXI": ("중국 대형", "중국"), "ASHR": ("중국 A주", "중국"),
+    "INDA": ("MSCI 인도", "인도"), "EPI": ("인도 어닝스", "인도"), "SMIN": ("인도 소형", "인도"),
+    "EWJ": ("MSCI 일본", "일본"), "DXJ": ("일본 헤지", "일본"), "EWY": ("MSCI 한국", "한국"), "EWT": ("MSCI 대만", "대만"),
+    "EWZ": ("브라질", "브라질"), "EWW": ("멕시코", "멕시코"), "EPU": ("페루", "페루"), "ECH": ("칠레", "중남미"),
+    "ARGT": ("아르헨티나", "중남미"), "ILF": ("라틴아메리카", "중남미"),
+    "EIDO": ("인도네시아", "동남아"), "VNM": ("베트남", "동남아"), "THD": ("태국", "동남아"),
+    "EWM": ("말레이시아", "동남아"), "EWS": ("싱가포르", "동남아"),
+    "KSA": ("사우디", "중동"), "QAT": ("카타르", "중동"), "UAE": ("UAE", "중동"), "TUR": ("터키", "중동"),
+    "EZA": ("남아공", "신흥국"), "EEM": ("신흥국", "신흥국"), "VWO": ("뱅가드 신흥국", "신흥국"), "FM": ("프론티어", "신흥국"),
+    "EWU": ("영국", "유럽"), "EWG": ("독일", "유럽"), "EWQ": ("프랑스", "유럽"), "EWI": ("이탈리아", "유럽"),
+    "EWP": ("스페인", "유럽"), "GREK": ("그리스", "유럽"), "EPOL": ("폴란드", "유럽"),
+    "VGK": ("유럽", "유럽"), "FEZ": ("유로스톡스50", "유럽"), "EWA": ("호주", "기타"), "EWC": ("캐나다", "기타"),
+}
+
+# 한국 ETF 자동수집 제외 키워드(파생·채권·금리·환·혼합·리츠 등)
+KR_ETFMOM_EX = ("레버리지", "인버스", "2X", "곱버스", "선물", "채권", "국고채", "회사채", "은행채", "전단채",
+                "금리", "CD", "SOFR", "머니마켓", "단기자금", "단기통안", "파킹", "액티브", "TDF", "TRF",
+                "혼합", "멀티에셋", "EMP", "리츠", "부동산", "달러", "엔화", "위안", "커버드본드", "본드")
+
+# 이름 키워드 → 테마 (순서 중요: 먼저 매칭되는 것 우선)
+KR_THEME_MAP = [
+    ("반도체", "반도체"), ("AI", "AI·소프트웨어"), ("인공지능", "AI·소프트웨어"), ("소프트웨어", "AI·소프트웨어"),
+    ("인터넷", "클라우드·인터넷"), ("클라우드", "클라우드·인터넷"), ("2차전지", "리튬·2차전지"), ("배터리", "리튬·2차전지"),
+    ("조선", "조선"), ("방산", "방산·우주"), ("우주", "방산·우주"), ("바이오", "바이오·헬스케어"),
+    ("헬스케어", "바이오·헬스케어"), ("의료", "의료기기"), ("제약", "제약"),
+    ("은행", "은행·금융"), ("금융", "은행·금융"), ("증권", "증권"), ("보험", "보험"),
+    ("전력", "인프라·전력"), ("전선", "인프라·전력"), ("변압기", "인프라·전력"), ("유틸", "인프라·전력"),
+    ("원자력", "우라늄·원자력"), ("원전", "우라늄·원자력"), ("SMR", "우라늄·원자력"),
+    ("태양광", "태양광"), ("수소", "클린에너지"), ("신재생", "클린에너지"), ("친환경", "클린에너지"),
+    ("철강", "철강·소재"), ("화학", "철강·소재"), ("정유", "석유·가스"), ("에너지", "석유·가스"),
+    ("금현물", "금·귀금속"), ("골드", "금·귀금속"), ("은현물", "금·귀금속"), ("구리", "구리·산업금속"),
+    ("희토류", "희토류·광물"), ("자동차", "전기차·자율주행"), ("전기차", "전기차·자율주행"),
+    ("고배당", "배당·인컴"), ("배당", "배당·인컴"), ("커버드콜", "커버드콜"), ("프리미엄", "커버드콜"), ("타겟", "커버드콜"),
+    ("게임", "게임·엔터"), ("엔터", "게임·엔터"), ("미디어", "게임·엔터"), ("K-POP", "게임·엔터"), ("콘텐츠", "게임·엔터"),
+    ("로봇", "로봇·자동화"), ("건설", "주택·건설"), ("여행", "레저·여행"), ("레저", "레저·여행"), ("카지노", "레저·여행"),
+    ("음식료", "소매·소비"), ("필수소비", "소매·소비"), ("화장품", "소매·소비"), ("뷰티", "소매·소비"),
+    ("통신", "통신"), ("해운", "항공·운송"), ("운송", "항공·운송"), ("항공", "항공·운송"),
+    ("중국", "중국"), ("차이나", "중국"), ("인도", "인도"), ("일본", "일본"), ("닛케이", "일본"),
+    ("미국나스닥", "미국 테크"), ("미국테크", "미국 테크"), ("미국빅테크", "미국 테크"), ("미국S&P", "미국 대형"),
+    ("미국500", "미국 대형"), ("미국", "미국 대형"), ("밸류업", "가치·성장"), ("밸류", "가치·성장"), ("저PBR", "가치·성장"),
+    ("삼성그룹", "한국"), ("그룹", "한국"), ("코스닥", "한국"), ("코스피", "한국"), ("KRX", "한국"),
+    ("코리아", "한국"), ("KTOP", "한국"), ("K-", "한국"), ("디스플레이", "IT하드웨어"), ("IT", "IT하드웨어"), ("전자", "IT하드웨어"),
+]
+
+
+def kr_etf_theme(name):
+    for kw, th in KR_THEME_MAP:
+        if kw in name:
+            return th
+    return "한국 광의"
+
+
+def discover_kr_etfs(cap=700):
+    """네이버 ETF 전체 목록 → 주식형(+현물 원자재) ETF만 {code:(name, theme)}. 실패 시 빈 dict."""
+    try:
+        import requests
+        r = requests.get("https://finance.naver.com/api/sise/etfItemList.nhn",
+                         headers={"User-Agent": "Mozilla/5.0", "Referer": "https://finance.naver.com/"},
+                         timeout=20)
+        items = r.json().get("result", {}).get("etfItemList", [])
+    except Exception as e:
+        print(f"[etfmom] KR ETF 목록 수집 실패: {e}")
+        return {}
+    found = {}
+    for it in items:
+        code = str(it.get("itemcode", "")).zfill(6)
+        nm = (it.get("itemname") or "").strip()
+        if not code or not nm or any(x in nm for x in KR_ETFMOM_EX):
+            continue
+        try:
+            if float(it.get("marketSum") or 0) < 50:      # 시총 50억 미만 초소형 제외(유동성)
+                continue
+        except Exception:
+            pass
+        found[code] = (nm, kr_etf_theme(nm))
+        if len(found) >= cap:
+            break
+    print(f"[etfmom] KR ETF 자동수집 {len(found)}종(주식형·현물)")
+    return found
+
+
+def build_etfmom_universe():
+    """{code: (name, theme, market)} — 미국 큐레이션 + 한국 자동수집."""
+    uni = {c: (n, t, "US") for c, (n, t) in US_ETF_UNIVERSE.items()}
+    for c, (n, t) in discover_kr_etfs().items():
+        uni[c] = (n, t, "KR")
+    return uni
+
+
+def etfmom_scores(data, uni):
+    """리스크조정 모멘텀 스코어. 반환: score 내림차순 rank 부여 리스트."""
+    rows = []
+    for code, (name, theme, mk) in uni.items():
+        sym = f"{code}.KS" if mk == "KR" else code
+        df = ohlc_for(data, sym)
+        if df is None:
+            continue
+        c = df["Close"].dropna()
+        if len(c) < ETFMOM_OBS + 20:                     # 이력 부족(신규상장) 제외
+            continue
+        price = float(c.iloc[-1])
+        base = float(c.iloc[-1 - ETFMOM_OBS])
+        if not price or not base or base <= 0:
+            continue
+        m = price / base - 1.0                            # 15영업일 수익률
+        sig = float(c.pct_change().iloc[-ETFMOM_OBS:].std())
+        if not sig or pd.isna(sig):
+            continue
+        rows.append({"code": code, "name": name, "theme": theme, "market": mk,
+                     "price": round(price, 2), "ret15": round(m * 100, 1),
+                     "madj": m / sig, "ytd": pc(ytd_return(c))})
+    if len(rows) < 20:
+        return []
+    vals = [r["madj"] for r in rows]
+    mu = statistics.mean(vals)
+    sd = statistics.pstdev(vals) or 1.0
+    for r in rows:
+        z = (r["madj"] - mu) / sd
+        r["score"] = round(1 + z if z >= 0 else 1 / (1 - z), 3)   # 비대칭 매핑
+        r.pop("madj")
+    rows.sort(key=lambda r: r["score"], reverse=True)
+    for i, r in enumerate(rows):
+        r["rank"] = i + 1
+    return rows
+
+
+def etfmom_themes(ranked, topn=30, k=5):
+    """모멘텀 상위 30개에서 중복 테마 가중 → 주도테마 TOP5(+테마별 대장 ETF)."""
+    top = ranked[:topn]
+    agg = {}
+    for r in top:
+        a = agg.setdefault(r["theme"], {"theme": r["theme"], "pts": 0, "leaders": []})
+        a["pts"] += topn + 1 - r["rank"]                 # 랭크 가중(1위=30점)
+        if len(a["leaders"]) < 3:
+            a["leaders"].append({"code": r["code"], "name": r["name"], "market": r["market"],
+                                 "ytd": r["ytd"], "rank": r["rank"]})
+    out = sorted(agg.values(), key=lambda a: a["pts"], reverse=True)[:k]
+    mx = out[0]["pts"] if out else 1
+    for a in out:
+        a["w"] = round(a["pts"] / mx * 100)
+    return out
+
+
+def update_etfmom_book(ranked, bar_date):
+    """TOP10 가상 포트 장부 운용 — 14영업일 리밸런싱 + 일일 로스컷 + 손실 1회 연장."""
+    try:
+        with open(ETFMOM_BOOK_FILE, encoding="utf-8") as f:
+            book = json.load(f)
+    except Exception:
+        book = {}
+    info = {r["code"]: r for r in ranked}
+    holdings = book.get("holdings", [])
+    last_reb = book.get("last_reb")
+    buys, sells, losscuts = [], [], []
+
+    def top_fill(held, n, prev_entry=None):
+        """상위 랭크에서 미보유 n개 편입(직전 보유였으면 편입가 승계)."""
+        got = []
+        for r in ranked:
+            if len(got) >= n:
+                break
+            if r["code"] in held:
+                continue
+            pe = (prev_entry or {}).get(r["code"])
+            got.append({"code": r["code"], "name": r["name"], "market": r["market"], "theme": r["theme"],
+                        "entry_date": pe["entry_date"] if pe else bar_date,
+                        "entry_price": pe["entry_price"] if pe else r["price"],
+                        "extended": False, "losscut": False})
+            held.add(r["code"])
+        return got
+
+    if not holdings:                                    # 최초 구성
+        holdings = top_fill(set(), ETFMOM_N)
+        buys = [dict(h) for h in holdings]
+        last_reb = bar_date
+    else:
+        # 1) 일일 로스컷: 편입가 대비 -10% → 즉시 교체(교체분은 첫 리밸런싱까지 보유)
+        kept = []
+        held = {h["code"] for h in holdings}
+        for h in holdings:
+            r = info.get(h["code"])
+            cur = r["price"] if r else None
+            pl = (cur / h["entry_price"] - 1) * 100 if (cur and h.get("entry_price")) else 0
+            if pl <= ETFMOM_LOSSCUT:
+                losscuts.append({"code": h["code"], "name": h["name"], "market": h["market"], "pl": round(pl, 1)})
+                held.discard(h["code"])
+            else:
+                kept.append(h)
+        if losscuts:
+            add = top_fill(held, ETFMOM_N - len(kept))
+            for a in add:
+                a["losscut"] = True                      # 로스컷 대체 매수 → 첫 리밸런싱 무조건 보유
+            buys += add
+            kept += add
+        holdings = kept
+        # 2) 14영업일 경과 시 리밸런싱
+        bd = len(pd.bdate_range(last_reb, bar_date)) - 1 if last_reb else 0
+        if bd >= ETFMOM_REB_BD:
+            prev_entry = {h["code"]: h for h in holdings}
+            keep = []
+            for h in holdings:
+                r = info.get(h["code"])
+                cur = r["price"] if r else None
+                pl = (cur / h["entry_price"] - 1) * 100 if (cur and h.get("entry_price")) else 0
+                if h.get("losscut"):                    # 로스컷 매수분: 첫 리밸런싱 무조건 보유 → 다음부턴 일반 룰
+                    h["losscut"] = False
+                    keep.append(h)
+                elif pl < 0 and not h.get("extended"):  # 손실 종목 1회 연장
+                    h["extended"] = True
+                    keep.append(h)
+                else:                                   # 이익(또는 연장 소진) → 모멘텀 룰로 재선정
+                    sells.append({"code": h["code"], "name": h["name"], "market": h["market"],
+                                  "why": ("이익 실현" if pl >= 0 else "연장 소진"), "pl": round(pl, 1)})
+            held = {h["code"] for h in keep}
+            add = top_fill(held, ETFMOM_N - len(keep), prev_entry)
+            # 매도했지만 상위라 다시 편입된 종목은 '계속 보유'로 정정
+            readd = {a["code"] for a in add}
+            sells = [s for s in sells if s["code"] not in readd]
+            buys += [a for a in add if a["code"] not in {b["code"] for b in buys}]
+            holdings = keep + add
+            last_reb = bar_date
+
+    # 보유 지표 부착
+    today = pd.Timestamp(bar_date)
+    for h in holdings:
+        r = info.get(h["code"], {})
+        h["price"] = r.get("price")
+        h["score"] = r.get("score")
+        h["rank"] = r.get("rank")
+        h["ret15"] = r.get("ret15")
+        h["ytd"] = r.get("ytd")
+        h["ret_since"] = round((h["price"] / h["entry_price"] - 1) * 100, 1) if (h.get("price") and h.get("entry_price")) else None
+        try:
+            h["held_days"] = (today - pd.Timestamp(h["entry_date"])).days
+        except Exception:
+            h["held_days"] = None
+    book = {"holdings": [{k: h[k] for k in ("code", "name", "market", "theme", "entry_date", "entry_price", "extended", "losscut")}
+                         for h in holdings],
+            "last_reb": last_reb}
+    try:
+        os.makedirs(REPORT_DIR, exist_ok=True)
+        with open(ETFMOM_BOOK_FILE, "w", encoding="utf-8") as f:
+            json.dump(book, f, ensure_ascii=False)
+    except Exception as e:
+        print(f"[etfmom] 장부 저장 실패: {e}")
+    next_reb = pd.Timestamp(last_reb) + pd.tseries.offsets.BDay(ETFMOM_REB_BD)
+    dleft = max(0, len(pd.bdate_range(bar_date, next_reb.date().isoformat())) - 1)
+    print(f"[etfmom] 보유 {len(holdings)} · 편입 {len(buys)} · 편출 {len(sells)} · 로스컷 {len(losscuts)} · 다음 리밸런싱 D-{dleft}")
+    return {"holdings": holdings, "last_reb": last_reb, "next_reb": next_reb.date().isoformat(), "dleft": dleft,
+            "changes": {"buys": [{"code": b["code"], "name": b["name"], "market": b["market"]} for b in buys],
+                        "sells": sells, "losscut": losscuts}}
+
+
+def update_etfmom_nav(data, bar_date, port):
+    """가상 포트 NAV(가격, 동일비중 10%) 매일 적립 — 배당 NAV와 동일 패턴."""
+    try:
+        with open(ETFMOM_NAV_FILE, encoding="utf-8") as f:
+            hist = json.load(f)
+    except Exception:
+        hist = {}
+    hist.setdefault("inception", bar_date)
+    today_ts = pd.Timestamp(bar_date)
+    rec = hist.get("rec")
+    if rec is None:
+        rec = {"nav": 100.0, "history": [{"date": bar_date, "nav": 100.0}]}
+    else:
+        last_date = rec["history"][-1]["date"] if rec.get("history") else None
+        if last_date != bar_date and rec.get("holdings"):
+            prev_ts = pd.Timestamp(last_date)
+            pr = 0.0
+            for h in rec["holdings"]:
+                sym = f'{h["code"]}.KS' if h.get("market") == "KR" else h["code"]
+                df = ohlc_for(data, sym)
+                if df is None:
+                    continue
+                c = df["Close"].dropna()
+                cp = c.asof(prev_ts)
+                cn = float(c.iloc[-1])
+                if cp is not None and not pd.isna(cp) and float(cp) > 0:
+                    pr += (1.0 / ETFMOM_N) * (cn / float(cp) - 1.0)
+            rec["nav"] = round(rec["nav"] * (1 + pr), 4)
+            rec["history"].append({"date": bar_date, "nav": rec["nav"]})
+    rec["holdings"] = [{"code": h["code"], "market": h["market"]} for h in port["holdings"]]
+    rec["history"] = rec["history"][-400:]
+    hist["rec"] = rec
+    try:
+        with open(ETFMOM_NAV_FILE, "w", encoding="utf-8") as f:
+            json.dump(hist, f, ensure_ascii=False)
+    except Exception as e:
+        print(f"[etfmom] NAV 저장 실패: {e}")
+    first = rec["history"][0]
+    port["nav_curve"] = rec["history"]
+    port["since"] = first["date"]
+    port["days_tracked"] = len(rec["history"])
+    port["cum"] = round((rec["nav"] / first["nav"] - 1) * 100, 1)
+
+
+def etfmom_text(em):
+    """텔레그램용 테마포착 요약(리밸런싱·로스컷 발생 시만 호출)."""
+    ch = em.get("changes", {})
+    lines = ["", "🚀 <b>ETF 모멘텀 TOP10 (테마포착)</b>"]
+    for l in ch.get("losscut", []):
+        lines.append(f"🔴 로스컷 {('🔵' if l['market']=='KR' else '🟢')}{l['name']} ({l['pl']}%)")
+    for b in ch.get("buys", []):
+        lines.append(f"🟢 편입 {('🔵' if b['market']=='KR' else '🟢')}{b['name']}")
+    for s in ch.get("sells", []):
+        lines.append(f"⚪ 편출 {('🔵' if s['market']=='KR' else '🟢')}{s['name']} ({s['why']})")
+    th = em.get("themes", [])
+    if th:
+        lines.append("📌 주도테마: " + " · ".join(f"{t['theme']}" for t in th))
+    return "\n".join(lines)
+
+
+# ----------------------------------------------------------------------
 # 핫한 종목(거래량 급증 + 단기 모멘텀)
 # ----------------------------------------------------------------------
 def hot_score(rec):
@@ -2182,6 +2551,28 @@ def main():
         print(f"[leverage] 실패: {e}")
         leverage = {"pairs": [], "singles": [], "signals": {"US": [], "KR": [], "fresh": []}}
 
+    # ETF 모멘텀 TOP10(테마포착): 광역 ETF 유니버스 스캔 → 가상 포트 운용 + 주도테마 TOP5
+    try:
+        import yfinance as yf
+        emu = build_etfmom_universe()
+        em_syms = [f"{c}.KS" if v[2] == "KR" else c for c, v in emu.items()]
+        em_data = yf.download(em_syms, period="1y", interval="1d",
+                              group_by="ticker", auto_adjust=False, threads=True, progress=False)
+        ranked = etfmom_scores(em_data, emu)
+        print(f"[etfmom] 유니버스 {len(emu)} · 스코어링 {len(ranked)}종")
+        if ranked:
+            etfmom = update_etfmom_book(ranked, bar_date)
+            update_etfmom_nav(em_data, bar_date, etfmom)
+            etfmom["themes"] = etfmom_themes(ranked)
+            etfmom["top30"] = [{k: r[k] for k in ("rank", "code", "name", "theme", "market", "score", "ret15", "ytd")}
+                               for r in ranked[:30]]
+            etfmom["universe"] = len(ranked)
+        else:
+            etfmom = {}
+    except Exception as e:
+        print(f"[etfmom] 실패: {e}")
+        etfmom = {}
+
     markets = build_tracks(allrecs, units_by_market)
     stocks = collect_selected(markets, allrecs)
     for rec in commodities:  # 원자재를 stocks에 추가(상세 차트용)
@@ -2222,7 +2613,7 @@ def main():
                                           "leaders_per_sector", "individual_top", "deep_top",
                                           "proximity_pct", "rs_weights", "zigzag_pct")},
         "regime": regime, "seasonality": seasonality, "macro": macro, "dividends": dividends,
-        "leverage": leverage,
+        "leverage": leverage, "etfmom": etfmom,
         "markets": markets, "stocks": stocks,
         "commodities": [c["id"] for c in commodities],
         "hot": [h["id"] for h in hot],
@@ -2238,6 +2629,9 @@ def main():
     lev_fresh = leverage.get("signals", {}).get("fresh", [])
     if lev_fresh:
         msg += "\n" + lev_signal_text(lev_fresh)
+    em_ch = etfmom.get("changes", {}) if etfmom else {}
+    if em_ch.get("buys") or em_ch.get("sells") or em_ch.get("losscut"):
+        msg += "\n" + etfmom_text(etfmom)
     send_telegram(msg)
     print("[done]")
 
