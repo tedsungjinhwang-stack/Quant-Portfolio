@@ -192,6 +192,7 @@ def get_universe():
         print(f"[universe] US 실패: {e}")
 
     kr_lookup = {}   # 전체 상장 KR: code -> {suffix, name} (구성종목 suffix 해석용)
+    kr = None
     try:
         frames = []
         for mkt, suffix in (("KOSPI", ".KS"), ("KOSDAQ", ".KQ")):
@@ -199,25 +200,53 @@ def get_universe():
             df["_suffix"] = suffix
             frames.append(df)
         kr = pd.concat(frames, ignore_index=True)
-        code_col = next((c for c in ("Code", "Symbol") if c in kr.columns), kr.columns[0])
-        name_col = "Name" if "Name" in kr.columns else code_col
-        cap_col = next((c for c in ("Marcap", "MarketCap", "Amount") if c in kr.columns), None)
-        for _, r in kr.iterrows():
-            code = str(r[code_col]).strip().zfill(6)
-            if code.isdigit():
-                kr_lookup[code] = {"suffix": r["_suffix"], "name": str(r.get(name_col, code))}
-        if cap_col:
-            kr = kr.sort_values(cap_col, ascending=False)
-        kr = kr.head(CONFIG["kr_top_n"])
-        for _, r in kr.iterrows():
-            code = str(r[code_col]).strip().zfill(6)
-            if not code.isdigit():
-                continue
-            rows.append({"market": "KR", "code": code, "yahoo": f"{code}{r['_suffix']}",
-                         "name": str(r.get(name_col, code)), "sector": "N/A"})
-        print(f"[universe] KR top{CONFIG['kr_top_n']}: {sum(1 for x in rows if x['market']=='KR')}")
     except Exception as e:
-        print(f"[universe] KR 실패: {e}")
+        print(f"[universe] KR(KOSPI/KOSDAQ) 실패: {e} → KRX 통합목록 재시도")
+        try:
+            kr = fdr.StockListing("KRX").copy()
+            mcol = "Market" if "Market" in kr.columns else None
+            kr["_suffix"] = (kr[mcol].map(lambda m: ".KQ" if "KOSDAQ" in str(m).upper() else ".KS")
+                             if mcol else ".KS")
+        except Exception as e2:
+            print(f"[universe] KRX 재시도 실패: {e2}")
+            kr = None
+    if kr is not None:
+        try:
+            code_col = next((c for c in ("Code", "Symbol") if c in kr.columns), kr.columns[0])
+            name_col = "Name" if "Name" in kr.columns else code_col
+            cap_col = next((c for c in ("Marcap", "MarketCap", "Amount") if c in kr.columns), None)
+            for _, r in kr.iterrows():
+                code = str(r[code_col]).strip().zfill(6)
+                if code.isdigit():
+                    kr_lookup[code] = {"suffix": r["_suffix"], "name": str(r.get(name_col, code))}
+            if cap_col:
+                kr = kr.sort_values(cap_col, ascending=False)
+            kr = kr.head(CONFIG["kr_top_n"])
+            for _, r in kr.iterrows():
+                code = str(r[code_col]).strip().zfill(6)
+                if not code.isdigit():
+                    continue
+                rows.append({"market": "KR", "code": code, "yahoo": f"{code}{r['_suffix']}",
+                             "name": str(r.get(name_col, code)), "sector": "N/A"})
+            print(f"[universe] KR top{CONFIG['kr_top_n']}: {sum(1 for x in rows if x['market']=='KR')}")
+        except Exception as e:
+            print(f"[universe] KR 목록 처리 실패: {e}")
+    # 이름 캐시: 수집 성공 시 저장 · 실패 시 캐시로 복구(이름=코드로 표시되는 사고 방지)
+    cache_f = os.path.join(REPORT_DIR, "kr_names.json")
+    if len(kr_lookup) >= 500:
+        try:
+            os.makedirs(REPORT_DIR, exist_ok=True)
+            with open(cache_f, "w", encoding="utf-8") as f:
+                json.dump(kr_lookup, f, ensure_ascii=False)
+        except Exception:
+            pass
+    else:
+        try:
+            with open(cache_f, encoding="utf-8") as f:
+                kr_lookup = {**json.load(f), **kr_lookup}
+            print(f"[universe] KR 이름 캐시 복구 {len(kr_lookup)}종")
+        except Exception:
+            print("[universe] KR 이름 캐시 없음 — 이름이 코드로 표시될 수 있음")
     return rows, kr_lookup
 
 
@@ -1703,8 +1732,9 @@ US_ETF_UNIVERSE = {
 
 # 한국 ETF 자동수집 제외 키워드(파생·채권·금리·환·혼합·리츠 등)
 KR_ETFMOM_EX = ("레버리지", "인버스", "2X", "곱버스", "선물", "채권", "국고채", "회사채", "은행채", "전단채",
-                "금리", "CD", "SOFR", "머니마켓", "단기자금", "단기통안", "파킹", "액티브", "TDF", "TRF",
-                "혼합", "멀티에셋", "EMP", "리츠", "부동산", "달러", "엔화", "위안", "커버드본드", "본드")
+                "금리", "CD", "SOFR", "머니마켓", "단기자금", "통안", "파킹", "액티브", "TDF", "TRF",
+                "혼합", "멀티에셋", "EMP", "리츠", "부동산", "달러", "엔화", "위안", "커버드본드", "본드",
+                "KOFR", "초단기", "국공채", "물가", "만기", "크레딧", "하이일드")
 
 # 이름 키워드 → 테마 (순서 중요: 먼저 매칭되는 것 우선)
 KR_THEME_MAP = [
@@ -1793,7 +1823,7 @@ def etfmom_scores(data, uni):
             continue
         m = price / base - 1.0                            # 15영업일 수익률
         sig = float(c.pct_change().iloc[-ETFMOM_OBS:].std())
-        if not sig or pd.isna(sig):
+        if not sig or pd.isna(sig) or sig < 0.0015:       # 초저변동(현금성·채권성) 제외 — 리스크조정 점수 왜곡 방지
             continue
         rows.append({"code": code, "name": name, "theme": theme, "market": mk,
                      "price": round(price, 2), "ret15": round(m * 100, 1),
@@ -1863,22 +1893,27 @@ def update_etfmom_book(ranked, bar_date):
         buys = [dict(h) for h in holdings]
         last_reb = bar_date
     else:
-        # 1) 일일 로스컷: 편입가 대비 -10% → 즉시 교체(교체분은 첫 리밸런싱까지 보유)
+        # 1) 일일 점검: 유니버스 제외(필터 강화·상폐 등) 퇴출 + 로스컷(-10%) 즉시 교체
         kept = []
         held = {h["code"] for h in holdings}
         for h in holdings:
             r = info.get(h["code"])
-            cur = r["price"] if r else None
+            if r is None:                                # 유니버스에서 빠진 종목 → 즉시 퇴출
+                sells.append({"code": h["code"], "name": h["name"], "market": h["market"],
+                              "why": "유니버스 제외", "pl": None})
+                held.discard(h["code"])
+                continue
+            cur = r["price"]
             pl = (cur / h["entry_price"] - 1) * 100 if (cur and h.get("entry_price")) else 0
             if pl <= ETFMOM_LOSSCUT:
                 losscuts.append({"code": h["code"], "name": h["name"], "market": h["market"], "pl": round(pl, 1)})
                 held.discard(h["code"])
             else:
                 kept.append(h)
-        if losscuts:
+        if len(kept) < ETFMOM_N:
             add = top_fill(held, ETFMOM_N - len(kept))
             for a in add:
-                a["losscut"] = True                      # 로스컷 대체 매수 → 첫 리밸런싱 무조건 보유
+                a["losscut"] = True                      # 대체 매수 → 첫 리밸런싱까지 보유(일일 회전 방지)
             buys += add
             kept += add
         holdings = kept
