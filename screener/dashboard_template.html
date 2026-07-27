@@ -436,6 +436,9 @@
   #viewTheme .navchart .narea{stroke:none;opacity:.12}
   #viewTheme .navchart .narea.pos{fill:var(--up)}#viewTheme .navchart .narea.neg{fill:var(--down)}
   #viewTheme .ncempty{margin-top:8px;padding:14px;background:var(--panel2);border:1px dashed var(--line);border-radius:10px;color:var(--dim);font-size:12px;line-height:1.6}
+  #viewTheme .ev-leg{display:flex;gap:14px;margin-top:4px;font-size:10.5px;color:var(--faint)}
+  #viewTheme .ev-leg i{display:inline-block;width:12px;height:0;border-top:1.5px dashed;vertical-align:middle;margin-right:4px}
+  #viewTheme .ev-leg .ev-reb{border-color:#8d897f}#viewTheme .ev-leg .ev-lc{border-color:#ff4d8b}
   @media(max-width:640px){#viewTheme .ctbl th,#viewTheme .ctbl td{padding:7px 4px;font-size:11px}
     #viewTheme .mh{display:none}}
 </style>
@@ -737,6 +740,7 @@ if(!DATA){
   DATA.etfmom={universe:612,last_reb:"2026-06-25",next_reb:"2026-07-15",dleft:9,
     since:"2026-06-01",days_tracked:12,cum:4.2,
     nav_curve:[{date:"2026-06-01",nav:100},{date:"2026-06-03",nav:100.8},{date:"2026-06-05",nav:101.5},{date:"2026-06-09",nav:100.9},{date:"2026-06-11",nav:102.2},{date:"2026-06-15",nav:101.8},{date:"2026-06-17",nav:102.9},{date:"2026-06-19",nav:103.4},{date:"2026-06-23",nav:102.8},{date:"2026-06-25",nav:103.6},{date:"2026-06-26",nav:104.0},{date:"2026-06-28",nav:104.2}],
+    events:[{date:"2026-06-11",t:"lc"},{date:"2026-06-25",t:"reb"},{date:"2026-06-28",t:"reb"}],
     changes:{buys:[{code:"468370",name:"가상HANARO 전력설비투자",market:"KR"}],sells:[{code:"EWW",name:"멕시코",market:"US",why:"이익 실현",pl:8.4}],losscut:[]},
     themes:[
       {theme:"인프라·전력",pts:87,w:100,leaders:[{code:"468370",name:"가상HANARO 전력설비투자",market:"KR",ytd:141.3,rank:1},{code:"GRID",name:"스마트그리드",market:"US",ytd:38.2,rank:4},{code:"487240",name:"가상KODEX AI전력핵심설비",market:"KR",ytd:142.7,rank:6}]},
@@ -1347,7 +1351,7 @@ function renderLeverage(){
 // ===== 테마포착 뷰 (ETF 모멘텀 TOP10 + 주도테마 TOP5) =====
 const emFlag=m=>m==='KR'?'🔵':'🟢';
 const emName=h=>h.market==='KR'?h.name:`${h.code}`;
-function themeNavSVG(cv){
+function themeNavSVG(cv,events){
   if(!cv||cv.length<2)return '';
   const W=560,H=110,pad=6,vs=cv.map(d=>d.nav),all=vs.concat([100]);
   const mn=Math.min(...all),mx=Math.max(...all),rng=(mx-mn)||1;
@@ -1355,9 +1359,14 @@ function themeNavSVG(cv){
   const path=vs.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join(' ');
   const up=vs[vs.length-1]>=100;
   const ar=path+` L ${X(cv.length-1).toFixed(1)} ${(H-pad).toFixed(1)} L ${pad} ${(H-pad).toFixed(1)} Z`;
+  const di={};cv.forEach((d,i)=>di[d.date]=i);
+  let evs='';
+  (events||[]).forEach(e=>{const i=di[e.date];if(i==null||i===0)return;
+    const col=e.t==='lc'?'#ff4d8b':'#8d897f';
+    evs+=`<line x1="${X(i).toFixed(1)}" y1="${pad}" x2="${X(i).toFixed(1)}" y2="${H-pad}" stroke="${col}" stroke-width="1" stroke-dasharray="${e.t==='lc'?'5 3':'2 3'}" opacity=".8"/>`;});
   return `<svg class="navchart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
     <line x1="${pad}" y1="${Y(100).toFixed(1)}" x2="${W-pad}" y2="${Y(100).toFixed(1)}" class="nbase"/>
-    <path d="${ar}" class="narea ${up?'pos':'neg'}"/><path d="${path}" class="nline ${up?'pos':'neg'}"/></svg>`;
+    <path d="${ar}" class="narea ${up?'pos':'neg'}"/>${evs}<path d="${path}" class="nline ${up?'pos':'neg'}"/></svg>`;
 }
 function renderTheme(){
   const host=$("viewTheme"), em=DATA.etfmom;
@@ -1389,7 +1398,7 @@ function renderTheme(){
       <div class="cstat"><div class="lab">기준지수(NAV)</div><div class="val">${em.nav_curve&&em.nav_curve.length?em.nav_curve[em.nav_curve.length-1].nav.toFixed(1):'–'}</div><div class="sub">시작 100.0</div></div>
       <div class="cstat"><div class="lab">리밸런싱</div><div class="val amb" style="color:#ffb000">D-${em.dleft??'–'}</div><div class="sub">최근 ${em.last_reb||'–'}</div></div>
     </div>
-    ${em.nav_curve&&em.nav_curve.length>1?themeNavSVG(em.nav_curve):`<div class="ncempty">최초 적립일 — 다음 거래일부터 NAV 곡선이 그려집니다.</div>`}
+    ${em.nav_curve&&em.nav_curve.length>1?themeNavSVG(em.nav_curve,em.events)+`<div class="ev-leg"><span><i class="ev-reb"></i> 리밸런싱</span><span><i class="ev-lc"></i> 로스컷</span></div>`:`<div class="ncempty">최초 적립일 — 다음 거래일부터 NAV 곡선이 그려집니다.</div>`}
     <div class="tbl-scroll"><table class="ctbl"><thead><tr><th class="l">#</th><th class="l">종목</th><th class="l mh">테마</th><th>점수</th><th>15D</th><th>편입후</th><th class="mh">편입일</th><th class="mh">YTD</th><th>상태</th></tr></thead><tbody>
     ${em.holdings.map((h,i)=>{const rc=v=>v==null?'–':`<span class="${v>=0?'pos':'neg'}">${(v>0?'+':'')+v}%</span>`;
       const st=h.losscut?'<span class="st-lc">로스컷保</span>':(h.extended?'<span class="st-ext">연장</span>':'–');

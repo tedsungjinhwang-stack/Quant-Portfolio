@@ -2006,6 +2006,17 @@ def update_etfmom_nav(data, bar_date, port):
             rec["history"].append({"date": bar_date, "nav": rec["nav"]})
     rec["holdings"] = [{"code": h["code"], "market": h["market"]} for h in port["holdings"]]
     rec["history"] = rec["history"][-400:]
+    # 이벤트 마커: 리밸런싱(reb) · 로스컷(lc) — NAV 곡선 위 점선 표시용
+    ch = port.get("changes", {})
+    ev = rec.get("events", [])
+    def _add(t):
+        if not any(e["date"] == bar_date and e["t"] == t for e in ev):
+            ev.append({"date": bar_date, "t": t})
+    if port.get("last_reb") == bar_date and (ch.get("buys") or ch.get("sells")):
+        _add("reb")
+    if ch.get("losscut"):
+        _add("lc")
+    rec["events"] = ev[-120:]
     hist["rec"] = rec
     try:
         with open(ETFMOM_NAV_FILE, "w", encoding="utf-8") as f:
@@ -2014,6 +2025,7 @@ def update_etfmom_nav(data, bar_date, port):
         print(f"[etfmom] NAV 저장 실패: {e}")
     first = rec["history"][0]
     port["nav_curve"] = rec["history"]
+    port["events"] = rec["events"]
     port["since"] = first["date"]
     port["days_tracked"] = len(rec["history"])
     port["cum"] = round((rec["nav"] / first["nav"] - 1) * 100, 1)
