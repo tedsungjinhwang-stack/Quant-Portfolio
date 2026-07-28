@@ -2031,6 +2031,62 @@ def update_etfmom_nav(data, bar_date, port):
     port["cum"] = round((rec["nav"] / first["nav"] - 1) * 100, 1)
 
 
+# ----------------------------------------------------------------------
+# 무한매수법(분할매수) 대상 ETF 후보 — 현재가·변동성·이격·낙폭 지표
+#  (실제 매수/매도 주문 계산은 대시보드에서 사용자 포지션 기준으로 수행)
+# ----------------------------------------------------------------------
+# (티커, 표시명, 배율, 기초지수, 형태, 등급, 비고)
+#  등급 — 주력: 원 전략의 기본 대상 / 대안: 지수 3배로 대체 가능 / 주의: ETN 신용·조기청산 위험
+#         비권장: 2배는 40거래일 내 +10% 도달 확률이 낮아 사이클이 잘 안 돌아감
+INF_ETFS = [
+    ("TQQQ", "나스닥100 3배", 3, "나스닥100", "ETF", "주력", "기본 대상 · 익절 +10%(v2.2)/+15%(v3.0)"),
+    ("SOXL", "반도체 3배", 3, "필라델피아 반도체", "ETF", "주력", "고변동 · 익절 +20%(v3.0) · 시드 소진도 빠름"),
+    ("UPRO", "S&P500 3배", 3, "S&P500", "ETF", "대안", "변동성 낮아 사이클 느림"),
+    ("SPXL", "S&P500 3배(Direxion)", 3, "S&P500", "ETF", "대안", "UPRO와 동일 지수"),
+    ("TECL", "미국 기술주 3배", 3, "기술 섹터", "ETF", "대안", "기술 섹터 집중"),
+    ("BULZ", "빅테크 이노베이션 3배", 3, "FANG 이노베이션", "ETN", "주의", "ETN — 발행사 신용위험·조기상환(콜) 가능"),
+    ("QLD", "나스닥100 2배", 2, "나스닥100", "ETF", "비권장", "2배 — 40일 내 목표 도달률 낮음"),
+    ("SSO", "S&P500 2배", 2, "S&P500", "ETF", "비권장", "2배 — 사이클 거의 안 돌아감"),
+]
+# 무한매수법 유의종목(거래량 부족 → LOC 종가 왜곡) — 커뮤니티 지정, 추천 아님
+INF_AVOID = ["BNKU", "CURE", "DRN", "DUSL", "HIBL", "MIDU", "NAIL",
+             "PILL", "RETL", "TPOR", "UTSL", "WANT", "WEBL"]
+
+
+def build_infinite(data):
+    """무한매수 후보 ETF 지표 — 현재가·일변동성·200MA 이격·52주 고점대비·1년 MDD."""
+    out = []
+    for tk, name, x, base, kind, tier, memo in INF_ETFS:
+        df = ohlc_for(data, tk)
+        if df is None:
+            continue
+        c = df["Close"].dropna()
+        if len(c) < 120:
+            continue
+        price = float(c.iloc[-1])
+        if not price:
+            continue
+        r = c.pct_change().dropna()
+        vol_d = float(r.iloc[-60:].std()) * 100 if len(r) >= 60 else None          # 최근 60일 일변동성(%)
+        ma200 = float(c.rolling(min(200, len(c))).mean().iloc[-1])
+        y = c.iloc[-252:] if len(c) >= 252 else c
+        hi = float(y.max())
+        mdd = float(((y / y.cummax()) - 1).min()) * 100                             # 1년 최대낙폭(%)
+        out.append({
+            "code": tk, "name": name, "x": x, "base": base, "kind": kind,
+            "tier": tier, "memo": memo,
+            "price": round(price, 2),
+            "vol": round(vol_d, 2) if vol_d else None,
+            "dist200": round((price / ma200 - 1) * 100, 1) if ma200 else None,
+            "high52": round((price / hi - 1) * 100, 1) if hi else None,
+            "mdd1y": round(mdd, 1),
+            "ret1m": round((price / float(c.iloc[-22]) - 1) * 100, 1) if len(c) > 22 else None,
+            "ret1y": round((price / float(c.iloc[-252]) - 1) * 100, 1) if len(c) > 252 else None,
+        })
+    print(f"[infinite] 후보 ETF {len(out)}종")
+    return out
+
+
 def etfmom_text(em):
     """텔레그램용 테마포착 요약(리밸런싱·로스컷 발생 시만 호출)."""
     ch = em.get("changes", {})
@@ -2584,9 +2640,15 @@ def main():
             if rc_:
                 lev_syms.append(f"{rc_}.KS" if mk == "KR" else rc_)
         lev_syms += [f"{c}.KS" if mk == "KR" else c for _n, mk, _x, c in LEV_SINGLES]
-        lev_data = yf.download(lev_syms, period="2y", interval="1d",
+        inf_only = [t for t, *_ in INF_ETFS if t not in lev_syms]      # 무한매수 후보 중 미포함분
+        lev_data = yf.download(lev_syms + inf_only, period="2y", interval="1d",
                                group_by="ticker", auto_adjust=False, threads=True, progress=False)
         leverage = build_leverage(lev_data)
+        try:
+            infinite = build_infinite(lev_data)
+        except Exception as e:
+            print(f"[infinite] 실패: {e}")
+            infinite = []
         try:  # 4시간봉 시그널: 1시간봉 다운로드 → 4h 합성 → 상승시작/풀백/하락전환
             lev1h = yf.download(lev_syms, period="720d", interval="1h",
                                 group_by="ticker", auto_adjust=False, threads=True, progress=False)
@@ -2597,6 +2659,7 @@ def main():
     except Exception as e:
         print(f"[leverage] 실패: {e}")
         leverage = {"pairs": [], "singles": [], "signals": {"US": [], "KR": [], "fresh": []}}
+        infinite = []
 
     # ETF 모멘텀 TOP10(테마포착): 광역 ETF 유니버스 스캔 → 가상 포트 운용 + 주도테마 TOP5
     try:
@@ -2660,7 +2723,7 @@ def main():
                                           "leaders_per_sector", "individual_top", "deep_top",
                                           "proximity_pct", "rs_weights", "zigzag_pct")},
         "regime": regime, "seasonality": seasonality, "macro": macro, "dividends": dividends,
-        "leverage": leverage, "etfmom": etfmom,
+        "leverage": leverage, "etfmom": etfmom, "infinite": infinite,
         "markets": markets, "stocks": stocks,
         "commodities": [c["id"] for c in commodities],
         "hot": [h["id"] for h in hot],
