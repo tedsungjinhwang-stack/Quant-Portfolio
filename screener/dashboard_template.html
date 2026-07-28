@@ -1578,7 +1578,9 @@ function renderInfinite(){
   const px=cand?cand.price:null;
   const c=infCalc(p,px);
   let html="";
-  html+=`<div class="warnbox">⚠️ <b>3배 레버리지 분할매수 전략입니다.</b> 장기 하락장에서 시드 전액 소진 + 큰 손실이 가능하고, 레버리지 복리 감쇠로 원지수가 회복해도 손실이 남을 수 있습니다. 이 화면은 <b>규칙대로 계산한 주문 참고표</b>이며 투자 판단·주문은 본인 책임입니다. 포지션 정보는 이 브라우저에만 저장됩니다(서버 전송 없음).</div>`;
+  html+=`<div class="warnbox">⚠️ <b>3배 레버리지 분할매수(마틴게일형) 전략입니다.</b> 수익은 +10~20%로 캡되지만 손실은 이론상 −100%인 비대칭 구조 — 2022년 TQQQ는 연 −80%였고, 닷컴·리먼급 하락에선 40거래일 사이클 전제가 무너집니다. 레버리지 복리 감쇠로 원지수가 회복해도 손실이 남을 수 있고, 미국주식 양도세 22%도 수익률을 깎습니다.<br>
+  이 화면은 <b>규칙대로 계산한 주문 참고표</b>이며 투자 판단·주문은 본인 책임입니다. 포지션은 이 브라우저에만 저장됩니다(서버 전송 없음 — 기기를 바꾸면 다시 입력).<br>
+  <span style="opacity:.85">구현 범위: <b>v2.2(2023 표준)·v3.0</b>의 매수·매도·쿼터모드. v3.0/v4.0의 '추가 하락 대비 단계별 LOC'는 공개 문서에 단계 수·간격·금액이 없어 미구현, v4.0의 잔금기반 1회매수금·리버스모드도 미구현입니다.</span></div>`;
   // ── 포지션 설정
   html+=`<div class="cpanel"><div class="cttl">⚙️ 내 포지션 <small>입력하면 브라우저에 저장 · 매일 이 탭만 열면 오늘 주문이 계산됩니다</small></div>
     <div class="frm">
@@ -1593,6 +1595,7 @@ function renderInfinite(){
     <div class="btnrow"><button class="act" id="ifSaveBtn">💾 저장</button>
       <button class="gh" id="ifFillBtn">✅ 매수 체결 반영</button>
       <button class="gh" id="ifSellBtn">💵 매도 체결 반영</button>
+      <button class="gh" id="ifSyncBtn">🔁 T 재동기화</button>
       <button class="gh dgr" id="ifResetBtn">🔄 사이클 초기화</button></div></div>`;
   // ── 진행 상태
   const phase=c.isQuarter?`<span class="phase p2">쿼터모드</span>`:(c.isSecond?`<span class="phase p2">후반전</span>`:`<span class="phase p1">전반전</span>`);
@@ -1621,7 +1624,9 @@ function renderInfinite(){
       <div class="ordbox buy"><h4>🟢 매수 주문</h4>${c.buys.length?c.buys.map(ordRow).join(""):`<div class="nores">쿼터모드 — 오늘은 매수하지 않습니다</div>`}</div>
       <div class="ordbox sell"><h4>🔴 매도 주문</h4>${c.sells.length?c.sells.map(ordRow).join(""):`<div class="nores">보유 수량 없음 — 첫 매수 후 매도 주문이 생깁니다</div>`}</div>
     </div>
-    <p class="cnote">※ <b>LOC</b>=종가가 기준가보다 유리할 때만 체결(장중 스파이크로는 체결 안 됨) · <b>MOC</b>=종가 무조건 체결 · <b>지정가 매도</b>는 프리장 시작(서머타임 17시/비서머 18시)에 걸어 애프터까지 유지. 매수 별지점은 규칙대로 <b>별지점 −$0.01</b>에 겁니다.</p></div>`;
+    <p class="cnote">※ <b>LOC</b>=종가가 기준가보다 유리할 때만 체결(장중 스파이크로는 체결 안 됨) · <b>MOC</b>=종가 무조건 체결 · <b>지정가 매도</b>는 프리장 시작(서머타임 17시/비서머 18시)에 걸어 애프터까지 유지. 매수 별지점은 <b>별지점 −$0.01</b>에 겁니다(같은 종가에 매수·매도가 동시 체결되는 것을 막는 규칙).<br>
+    ※ LOC는 본장 중 언제든 넣을 수 있지만 실질 컷오프는 <b>마감 10분 전(15:50 ET)</b>이고 이후 정정·취소가 제한됩니다. 증권사마다 LOC 지원 여부가 다릅니다.<br>
+    ※ 규칙에 <b>가격 기반 손절선은 없습니다</b> — 손절은 시드 소진(쿼터모드)이라는 상태 조건에서만 발동합니다. 임의 손절·조기 익절은 규칙 위반이라 이 화면은 규칙이 산출한 주문만 보여줍니다.${c.isQuarter&&p.ver==="v2.2"?'<br>※ <b>v2.2 쿼터손절 재개 절차</b>: 1/4 MOC 정리 후 남은 자금을 10분할해 재개하고, 재개 매수는 <b>평단 −10% LOC</b>로 겁니다(10회 종료 후 다시 MOC). 이 재개 단계는 T 재동기화로 직접 맞춰 주세요.':''}</p></div>`;
   // ── 후보 ETF
   if(cands.length){
     html+=`<div class="cpanel"><div class="cttl">🎯 대상 ETF 후보 <small>행 클릭 → 종목 변경 · 변동성 높을수록 사이클이 빨리 돌지만 시드 소진도 빠름</small></div>
@@ -1670,10 +1675,18 @@ function renderInfinite(){
     const q=parseFloat(prompt(`매도 체결 수량(주)? 보유 ${n.qty}주`,String(n.qty))||"0");
     if(!(q>0))return;
     const pr=parseFloat(prompt("체결가($)?",String(px||n.avg||0))||"0");
-    n.qty=Math.max(0,n.qty-q);
+    const prev=n.qty;
+    n.qty=Math.max(0,prev-q);
+    // T 갱신 = T × (잔존수량 / 직전보유수량) — 쿼터매도(1/4)의 ×0.75, 지정가매도(3/4)의 ×0.25가 이 식의 특수해
+    n.T=prev>0?+(n.T*(n.qty/prev)).toFixed(3):0;
     n.log=(n.log||[]).concat([{d:DATA.bar_date||"",k:"매도",q:q,pr:pr||0,avg:n.avg,qty:n.qty,T:n.T}]).slice(-60);
-    if(n.qty<=0){n.T=0;n.avg=0;alert("보유 수량 0 → 사이클 종료. T와 평단을 초기화했습니다. 새 사이클을 시작하세요.");}
-    else if(confirm("쿼터매도였나요? (확인=T를 0.75배로 조정 / 취소=T 유지)")){n.T=+(n.T*0.75).toFixed(3);}
+    if(n.qty<=0){n.T=0;n.avg=0;alert("보유 수량 0 → 사이클 종료. T·평단을 초기화했습니다.\n\n※ 같은 날 급락으로 LOC 매수가 체결됐다면 종료가 아닙니다 — 그 경우 매수 체결도 반영하세요.");}
+    infSave(n); renderInfinite();});
+  $("ifSyncBtn").addEventListener("click",()=>{
+    const n=read(), one=n.seed/Math.max(2,n.split);
+    const cum=parseFloat(prompt("이 사이클 누적 매수금액($)? — 부분체결이 쌓여 T가 실제와 벌어졌을 때 재동기화합니다",String((n.T*one).toFixed(2)))||"0");
+    if(!(cum>0))return;
+    n.T=Math.ceil((cum/one)*10)/10;      // 소수 1자리 올림(쿼터모드 구간 표기와 정합)
     infSave(n); renderInfinite();});
   $("ifResetBtn").addEventListener("click",()=>{
     if(!confirm("현재 사이클을 초기화합니다(T·보유수량·평단 0). 계속?"))return;
