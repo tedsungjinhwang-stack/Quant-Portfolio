@@ -2041,12 +2041,6 @@ def update_etfmom_nav(data, bar_date, port):
 INF_ETFS = [
     ("TQQQ", "나스닥100 3배", 3, "나스닥100", "ETF", "주력", "기본 대상 · 익절 +10%(v2.2)/+15%(v3.0)"),
     ("SOXL", "반도체 3배", 3, "필라델피아 반도체", "ETF", "주력", "고변동 · 익절 +20%(v3.0) · 시드 소진도 빠름"),
-    ("UPRO", "S&P500 3배", 3, "S&P500", "ETF", "대안", "변동성 낮아 사이클 느림"),
-    ("SPXL", "S&P500 3배(Direxion)", 3, "S&P500", "ETF", "대안", "UPRO와 동일 지수"),
-    ("TECL", "미국 기술주 3배", 3, "기술 섹터", "ETF", "대안", "기술 섹터 집중"),
-    ("BULZ", "빅테크 이노베이션 3배", 3, "FANG 이노베이션", "ETN", "주의", "ETN — 발행사 신용위험·조기상환(콜) 가능"),
-    ("QLD", "나스닥100 2배", 2, "나스닥100", "ETF", "비권장", "2배 — 40일 내 목표 도달률 낮음"),
-    ("SSO", "S&P500 2배", 2, "S&P500", "ETF", "비권장", "2배 — 사이클 거의 안 돌아감"),
 ]
 # 무한매수법 유의종목(거래량 부족 → LOC 종가 왜곡) — 커뮤니티 지정, 추천 아님
 INF_AVOID = ["BNKU", "CURE", "DRN", "DUSL", "HIBL", "MIDU", "NAIL",
@@ -2084,6 +2078,117 @@ def build_infinite(data):
             "ret1y": round((price / float(c.iloc[-252]) - 1) * 100, 1) if len(c) > 252 else None,
         })
     print(f"[infinite] 후보 ETF {len(out)}종")
+    return out
+
+
+INF_BT_SEED = 40000.0     # 백테스트 가정 원금($) — 1회분 절반으로 최소 2주 매수 가능한 규모
+INF_BT_SPLIT = 40         # 분할수
+INF_BT_BASE = 10          # 익절 기준%(v2.2: 종목 무관 10)
+
+
+def inf_backtest(df, base=INF_BT_BASE, a=INF_BT_SPLIT, seed=INF_BT_SEED, start=None):
+    """무한매수법(v2.2 정액법) 일별 시뮬레이션 → 월별 수익률·일별 NAV·사이클 통계.
+    체결 판정: 지정가매도=장중 고가 도달 / LOC=종가가 기준보다 유리할 때 종가 체결 / MOC=종가 무조건."""
+    if df is None:
+        return None
+    d = df.dropna(subset=["Close", "High"])
+    if start:
+        d = d[d.index >= pd.Timestamp(start)]
+    if len(d) < 20:
+        return None
+    one = seed / a
+    cash, qty, avg, T = seed, 0, 0.0, 0.0
+    cycles, wins, buys, sells, qcuts = 0, 0, 0, 0, 0
+    realized = 0.0
+    nav_hist, peak, mdd = [], None, 0.0
+    for ts, row in d.iterrows():
+        c, hi = float(row["Close"]), float(row["High"])
+        # ── 매도 (보유분이 있을 때: 지정가(¾) → LOC/MOC(¼) 순서)
+        if qty > 0 and avg > 0:
+            quarter = T > a - 1
+            star = avg * (1 + base * (1 - 2 * T / a) / 100)
+            lmt = avg * (1 + base / 100)
+            q4 = int(qty // 4)
+            rest = qty - q4
+            if rest > 0 and hi >= lmt:                       # ¾ 지정가 매도(장중)
+                prev = qty
+                cash += rest * lmt
+                realized += rest * (lmt - avg)
+                qty -= rest
+                T = T * (qty / prev) if prev > 0 else 0.0
+                sells += 1
+                wins += 1
+            if qty > 0:
+                q4 = int(qty // 4)
+                if q4 > 0 and (quarter or c >= star):        # ¼ MOC(쿼터모드) 또는 별지점 LOC
+                    prev = qty
+                    cash += q4 * c
+                    realized += q4 * (c - avg)
+                    qty -= q4
+                    T = T * (qty / prev) if prev > 0 else 0.0
+                    sells += 1
+                    if quarter:
+                        qcuts += 1
+            if qty <= 0:                                     # 사이클 종료
+                avg, T = 0.0, 0.0
+                cycles += 1
+        # ── 매수 (쿼터모드에는 매수 안 함)
+        if not (T > a - 1):
+            if qty <= 0 or avg <= 0:                         # 첫 매수(평단 없음 → 큰수 LOC는 사실상 체결)
+                n = int(min(cash, one) // c)
+                if n > 0:
+                    cash -= n * c
+                    avg, qty = c, n
+                    T += (n * c) / one
+                    buys += 1
+            else:
+                star = avg * (1 + base * (1 - 2 * T / a) / 100)
+                legs = ([(avg, one / 2), (star - 0.01, one / 2)] if T < a / 2 else [(star - 0.01, one)])
+                for lim, amt in legs:
+                    if c <= lim:                             # LOC 체결 → 종가로 매수
+                        n = int(min(cash, amt) // c)
+                        if n > 0:
+                            avg = (qty * avg + n * c) / (qty + n)
+                            qty += n
+                            cash -= n * c
+                            T += (n * c) / one
+                            buys += 1
+        nav = cash + qty * c
+        peak = nav if peak is None else max(peak, nav)
+        mdd = min(mdd, nav / peak - 1)
+        nav_hist.append((ts, nav))
+    # ── 월별 수익률
+    monthly, prev = [], None
+    ser = pd.Series([v for _, v in nav_hist], index=[t for t, _ in nav_hist])
+    for mkey, grp in ser.groupby(ser.index.to_period("M")):
+        endv = float(grp.iloc[-1])
+        basev = prev if prev is not None else seed
+        monthly.append({"m": str(mkey), "ret": round((endv / basev - 1) * 100, 2), "nav": round(endv, 2)})
+        prev = endv
+    last = float(ser.iloc[-1])
+    return {"seed": seed, "split": a, "base": base,
+            "start": nav_hist[0][0].date().isoformat(), "end": nav_hist[-1][0].date().isoformat(),
+            "monthly": monthly, "total": round((last / seed - 1) * 100, 2),
+            "nav": round(last, 2), "mdd": round(mdd * 100, 1),
+            "cycles": cycles, "wins": wins, "buys": buys, "sells": sells, "qcuts": qcuts,
+            "realized": round(realized, 0), "open_qty": qty, "open_avg": round(avg, 2) if avg else 0,
+            "T": round(T, 2), "cash": round(cash, 0),
+            "curve": [{"date": t.date().isoformat(), "nav": round(v, 2)} for t, v in nav_hist]}
+
+
+def build_inf_backtest(data, bar_date):
+    """무한매수 후보 종목별 올해(YTD) 백테스트."""
+    y0 = f"{bar_date[:4]}-01-01"
+    out = {}
+    for tk, name, *_ in INF_ETFS:
+        try:
+            r = inf_backtest(ohlc_for(data, tk), start=y0)
+            if r:
+                r["name"] = name
+                out[tk] = r
+                print(f"[inf-bt] {tk} {bar_date[:4]}년: {r['total']:+.1f}% · 사이클 {r['cycles']} · MDD {r['mdd']}%")
+        except Exception as e:
+            print(f"[inf-bt] {tk} 실패: {e}")
     return out
 
 
@@ -2646,9 +2751,10 @@ def main():
         leverage = build_leverage(lev_data)
         try:
             infinite = build_infinite(lev_data)
+            inf_bt = build_inf_backtest(lev_data, bar_date)
         except Exception as e:
             print(f"[infinite] 실패: {e}")
-            infinite = []
+            infinite, inf_bt = [], {}
         try:  # 4시간봉 시그널: 1시간봉 다운로드 → 4h 합성 → 상승시작/풀백/하락전환
             lev1h = yf.download(lev_syms, period="720d", interval="1h",
                                 group_by="ticker", auto_adjust=False, threads=True, progress=False)
@@ -2659,7 +2765,7 @@ def main():
     except Exception as e:
         print(f"[leverage] 실패: {e}")
         leverage = {"pairs": [], "singles": [], "signals": {"US": [], "KR": [], "fresh": []}}
-        infinite = []
+        infinite, inf_bt = [], {}
 
     # ETF 모멘텀 TOP10(테마포착): 광역 ETF 유니버스 스캔 → 가상 포트 운용 + 주도테마 TOP5
     try:
@@ -2723,7 +2829,7 @@ def main():
                                           "leaders_per_sector", "individual_top", "deep_top",
                                           "proximity_pct", "rs_weights", "zigzag_pct")},
         "regime": regime, "seasonality": seasonality, "macro": macro, "dividends": dividends,
-        "leverage": leverage, "etfmom": etfmom, "infinite": infinite,
+        "leverage": leverage, "etfmom": etfmom, "infinite": infinite, "inf_bt": inf_bt,
         "markets": markets, "stocks": stocks,
         "commodities": [c["id"] for c in commodities],
         "hot": [h["id"] for h in hot],
