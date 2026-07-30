@@ -420,7 +420,9 @@
   #viewTheme .th-lead{display:flex;flex-wrap:wrap;gap:5px}
   #viewTheme .th-etf{font-size:11.5px;padding:3px 9px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
   #viewTheme .th-etf b{font-weight:700}
-  #viewTheme .th-etf .y{font-family:var(--mono);margin-left:4px}
+  #viewTheme .th-etf .y{font-family:var(--mono);margin-left:6px;font-size:10.5px}
+  #viewTheme .th-etf .y em{font-style:normal;color:var(--faint);margin-right:2px;font-size:9.5px}
+  #viewTheme .th-etf .y b{font-weight:700}
   #viewTheme .ctbl{width:100%;border-collapse:collapse;font-size:12.5px}
   #viewTheme .ctbl th,#viewTheme .ctbl td{padding:8px 7px;border-bottom:1px solid rgba(255,176,0,.08);text-align:right;white-space:nowrap;color:var(--txt);font-variant-numeric:tabular-nums}
   #viewTheme .ctbl th{color:#8d897f;font-size:11px;font-weight:700}
@@ -835,35 +837,35 @@ if(!DATA){
     events:[{date:"2026-06-11",t:"lc"},{date:"2026-06-25",t:"reb"},{date:"2026-06-28",t:"reb"}],
     changes:{buys:[{code:"468370",name:"가상HANARO 전력설비투자",market:"KR"}],sells:[{code:"EWW",name:"멕시코",market:"US",why:"이익 실현",pl:8.4}],losscut:[]},
     themes:[
-      {theme:"인프라·전력",pts:87,w:100,leaders:[{code:"468370",name:"가상HANARO 전력설비투자",market:"KR",ytd:141.3,rank:1},{code:"GRID",name:"스마트그리드",market:"US",ytd:38.2,rank:4},{code:"487240",name:"가상KODEX AI전력핵심설비",market:"KR",ytd:142.7,rank:6}]},
-      {theme:"우라늄·원자력",pts:64,w:74,leaders:[{code:"URNM",name:"우라늄 광산",market:"US",ytd:52.0,rank:2},{code:"NLR",name:"원자력",market:"US",ytd:41.5,rank:7}]},
-      {theme:"금·귀금속",pts:49,w:56,leaders:[{code:"GDX",name:"금광",market:"US",ytd:44.1,rank:3},{code:"SIL",name:"은광",market:"US",ytd:39.8,rank:9}]},
-      {theme:"조선",pts:38,w:44,leaders:[{code:"466920",name:"가상SOL 조선TOP3플러스",market:"KR",ytd:88.4,rank:5}]},
-      {theme:"방산·우주",pts:29,w:33,leaders:[{code:"449450",name:"가상PLUS K방산",market:"KR",ytd:76.2,rank:8},{code:"ITA",name:"방산·우주 iShares",market:"US",ytd:28.9,rank:12}]}],
+      {theme:"인프라·전력",pts:87,w:100,leaders:[{code:"468370",name:"가상HANARO 전력설비투자",market:"KR",ret15:12.4,ret1w:3.1,ret1m:16.7,ret1w:3.1,ret1m:18.2,ytd:141.3,rank:1},{code:"GRID",name:"스마트그리드",market:"US",ret15:8.9,ret1w:2.2,ret1m:12.0,ret1w:2.2,ret1m:11.4,ytd:38.2,rank:4},{code:"487240",name:"가상KODEX AI전력핵심설비",market:"KR",ret15:7.8,ret1w:1.9,ret1m:10.5,ret1w:1.9,ret1m:16.0,ytd:142.7,rank:6}]},
+      {theme:"우라늄·원자력",pts:64,w:74,leaders:[{code:"URNM",name:"우라늄 광산",market:"US",ret15:10.8,ret1w:2.7,ret1m:14.6,ret1w:2.8,ret1m:14.1,ytd:52.0,rank:2},{code:"NLR",name:"원자력",market:"US",ret15:7.1,ret1w:1.8,ret1m:9.6,ret1w:1.4,ret1m:9.8,ytd:41.5,rank:7}]},
+      {theme:"금·귀금속",pts:49,w:56,leaders:[{code:"GDX",name:"금광",market:"US",ret15:9.5,ret1w:2.4,ret1m:12.8,ret1w:2.6,ret1m:12.7,ytd:44.1,rank:3},{code:"SIL",name:"은광",market:"US",ret15:6.2,ret1w:1.6,ret1m:8.4,ret1w:-0.8,ret1m:8.4,ytd:39.8,rank:9}]},
+      {theme:"조선",pts:38,w:44,leaders:[{code:"466920",name:"가상SOL 조선TOP3플러스",market:"KR",ret15:8.2,ret1w:2.0,ret1m:11.1,ret1w:2.0,ret1m:10.5,ytd:88.4,rank:5}]},
+      {theme:"방산·우주",pts:29,w:33,leaders:[{code:"449450",name:"가상PLUS K방산",market:"KR",ret15:6.6,ret1w:1.6,ret1m:8.9,ret1w:1.1,ret1m:7.9,ytd:76.2,rank:8},{code:"ITA",name:"방산·우주 iShares",market:"US",ret15:5.3,ret1w:1.3,ret1m:7.2,ret1w:0.9,ret1m:6.2,ytd:28.9,rank:12}]}],
     holdings:[
-      {code:"468370",name:"가상HANARO 전력설비투자",market:"KR",theme:"인프라·전력",score:3.21,rank:1,ret15:12.4,ret_since:2.1,ytd:141.3,entry_date:"2026-06-28",held_days:0,extended:false,losscut:false},
-      {code:"URNM",name:"우라늄 광산",market:"US",theme:"우라늄·원자력",score:2.88,rank:2,ret15:10.8,ret_since:6.2,ytd:52.0,entry_date:"2026-06-11",held_days:17,extended:false,losscut:false},
-      {code:"GDX",name:"금광",market:"US",theme:"금·귀금속",score:2.64,rank:3,ret15:9.5,ret_since:9.0,ytd:44.1,entry_date:"2026-05-28",held_days:31,extended:false,losscut:false},
-      {code:"GRID",name:"스마트그리드",market:"US",theme:"인프라·전력",score:2.41,rank:4,ret15:8.9,ret_since:4.4,ytd:38.2,entry_date:"2026-06-11",held_days:17,extended:false,losscut:false},
-      {code:"466920",name:"가상SOL 조선TOP3플러스",market:"KR",theme:"조선",score:2.28,rank:5,ret15:8.2,ret_since:3.6,ytd:88.4,entry_date:"2026-06-25",held_days:3,extended:false,losscut:false},
-      {code:"487240",name:"가상KODEX AI전력핵심설비",market:"KR",theme:"인프라·전력",score:2.11,rank:6,ret15:7.8,ret_since:1.9,ytd:142.7,entry_date:"2026-06-25",held_days:3,extended:false,losscut:false},
-      {code:"NLR",name:"원자력",market:"US",theme:"우라늄·원자력",score:1.97,rank:7,ret15:7.1,ret_since:-2.3,ytd:41.5,entry_date:"2026-06-25",held_days:3,extended:true,losscut:false},
-      {code:"449450",name:"가상PLUS K방산",market:"KR",theme:"방산·우주",score:1.85,rank:8,ret15:6.6,ret_since:5.5,ytd:76.2,entry_date:"2026-06-11",held_days:17,extended:false,losscut:false},
-      {code:"SIL",name:"은광",market:"US",theme:"금·귀금속",score:1.74,rank:9,ret15:6.2,ret_since:-8.8,ytd:39.8,entry_date:"2026-06-26",held_days:2,extended:false,losscut:true},
-      {code:"EPU",name:"페루",market:"US",theme:"페루",score:1.62,rank:10,ret15:5.9,ret_since:7.7,ytd:35.6,entry_date:"2026-05-28",held_days:31,extended:false,losscut:false}],
+      {code:"468370",name:"가상HANARO 전력설비투자",market:"KR",theme:"인프라·전력",score:3.21,rank:1,ret15:12.4,ret1w:3.1,ret1m:16.7,ret_since:2.1,ytd:141.3,entry_date:"2026-06-28",held_days:0,extended:false,losscut:false},
+      {code:"URNM",name:"우라늄 광산",market:"US",theme:"우라늄·원자력",score:2.88,rank:2,ret15:10.8,ret1w:2.7,ret1m:14.6,ret_since:6.2,ytd:52.0,entry_date:"2026-06-11",held_days:17,extended:false,losscut:false},
+      {code:"GDX",name:"금광",market:"US",theme:"금·귀금속",score:2.64,rank:3,ret15:9.5,ret1w:2.4,ret1m:12.8,ret_since:9.0,ytd:44.1,entry_date:"2026-05-28",held_days:31,extended:false,losscut:false},
+      {code:"GRID",name:"스마트그리드",market:"US",theme:"인프라·전력",score:2.41,rank:4,ret15:8.9,ret1w:2.2,ret1m:12.0,ret_since:4.4,ytd:38.2,entry_date:"2026-06-11",held_days:17,extended:false,losscut:false},
+      {code:"466920",name:"가상SOL 조선TOP3플러스",market:"KR",theme:"조선",score:2.28,rank:5,ret15:8.2,ret1w:2.0,ret1m:11.1,ret_since:3.6,ytd:88.4,entry_date:"2026-06-25",held_days:3,extended:false,losscut:false},
+      {code:"487240",name:"가상KODEX AI전력핵심설비",market:"KR",theme:"인프라·전력",score:2.11,rank:6,ret15:7.8,ret1w:1.9,ret1m:10.5,ret_since:1.9,ytd:142.7,entry_date:"2026-06-25",held_days:3,extended:false,losscut:false},
+      {code:"NLR",name:"원자력",market:"US",theme:"우라늄·원자력",score:1.97,rank:7,ret15:7.1,ret1w:1.8,ret1m:9.6,ret_since:-2.3,ytd:41.5,entry_date:"2026-06-25",held_days:3,extended:true,losscut:false},
+      {code:"449450",name:"가상PLUS K방산",market:"KR",theme:"방산·우주",score:1.85,rank:8,ret15:6.6,ret1w:1.6,ret1m:8.9,ret_since:5.5,ytd:76.2,entry_date:"2026-06-11",held_days:17,extended:false,losscut:false},
+      {code:"SIL",name:"은광",market:"US",theme:"금·귀금속",score:1.74,rank:9,ret15:6.2,ret1w:1.6,ret1m:8.4,ret_since:-8.8,ytd:39.8,entry_date:"2026-06-26",held_days:2,extended:false,losscut:true},
+      {code:"EPU",name:"페루",market:"US",theme:"페루",score:1.62,rank:10,ret15:5.9,ret1w:1.5,ret1m:8.0,ret_since:7.7,ytd:35.6,entry_date:"2026-05-28",held_days:31,extended:false,losscut:false}],
     top30:[
-      {rank:1,code:"468370",name:"가상HANARO 전력설비투자",theme:"인프라·전력",market:"KR",score:3.21,ret15:12.4,ytd:141.3},
-      {rank:2,code:"URNM",name:"우라늄 광산",theme:"우라늄·원자력",market:"US",score:2.88,ret15:10.8,ytd:52.0},
-      {rank:3,code:"GDX",name:"금광",theme:"금·귀금속",market:"US",score:2.64,ret15:9.5,ytd:44.1},
-      {rank:4,code:"GRID",name:"스마트그리드",theme:"인프라·전력",market:"US",score:2.41,ret15:8.9,ytd:38.2},
-      {rank:5,code:"466920",name:"가상SOL 조선TOP3플러스",theme:"조선",market:"KR",score:2.28,ret15:8.2,ytd:88.4},
-      {rank:6,code:"487240",name:"가상KODEX AI전력핵심설비",theme:"인프라·전력",market:"KR",score:2.11,ret15:7.8,ytd:142.7},
-      {rank:7,code:"NLR",name:"원자력",theme:"우라늄·원자력",market:"US",score:1.97,ret15:7.1,ytd:41.5},
-      {rank:8,code:"449450",name:"가상PLUS K방산",theme:"방산·우주",market:"KR",score:1.85,ret15:6.6,ytd:76.2},
-      {rank:9,code:"SIL",name:"은광",theme:"금·귀금속",market:"US",score:1.74,ret15:6.2,ytd:39.8},
-      {rank:10,code:"EPU",name:"페루",theme:"페루",market:"US",score:1.62,ret15:5.9,ytd:35.6},
-      {rank:11,code:"COPX",name:"구리 광산",theme:"구리·산업금속",market:"US",score:1.55,ret15:5.6,ytd:22.1},
-      {rank:12,code:"ITA",name:"방산·우주 iShares",theme:"방산·우주",market:"US",score:1.49,ret15:5.3,ytd:28.9}]};
+      {rank:1,code:"468370",name:"가상HANARO 전력설비투자",theme:"인프라·전력",market:"KR",score:3.21,ret15:12.4,ret1w:3.1,ret1m:16.7,ytd:141.3},
+      {rank:2,code:"URNM",name:"우라늄 광산",theme:"우라늄·원자력",market:"US",score:2.88,ret15:10.8,ret1w:2.7,ret1m:14.6,ytd:52.0},
+      {rank:3,code:"GDX",name:"금광",theme:"금·귀금속",market:"US",score:2.64,ret15:9.5,ret1w:2.4,ret1m:12.8,ytd:44.1},
+      {rank:4,code:"GRID",name:"스마트그리드",theme:"인프라·전력",market:"US",score:2.41,ret15:8.9,ret1w:2.2,ret1m:12.0,ytd:38.2},
+      {rank:5,code:"466920",name:"가상SOL 조선TOP3플러스",theme:"조선",market:"KR",score:2.28,ret15:8.2,ret1w:2.0,ret1m:11.1,ytd:88.4},
+      {rank:6,code:"487240",name:"가상KODEX AI전력핵심설비",theme:"인프라·전력",market:"KR",score:2.11,ret15:7.8,ret1w:1.9,ret1m:10.5,ytd:142.7},
+      {rank:7,code:"NLR",name:"원자력",theme:"우라늄·원자력",market:"US",score:1.97,ret15:7.1,ret1w:1.8,ret1m:9.6,ytd:41.5},
+      {rank:8,code:"449450",name:"가상PLUS K방산",theme:"방산·우주",market:"KR",score:1.85,ret15:6.6,ret1w:1.6,ret1m:8.9,ytd:76.2},
+      {rank:9,code:"SIL",name:"은광",theme:"금·귀금속",market:"US",score:1.74,ret15:6.2,ret1w:1.6,ret1m:8.4,ytd:39.8},
+      {rank:10,code:"EPU",name:"페루",theme:"페루",market:"US",score:1.62,ret15:5.9,ret1w:1.5,ret1m:8.0,ytd:35.6},
+      {rank:11,code:"COPX",name:"구리 광산",theme:"구리·산업금속",market:"US",score:1.55,ret15:5.6,ret1w:1.4,ret1m:7.6,ytd:22.1},
+      {rank:12,code:"ITA",name:"방산·우주 iShares",theme:"방산·우주",market:"US",score:1.49,ret15:5.3,ret1w:1.3,ret1m:7.2,ytd:28.9}]};
   DATA.infinite=[
     {code:"TQQQ",name:"나스닥100 3배",x:3,base:"나스닥100",kind:"ETF",tier:"주력",memo:"기본 대상 · 익절 +10%(v2.2)/+15%(v3.0)",price:78.52,vol:3.15,dist200:8.4,high52:-4.2,mdd1y:-31.5,ret1m:9.2,ret1y:62.4},
     {code:"SOXL",name:"반도체 3배",x:3,base:"필라델피아 반도체",kind:"ETF",tier:"주력",memo:"고변동 · 익절 +20%(v3.0) · 시드 소진도 빠름",price:42.30,vol:4.82,dist200:12.1,high52:-8.0,mdd1y:-48.2,ret1m:12.3,ret1y:88.1}];
@@ -1487,7 +1489,8 @@ function renderTheme(){
     html+=`<div class="cpanel"><div class="cttl">📌 주도테마 TOP5 <small>모멘텀 상위 30개 ETF의 테마 가중 집계 · 매일 갱신</small></div>
       ${th.map(t=>`<div class="th-row"><span class="th-name">${t.theme}</span><span class="th-pts">${t.pts}점</span>
         <div class="th-bar"><i style="width:${t.w}%"></i></div>
-        <div class="th-lead">${(t.leaders||[]).map(l=>`<span class="th-etf">${emFlag(l.market)} <b>${l.market==='KR'?l.name:l.code}</b><span class="y ${(l.ytd||0)>=0?'pos':'neg'}">${l.ytd==null?'':((l.ytd>0?'+':'')+l.ytd+'%')}</span></span>`).join("")}</div></div>`).join("")}
+        <div class="th-lead">${(t.leaders||[]).map(l=>{const pr=(k,v)=>v==null?'':`<span class="y"><em>${k}</em><b class="${v>=0?'pos':'neg'}">${(v>0?'+':'')+v}%</b></span>`;
+          return `<span class="th-etf">${emFlag(l.market)} <b>${l.market==='KR'?l.name:l.code}</b>${pr('15D',l.ret15)}${pr('1W',l.ret1w)}${pr('1M',l.ret1m)}${pr('YTD',l.ytd)}</span>`;}).join("")}</div></div>`).join("")}
     </div>`;
   }
   // TOP10 포트폴리오
@@ -1499,22 +1502,22 @@ function renderTheme(){
       <div class="cstat"><div class="lab">리밸런싱</div><div class="val amb" style="color:#ffb000">D-${em.dleft??'–'}</div><div class="sub">최근 ${em.last_reb||'–'}</div></div>
     </div>
     ${em.nav_curve&&em.nav_curve.length>1?themeNavSVG(em.nav_curve,em.events)+`<div class="ev-leg"><span><i class="ev-reb"></i> 리밸런싱</span><span><i class="ev-lc"></i> 로스컷</span></div>`:`<div class="ncempty">최초 적립일 — 다음 거래일부터 NAV 곡선이 그려집니다.</div>`}
-    <div class="tbl-scroll"><table class="ctbl"><thead><tr><th class="l">#</th><th class="l">종목</th><th class="l mh">테마</th><th>점수</th><th>15D</th><th>편입후</th><th class="mh">편입일</th><th class="mh">YTD</th><th>상태</th></tr></thead><tbody>
+    <div class="tbl-scroll"><table class="ctbl"><thead><tr><th class="l">#</th><th class="l">종목</th><th class="l mh">테마</th><th>점수</th><th>15D</th><th>1W</th><th>1M</th><th>YTD</th><th>편입후</th><th class="mh">편입일</th><th>상태</th></tr></thead><tbody>
     ${em.holdings.map((h,i)=>{const rc=v=>v==null?'–':`<span class="${v>=0?'pos':'neg'}">${(v>0?'+':'')+v}%</span>`;
       const st=h.losscut?'<span class="st-lc">로스컷保</span>':(h.extended?'<span class="st-ext">연장</span>':'–');
       return `<tr><td class="l">${i+1}</td><td class="l">${emFlag(h.market)} <b>${emName(h)}</b>${h.market==='KR'?'':' <span style="color:#8d897f;font-size:10.5px">'+h.name+'</span>'}</td>
       <td class="l mh" style="color:var(--dim)">${h.theme||''}</td><td class="amb">${h.score??'–'}</td>
-      <td>${rc(h.ret15)}</td><td>${rc(h.ret_since)}</td><td class="mh" style="color:var(--dim)">${h.entry_date||''}</td>
-      <td class="mh">${rc(h.ytd)}</td><td>${st}</td></tr>`;}).join("")}
+      <td>${rc(h.ret15)}</td><td>${rc(h.ret1w)}</td><td>${rc(h.ret1m)}</td><td>${rc(h.ytd)}</td>
+      <td>${rc(h.ret_since)}</td><td class="mh" style="color:var(--dim)">${h.entry_date||''}</td><td>${st}</td></tr>`;}).join("")}
     </tbody></table></div></div>`;
   // TOP30 관찰 리스트
   const t30=em.top30||[];
   if(t30.length){
     html+=`<div class="cpanel"><div class="cttl">🔎 모멘텀 TOP30 <small>리스크조정 모멘텀(15일 수익률÷변동성) 상위 관찰 리스트</small></div>
-      <div class="tbl-scroll" style="max-height:420px"><table class="ctbl"><thead><tr><th class="l">#</th><th class="l">종목</th><th class="l mh">테마</th><th>점수</th><th>15D</th><th class="mh">YTD</th></tr></thead><tbody>
+      <div class="tbl-scroll" style="max-height:420px"><table class="ctbl"><thead><tr><th class="l">#</th><th class="l">종목</th><th class="l mh">테마</th><th>점수</th><th>15D</th><th>1W</th><th>1M</th><th>YTD</th></tr></thead><tbody>
       ${t30.map(r=>{const rc=v=>v==null?'–':`<span class="${v>=0?'pos':'neg'}">${(v>0?'+':'')+v}%</span>`;
         return `<tr><td class="l">${r.rank}</td><td class="l">${emFlag(r.market)} <b>${r.market==='KR'?r.name:r.code}</b>${r.market==='KR'?'':' <span style="color:#8d897f;font-size:10.5px">'+r.name+'</span>'}</td>
-        <td class="l mh" style="color:var(--dim)">${r.theme}</td><td class="amb">${r.score}</td><td>${rc(r.ret15)}</td><td class="mh">${rc(r.ytd)}</td></tr>`;}).join("")}
+        <td class="l mh" style="color:var(--dim)">${r.theme}</td><td class="amb">${r.score}</td><td>${rc(r.ret15)}</td><td>${rc(r.ret1w)}</td><td>${rc(r.ret1m)}</td><td>${rc(r.ytd)}</td></tr>`;}).join("")}
       </tbody></table></div></div>`;
   }
   html+=`<p class="cnote">※ 가상 모델 포트폴리오(참고용). 스코어=직전 15영업일 수익률을 변동성으로 나눠 표준화(Z)한 비대칭 매핑값. 유니버스=미국 큐레이션+한국 전체 주식형 ETF(레버리지·인버스·채권·액티브·리츠 제외, 시총 50억↑). 미국·크립토는 티커, 한국은 종목명.</p>`;

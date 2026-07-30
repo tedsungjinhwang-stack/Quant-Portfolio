@@ -1825,8 +1825,10 @@ def etfmom_scores(data, uni):
         sig = float(c.pct_change().iloc[-ETFMOM_OBS:].std())
         if not sig or pd.isna(sig) or sig < 0.0015:       # 초저변동(현금성·채권성) 제외 — 리스크조정 점수 왜곡 방지
             continue
+        rr = lambda n: round((price / float(c.iloc[-1 - n]) - 1) * 100, 1) if len(c) > n else None
         rows.append({"code": code, "name": name, "theme": theme, "market": mk,
                      "price": round(price, 2), "ret15": round(m * 100, 1),
+                     "ret1w": rr(5), "ret1m": rr(21),
                      "madj": m / sig, "ytd": pc(ytd_return(c))})
     if len(rows) < 20:
         return []
@@ -1852,7 +1854,8 @@ def etfmom_themes(ranked, topn=30, k=5):
         a["pts"] += topn + 1 - r["rank"]                 # 랭크 가중(1위=30점)
         if len(a["leaders"]) < 3:
             a["leaders"].append({"code": r["code"], "name": r["name"], "market": r["market"],
-                                 "ytd": r["ytd"], "rank": r["rank"]})
+                                 "ytd": r["ytd"], "ret15": r["ret15"], "ret1w": r["ret1w"],
+                                 "ret1m": r["ret1m"], "rank": r["rank"]})
     out = sorted(agg.values(), key=lambda a: a["pts"], reverse=True)[:k]
     mx = out[0]["pts"] if out else 1
     for a in out:
@@ -1952,6 +1955,8 @@ def update_etfmom_book(ranked, bar_date):
         h["score"] = r.get("score")
         h["rank"] = r.get("rank")
         h["ret15"] = r.get("ret15")
+        h["ret1w"] = r.get("ret1w")
+        h["ret1m"] = r.get("ret1m")
         h["ytd"] = r.get("ytd")
         h["ret_since"] = round((h["price"] / h["entry_price"] - 1) * 100, 1) if (h.get("price") and h.get("entry_price")) else None
         try:
@@ -2780,7 +2785,8 @@ def main():
             etfmom = update_etfmom_book(ranked, bar_date)
             update_etfmom_nav(em_data, bar_date, etfmom)
             etfmom["themes"] = etfmom_themes(ranked)
-            etfmom["top30"] = [{k: r[k] for k in ("rank", "code", "name", "theme", "market", "score", "ret15", "ytd")}
+            etfmom["top30"] = [{k: r[k] for k in ("rank", "code", "name", "theme", "market", "score",
+                                                  "ret15", "ret1w", "ret1m", "ytd")}
                                for r in ranked[:30]]
             etfmom["universe"] = len(ranked)
         else:
