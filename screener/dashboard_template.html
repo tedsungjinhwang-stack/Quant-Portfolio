@@ -101,6 +101,14 @@
   .rlight{font-size:21px;font-weight:800;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
   .rlight small{color:var(--muted);font-size:13px;font-weight:500}
   .reasons{color:var(--muted);font-size:12.5px;margin-top:7px;line-height:1.55}
+  .axes{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-top:9px}
+  .axg{display:flex;align-items:center;gap:6px;font-size:11.5px}
+  .axk{color:var(--muted);font-weight:700;min-width:24px}
+  .axb{display:inline-block;width:72px;height:6px;background:rgba(255,255,255,.09);border-radius:4px;overflow:hidden}
+  .axb i{display:block;height:100%;border-radius:4px}
+  .axv{font-family:var(--mono);font-weight:800;font-size:12.5px;min-width:22px;text-align:right}
+  .axs{color:var(--dim);font-size:11px}
+  .axsub{color:var(--dim);font-size:11.5px}
   /* 레짐 내 경기국면·매크로 신호 */
   .mcyc{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin-top:9px;font-size:12.5px}
   .cyc-ph{font-weight:800;padding:3px 10px;border-radius:999px;font-size:12.5px}
@@ -695,14 +703,18 @@ if(!DATA){
     commodities:CMD.map(r=>r.id), hot:HOT.map(r=>r.id),
     consensus:[...US,...KR].filter(r=>r.t_mean!=null).sort((a,b)=>(b.t_upside??-999)-(a.t_upside??-999)).map(r=>r.id),
     regime:{
-      US:{label:"추세유지",color:"green",premise:"상승 추세 견조 — 다수 종목이 240일선 위, 신고가 우위. 눌림목 매수 우호.",
-        exposure:{stance:"적극 투자",equity:"80~100%",cash:"0~20%"},
-        reasons:["S&P500 240일선 위(+6.2%, 정배열)","240일선 이탈 32% · 20일선 이탈 41% (낮을수록 강세)","52주 신고가 16% · 신저가 4% (순증 +12)"],
+      US:{label:"상승 둔화",color:"yellow",premise:"장기 구조는 살아있으나 단기 흔들림 — 주도주만 홀딩, 신규는 대장주 한정, 레버리지 신규 금지.",
+        exposure:{stance:"중립·선별",equity:"55~65%",cash:"35~45%",equity_pct:60},
+        subtitle:"장기 강세 구조 · 단기 흔들림",
+        axes:{long:74.8,short:50.8,long_state:"BULL",short_state:"WOBBLE",long_ko:"강세 구조",short_ko:"흔들림"},
+        reasons:["장기 75점 — 240일선 위 67% · 6개월 상승 60% · 신고가순증 +2","단기 51점 — 20일선 위 55% · 지수 50일선 -1.8%","이 라벨 4일째 · 최근 60일 변경 1회"],
         breadth:{below20:41,below200:32,above200:68,new_high:16,near_high:24,new_low:4,net_new_high:12,n:480},
         indexes:[{name:"S&P500",close:5600,above200:true,golden:true,rsi:58,ret1d:0.4,ret1m:3.1,ret_ytd:12.5,ret1y:21.0,wyckoff:"상승 추세 (Markup)"},{name:"나스닥",close:18200,above200:true,golden:true,rsi:60,ret1d:0.6,ret1m:4.2,ret_ytd:15.0,ret1y:28.0,wyckoff:"상승 추세 (Markup)"}],macro:{risk:{score:62,net:3,on:["CPI","기대인플레","M2 통화량","구리(Dr.)","신규실업수당"],off:["기준금리","VIX 변동성"],label:"위험선호(완화적)",tone:"green"},cycle:{phase:"회복",desc:"성장↑·물가↓ — 디스인플레 회복",stance:"주식 비중확대 · 방어 강화",prefer:"성장주·반도체·경기민감 ↑ / 현금·장기채 ↓",growth:2,inflation:-2,flags:["장단기 금리 역전(침체 선행)"]},summary:"완화적 환경 · 회복 국면 → 위험자산 우호 · ⚠ 장단기 금리 역전"}},
-      KR:{label:"상승 둔화",color:"yellow",premise:"지수는 위지만 신고가 줄고 이탈 증가 — 주도 섹터·대장주만 선별 대응.",
-        exposure:{stance:"중립·선별",equity:"50~70%",cash:"30~50%"},
-        reasons:["코스피 240일선 위(+1.1%, 정배열)","240일선 이탈 52% · 20일선 이탈 63% (낮을수록 강세)","52주 신고가 7% · 신저가 9% (순증 -2)"],
+      KR:{label:"조정 국면",color:"red",premise:"다수 종목이 추세 이탈 — 현금 우선, 반등은 비중 축소 기회.",
+        exposure:{stance:"현금 우선",equity:"5~15%",cash:"85~95%",equity_pct:10},
+        subtitle:"장기 약세 구조 · 단기 조정 진행",
+        axes:{long:13.0,short:7.5,long_state:"BEAR",short_state:"PULLBACK",long_ko:"약세 구조",short_ko:"조정 진행"},
+        reasons:["장기 13점 — 240일선 위 22% · 6개월 상승 45% · 신고가순증 -13","단기 8점 — 20일선 위 13% · 지수 50일선 -27.9%","이 라벨 2일째 · 최근 60일 변경 2회 · 🚨 급락 감지"],
         breadth:{below20:63,below200:52,above200:48,new_high:7,near_high:13,new_low:9,net_new_high:-2,n:240},
         indexes:[{name:"코스피",close:2700,above200:true,golden:true,rsi:51,ret1d:-0.3,ret1m:1.2,ret_ytd:4.0,ret1y:6.5,wyckoff:"분산 추정 (Distribution)"},{name:"코스닥",close:850,above200:false,golden:false,rsi:45,ret1d:-0.8,ret1m:-3.5,ret_ytd:-6.0,ret1y:-9.0,wyckoff:"하락 추세 (Markdown)"}],macro:{risk:{score:62,net:3,on:["CPI","기대인플레","M2 통화량","구리(Dr.)","신규실업수당"],off:["기준금리","VIX 변동성"],label:"위험선호(완화적)",tone:"green"},cycle:{phase:"회복",desc:"성장↑·물가↓ — 디스인플레 회복",stance:"주식 비중확대 · 방어 강화",prefer:"성장주·반도체·경기민감 ↑ / 현금·장기채 ↓",growth:2,inflation:-2,flags:["장단기 금리 역전(침체 선행)"]},summary:"완화적 환경 · 회복 국면 → 위험자산 우호 · ⚠ 장단기 금리 역전"}}},
     counts:{stocks:US.length+KR.length,touched:3,near:3},stocks,
@@ -925,8 +937,12 @@ function renderRegime(){
       <span class="msig">🌐 매크로 신호 <b class="sig-${mac.risk.tone}">${mac.risk.label} ${mac.risk.score}</b> <i>완화 ${mac.risk.on.length}/긴축 ${mac.risk.off.length}</i></span>
     </div>
     <div class="mpos">📌 매크로 포지션 <b class="mpos-ph ph-${phC}">${mac.cycle.stance}</b> <span class="mpos-x">${mac.cycle.prefer||''}</span></div>`:'';
+  const ax=rg.axes;
+  const axg=(k,v,st)=>{const c=v>=60?'#26d07c':(v>=40?'#ffb000':'#ff4d4f');
+    return `<div class="axg"><span class="axk">${k}</span><span class="axb"><i style="width:${Math.max(0,Math.min(100,v))}%;background:${c}"></i></span><b class="axv" style="color:${c}">${Math.round(v)}</b><span class="axs">${st}</span></div>`;};
   el.innerHTML=`<div class="rbanner ${rg.color}">
     <div><div class="rlight">${lc} ${rg.label} <small>${rg.premise}</small></div>
+      ${ax?`<div class="axes">${axg('장기',ax.long,ax.long_ko||'')}${axg('단기',ax.short,ax.short_ko||'')}<span class="axsub">${rg.subtitle||''}</span></div>`:''}
       ${ex?`<div class="stance">💰 권장 스탠스 <b class="st-main">${ex.stance}</b> <span class="st-div">·</span> 주식 <b>${ex.equity}</b> / 현금 <b>${ex.cash}</b> <span class="st-ref">(참고용)</span></div>`:''}
       ${mblock}
       <div class="reasons">${(rg.reasons||[]).join(" · ")}</div></div>

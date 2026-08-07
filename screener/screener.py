@@ -2697,7 +2697,19 @@ def main():
             h = index_health(nm, tk, df_i)
             if h:
                 idx_map[tk] = h
-    regime = build_regime(allrecs, idx_map)
+    try:                                  # 2축 엔진(장기 구조 + 단기 국면). 실패 시 기존 판정으로 폴백
+        from regime2 import build_regime2
+        regime = build_regime2(allrecs, idx_map, INDEXES,
+                               os.path.join(REPORT_DIR, "regime_state.json"))
+        if not regime:
+            raise RuntimeError("빈 결과")
+        for mk, r in regime.items():
+            a = r["axes"]
+            print(f"[regime2] {mk}={r['label']} · 장기 {a['long']}({a['long_state']}) "
+                  f"단기 {a['short']}({a['short_state']}) · 주식 {r['exposure']['equity_pct']}%")
+    except Exception as e:
+        print(f"[regime2] 실패 → 기존 판정 사용: {e}")
+        regime = build_regime(allrecs, idx_map)
     stale = [f"{h['name']}({h['asof']})" for mk in regime for h in regime[mk].get("indexes", []) if h.get("asof") and h["asof"] < bar_date]
     if stale:
         print(f"[regime] ⚠️ 기준일({bar_date})보다 뒤처진 지수: {', '.join(stale)}")
