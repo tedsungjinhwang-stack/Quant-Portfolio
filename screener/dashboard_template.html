@@ -354,10 +354,14 @@
   #viewDiv .dchg .ch-s{color:var(--down);background:rgba(255,77,79,.12)}
   #viewDiv .dchg .ch-s i{font-style:normal;font-weight:400;opacity:.7;margin-left:3px}
   @media(max-width:640px){#viewDiv .ctbl th,#viewDiv .ctbl td{padding:8px 4px;font-size:12.5px}
-    #viewDiv .rtbl{table-layout:fixed}
-    #viewDiv .rtbl th,#viewDiv .rtbl td,#viewDiv .rtbl th.r,#viewDiv .rtbl td.r{padding:6px 1px;font-size:10px;letter-spacing:-.3px;overflow:hidden;text-overflow:ellipsis}
-    #viewDiv .rtbl th:not(.l),#viewDiv .rtbl td:not(.l){width:32px}
-    #viewDiv .rtbl td.l{font-size:11.5px}}
+    #viewDiv .mh2{display:none!important}                 /* 모바일: 7D·3M·6M 접어 종목명 폭 확보 */
+    #viewDiv .rtbl{table-layout:fixed;width:100%}
+    #viewDiv .rtbl th,#viewDiv .rtbl td,#viewDiv .rtbl th.r,#viewDiv .rtbl td.r{padding:6px 2px;font-size:10.5px;letter-spacing:-.2px}
+    #viewDiv .rtbl th:not(.l),#viewDiv .rtbl td:not(.l){width:34px}
+    #viewDiv .rtbl th.l,#viewDiv .rtbl td.l{width:auto}
+    #viewDiv .rtbl td.l{font-size:11px;white-space:normal;line-height:1.3}
+    #viewDiv .rtbl td.l b{white-space:normal;display:inline}   /* 이름이 길면 2줄로 흐르게 */
+    #viewDiv .rtbl td.l .scode{display:block;font-size:9.5px;opacity:.75}}
   /* ===== 레버리지 뷰 ===== */
   #viewLev .lev-warn{font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:10px;margin-bottom:14px;
     background:rgba(255,77,79,.1);border:1px solid rgba(255,77,79,.3);color:#ffb3b4}
@@ -1337,12 +1341,12 @@ function renderDividend(){
     ${navPerf(p)}
     <div class="dcal"><div class="dcal-t">📅 월별 배당 — <b style="color:var(--accent)">막대=실제 배당수익률(%)</b> · <span style="color:var(--faint)">회색=연 배당 중 비중</span> · 연 합계 ${p.yield}%</div>
       <div class="dcal-row">${p.monthly.map((v,i)=>{const sh=Math.round(v/mtot*100);const yld=v>=0.05?(v<10?v.toFixed(1):Math.round(v))+'%':'';return `<div class="dcal-bar" title="${i+1}월 · 배당수익률 ${v.toFixed(2)}% · 연 배당의 ${sh}%"><b class="dcal-v">${yld}</b><em class="dcal-s">${sh>=1?sh+'%':''}</em><i style="height:${Math.round(v/maxm*100)}%"></i><span>${i+1}</span></div>`;}).join("")}</div></div>
-    <div class="tbl-scroll"><table class="ctbl rtbl"><thead><tr><th class="l">종목</th><th>비중</th><th>배당</th><th class="r">1D</th><th class="r">7D</th><th class="r">1M</th><th class="r">3M</th><th class="r">6M</th><th class="r">1Y</th><th class="r mhide">편입후</th><th class="mhide">보유</th><th class="mhide">연속↑</th><th class="l mhide">섹터</th></tr></thead><tbody>
-      ${p.holdings.map(h=>{const rc=v=>{if(v==null)return '<td class="r">–</td>';const t=(Math.abs(v)>=10?Math.round(v):v)+'%';return `<td class="r ${v>=0?'pos':'neg'}">${t}</td>`;};
+    <div class="tbl-scroll"><table class="ctbl rtbl"><thead><tr><th class="l">종목</th><th>비중</th><th>배당</th><th class="r">1D</th><th class="r mh2">7D</th><th class="r">1M</th><th class="r mh2">3M</th><th class="r mh2">6M</th><th class="r">1Y</th><th class="r mhide">편입후</th><th class="mhide">보유</th><th class="mhide">연속↑</th><th class="l mhide">섹터</th></tr></thead><tbody>
+      ${p.holdings.map(h=>{const rc=(v,c='')=>{if(v==null)return `<td class="r ${c}">–</td>`;const t=(Math.abs(v)>=10?Math.round(v):v)+'%';return `<td class="r ${c} ${v>=0?'pos':'neg'}">${t}</td>`;};
         const hd=h.held_days==null?'–':(h.held_days>=31?(h.held_days/30).toFixed(1)+'M':h.held_days+'d');
         return `<tr><td class="l"><b>${dflag(h)}${h.name}</b> <span class="scode" style="color:#8d897f">${h.code}</span></td>
         <td class="amb"><b>${h.weight}%</b></td><td class="teal">${h.yield}%</td>
-        ${rc(h.ret1d)}${rc(h.ret7d)}${rc(h.ret1m)}${rc(h.ret3m)}${rc(h.ret6m)}${rc(h.ret1y)}${rc(h.ret_since)}
+        ${rc(h.ret1d)}${rc(h.ret7d,'mh2')}${rc(h.ret1m)}${rc(h.ret3m,'mh2')}${rc(h.ret6m,'mh2')}${rc(h.ret1y)}${rc(h.ret_since,'mhide')}
         <td class="mhide" style="color:var(--dim)">${hd}</td><td class="mhide">${h.streak==null?'–':h.streak+'년'}</td><td class="l mhide">${h.sector}</td></tr>`;}).join("")}
     </tbody></table></div></div>`;
   html+=`<div class="cpanel" style="margin-top:14px"><div class="cttl">🔎 배당주 스크리너 <small>점수=배당수익률·성장률·연속증가 종합 (고배당 함정 감점)</small></div>
